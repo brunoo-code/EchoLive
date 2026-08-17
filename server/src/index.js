@@ -135,7 +135,11 @@ app.get("/ice-config", (_request, response) => {
 });
 
 if (existsSync(CLIENT_DIST_DIR)) {
+  app.use("/assets", express.static(path.join(CLIENT_DIST_DIR, "assets")));
   app.use(express.static(CLIENT_DIST_DIR));
+  app.use("/assets", (_request, response) => {
+    response.status(404).type("text").send("Asset not found.");
+  });
   app.get("*", (_request, response, next) => {
     response.sendFile(path.join(CLIENT_DIST_DIR, "index.html"), (error) => {
       if (error) {
