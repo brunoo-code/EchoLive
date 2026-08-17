@@ -52,6 +52,7 @@ export default function RoomPage({ roomCode, onBack }) {
   const pendingIceRef = useRef(new Map());
   const remoteStreamsRef = useRef(new Map());
   const localStreamRef = useRef(null);
+  const localMediaPromiseRef = useRef(null);
   const audioTrackRef = useRef(null);
   const cameraTrackRef = useRef(null);
   const screenStreamRef = useRef(null);
@@ -228,6 +229,7 @@ export default function RoomPage({ roomCode, onBack }) {
 
     socket.on("webrtc-offer", async ({ from, offer }) => {
       console.log("[WEBRTC] offer received", from);
+      await setupLocalMedia();
       const peer = createPeer(from, false);
       await peer.pc.setRemoteDescription(new RTCSessionDescription(offer));
       await flushPendingIce(from);
@@ -250,6 +252,7 @@ export default function RoomPage({ roomCode, onBack }) {
 
     socket.on("ice-candidate", async ({ from, candidate }) => {
       console.log("[WEBRTC] ICE candidate received", from);
+      await setupLocalMedia();
       const peer = peersRef.current.get(from) || createPeer(from, false);
 
       if (!peer.pc.remoteDescription) {
@@ -329,19 +332,35 @@ export default function RoomPage({ roomCode, onBack }) {
       return;
     }
 
-    const media = await requestInitialMedia(notify, {
-      audioDeviceId: selectedAudioId,
-      videoDeviceId: selectedVideoId
-    });
-    localStreamRef.current = media.stream;
-    audioTrackRef.current = media.audioTrack;
-    cameraTrackRef.current = media.videoTrack;
-    setDisplayStream(media.videoTrack ? media.stream : null);
-    updateMicEnabled(Boolean(media.audioTrack?.enabled), false);
-    updateCameraEnabled(Boolean(media.videoTrack?.enabled), false);
-    replaceSenderTrackForAll("audio", media.audioTrack);
-    replaceSenderTrackForAll("video", media.videoTrack);
-    startSpeakingDetection(media.audioTrack);
+    if (localMediaPromiseRef.current) {
+      return localMediaPromiseRef.current;
+    }
+
+    localMediaPromiseRef.current = (async () => {
+      const media = await requestInitialMedia(notify, {
+        audioDeviceId: selectedAudioId,
+        videoDeviceId: selectedVideoId
+      });
+      if (!isInVoiceRef.current || !hasJoinedRef.current) {
+        stopStream(media.stream);
+        return;
+      }
+      localStreamRef.current = media.stream;
+      audioTrackRef.current = media.audioTrack;
+      cameraTrackRef.current = media.videoTrack;
+      setDisplayStream(media.videoTrack ? media.stream : null);
+      updateMicEnabled(Boolean(media.audioTrack?.enabled), false);
+      updateCameraEnabled(Boolean(media.videoTrack?.enabled), false);
+      replaceSenderTrackForAll("audio", media.audioTrack);
+      replaceSenderTrackForAll("video", media.videoTrack);
+      startSpeakingDetection(media.audioTrack);
+    })();
+
+    try {
+      await localMediaPromiseRef.current;
+    } finally {
+      localMediaPromiseRef.current = null;
+    }
   }
 
   function createPeer(remoteSocketId, shouldCreateOffer) {
