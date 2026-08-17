@@ -173,9 +173,6 @@ export default function RoomPage({ roomCode, onBack }) {
       upsertRemoteParticipants(voiceParticipants || participants);
       await setupLocalMedia();
       emitMediaStatus();
-      (voiceParticipants || participants).forEach((participant) => {
-        createPeer(participant.socketId, false);
-      });
     });
 
     socket.on("message-history", ({ channelId, messages: history } = {}) => {
@@ -204,7 +201,7 @@ export default function RoomPage({ roomCode, onBack }) {
       notify(`${participant.nickname} entrou na sala.`);
       if (isInVoiceRef.current) {
         upsertRemoteParticipants((voiceParticipants || [participant]).filter((item) => item.socketId !== socket.id));
-        const peer = createPeer(participant.socketId, false);
+        const peer = createPeer(participant.socketId, false, true);
         await sendOffer(participant.socketId, peer.pc);
         emitMediaStatus();
       }
@@ -227,7 +224,7 @@ export default function RoomPage({ roomCode, onBack }) {
       await setupLocalMedia();
       emitMediaStatus();
       participants.forEach((participant) => {
-        const peer = createPeer(participant.socketId, false);
+        const peer = createPeer(participant.socketId, false, true);
         sendOffer(participant.socketId, peer.pc);
       });
     });
@@ -238,7 +235,7 @@ export default function RoomPage({ roomCode, onBack }) {
       }
 
       upsertRemoteParticipants([participant]);
-      createPeer(participant.socketId, false);
+      createPeer(participant.socketId, false, false);
     });
 
     socket.on("voice-user-left", ({ participant }) => {
@@ -256,8 +253,10 @@ export default function RoomPage({ roomCode, onBack }) {
     socket.on("webrtc-offer", async ({ from, offer }) => {
       console.log("[WEBRTC] offer received", from);
       await setupLocalMedia();
-      const peer = createPeer(from, false);
+      const peer = createPeer(from, false, false);
       await peer.pc.setRemoteDescription(new RTCSessionDescription(offer));
+      refreshPeerTransceivers(peer, true);
+      syncLocalTracksToPeer(peer);
       await flushPendingIce(from);
       const answer = await peer.pc.createAnswer();
       await peer.pc.setLocalDescription(answer);
@@ -279,7 +278,7 @@ export default function RoomPage({ roomCode, onBack }) {
     socket.on("ice-candidate", async ({ from, candidate }) => {
       console.log("[WEBRTC] ICE candidate received", from);
       await setupLocalMedia();
-      const peer = peersRef.current.get(from) || createPeer(from, false);
+      const peer = peersRef.current.get(from) || createPeer(from, false, false);
 
       if (!peer.pc.remoteDescription) {
         const pending = pendingIceRef.current.get(from) || [];
@@ -389,7 +388,7 @@ export default function RoomPage({ roomCode, onBack }) {
     }
   }
 
-  function createPeer(remoteSocketId, shouldCreateOffer) {
+  function createPeer(remoteSocketId, shouldCreateOffer, createOfferTransceivers = true) {
     const existingPeer = peersRef.current.get(remoteSocketId);
 
     if (existingPeer) {
@@ -398,15 +397,19 @@ export default function RoomPage({ roomCode, onBack }) {
 
     console.log("[WEBRTC] creating peer", remoteSocketId);
     const pc = new RTCPeerConnection(iceConfigRef.current);
-    const audioTransceiver = pc.addTransceiver("audio", { direction: "sendrecv" });
-    const videoTransceiver = pc.addTransceiver("video", { direction: "sendrecv" });
     const peer = {
       pc,
-      audioSender: audioTransceiver.sender,
-      videoSender: videoTransceiver.sender
+      audioSender: null,
+      videoSender: null
     };
 
+    if (createOfferTransceivers) {
+      pc.addTransceiver("audio", { direction: "sendrecv" });
+      pc.addTransceiver("video", { direction: "sendrecv" });
+    }
+
     peersRef.current.set(remoteSocketId, peer);
+    refreshPeerTransceivers(peer, createOfferTransceivers);
     syncLocalTracksToPeer(peer);
 
     pc.onicecandidate = (event) => {
@@ -453,6 +456,23 @@ export default function RoomPage({ roomCode, onBack }) {
     }
 
     return peer;
+  }
+
+  function refreshPeerTransceivers(peer, makeSendRecv = false) {
+    const audioTransceiver = peer.pc.getTransceivers().find((transceiver) => (
+      transceiver.receiver.track?.kind === "audio" || transceiver.sender.track?.kind === "audio"
+    ));
+    const videoTransceiver = peer.pc.getTransceivers().find((transceiver) => (
+      transceiver.receiver.track?.kind === "video" || transceiver.sender.track?.kind === "video"
+    ));
+
+    if (makeSendRecv) {
+      if (audioTransceiver) audioTransceiver.direction = "sendrecv";
+      if (videoTransceiver) videoTransceiver.direction = "sendrecv";
+    }
+
+    peer.audioSender = audioTransceiver?.sender || null;
+    peer.videoSender = videoTransceiver?.sender || null;
   }
 
   async function sendOffer(remoteSocketId, pc) {
@@ -547,6 +567,14 @@ export default function RoomPage({ roomCode, onBack }) {
     peer.videoSender?.replaceTrack(videoTrack);
   }
 
+  function summarizeSdp(sdp = "") {
+    return ["audio", "video"].reduce((summary, kind) => {
+      const section = sdp.split("m=").find((part) => part.startsWith(`${kind} `)) || "";
+      summary[kind] = section.match(/a=(sendrecv|sendonly|recvonly|inactive)/)?.[1] || null;
+      return summary;
+    }, {});
+  }
+
   async function collectPeerDiagnostics(peerSocketId, peer) {
     const { pc } = peer;
     const stats = { audio: { outbound: {}, inbound: {} }, video: { outbound: {}, inbound: {} } };
@@ -592,6 +620,13 @@ export default function RoomPage({ roomCode, onBack }) {
       sender: transceiver.sender.track?.kind || null,
       receiver: transceiver.receiver.track?.kind || null
     }));
+    const audioTransceivers = transceivers.filter((transceiver) => transceiver.sender === "audio" || transceiver.receiver === "audio");
+    const videoTransceivers = transceivers.filter((transceiver) => transceiver.sender === "video" || transceiver.receiver === "video");
+    const warnings = [];
+    if (audioTransceivers.length > 1) warnings.push("DUPLICATE AUDIO TRANSCEIVER");
+    if (videoTransceivers.length > 1) warnings.push("DUPLICATE VIDEO TRANSCEIVER");
+    if (audioTransceivers.some((transceiver) => transceiver.currentDirection && transceiver.currentDirection !== "sendrecv")) warnings.push("AUDIO NOT SENDRECV");
+    if (videoTransceivers.some((transceiver) => transceiver.currentDirection && transceiver.currentDirection !== "sendrecv")) warnings.push("VIDEO NOT SENDRECV");
 
     return {
       peerSocketId,
@@ -603,6 +638,11 @@ export default function RoomPage({ roomCode, onBack }) {
       senders,
       receivers,
       transceivers,
+      warnings,
+      sdp: {
+        local: summarizeSdp(pc.localDescription?.sdp),
+        remote: summarizeSdp(pc.remoteDescription?.sdp)
+      },
       stats,
       audioElement: (() => {
         const audio = document.querySelector(`[data-audio-peer="${peerSocketId}"]`);
@@ -1098,7 +1138,7 @@ export default function RoomPage({ roomCode, onBack }) {
           <span>Peers: {rtcDiagnostics.length} | IDs: {Array.from(peersRef.current.keys()).join(", ") || "nenhum"}</span>
           {rtcDiagnostics.map((diagnostic) => (
             <details key={diagnostic.peerSocketId} open>
-              <summary>Peer {diagnostic.peerSocketId} | {diagnostic.connectionState} / {diagnostic.iceConnectionState}</summary>
+              <summary>Peer {diagnostic.peerSocketId} | {diagnostic.connectionState} / {diagnostic.iceConnectionState}{diagnostic.warnings.length ? ` | ${diagnostic.warnings.join(", ")}` : ""}</summary>
               <pre>{JSON.stringify(diagnostic, null, 2)}</pre>
             </details>
           ))}
