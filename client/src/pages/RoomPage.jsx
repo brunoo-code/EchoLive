@@ -16,6 +16,7 @@ import { getPeerConnectionConfig, SERVER_URL } from "../utils/webrtc.js";
 const NICKNAME_KEY = "echolive.nickname";
 const AUDIO_DEVICE_KEY = "echolive.audioDeviceId";
 const VIDEO_DEVICE_KEY = "echolive.videoDeviceId";
+const OUTPUT_DEVICE_KEY = "echolive.audioOutputDeviceId";
 const AVATAR_KEY = "echolive.avatarUrl";
 
 export default function RoomPage({ roomCode, onBack }) {
@@ -44,6 +45,7 @@ export default function RoomPage({ roomCode, onBack }) {
   const [devices, setDevices] = useState({ audio: [], video: [] });
   const [selectedAudioId, setSelectedAudioId] = useState(() => localStorage.getItem(AUDIO_DEVICE_KEY) || "");
   const [selectedVideoId, setSelectedVideoId] = useState(() => localStorage.getItem(VIDEO_DEVICE_KEY) || "");
+  const [selectedOutputId, setSelectedOutputId] = useState(() => localStorage.getItem(OUTPUT_DEVICE_KEY) || "");
   const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem(AVATAR_KEY) || "");
   const { toasts, notify } = useToasts();
 
@@ -211,8 +213,7 @@ export default function RoomPage({ roomCode, onBack }) {
       }
 
       upsertRemoteParticipants([participant]);
-      const peer = createPeer(participant.socketId, false);
-      await sendOffer(participant.socketId, peer.pc);
+      createPeer(participant.socketId, false);
     });
 
     socket.on("voice-user-left", ({ participant }) => {
@@ -374,17 +375,6 @@ export default function RoomPage({ roomCode, onBack }) {
     const pc = new RTCPeerConnection(iceConfigRef.current);
     const audioTransceiver = pc.addTransceiver("audio", { direction: "sendrecv" });
     const videoTransceiver = pc.addTransceiver("video", { direction: "sendrecv" });
-    const audioTrack = audioTrackRef.current;
-    const videoTrack = screenTrackRef.current || cameraTrackRef.current;
-
-    if (audioTrack) {
-      audioTransceiver.sender.replaceTrack(audioTrack);
-    }
-
-    if (videoTrack) {
-      videoTransceiver.sender.replaceTrack(videoTrack);
-    }
-
     const peer = {
       pc,
       audioSender: audioTransceiver.sender,
@@ -392,6 +382,7 @@ export default function RoomPage({ roomCode, onBack }) {
     };
 
     peersRef.current.set(remoteSocketId, peer);
+    syncLocalTracksToPeer(peer);
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -433,6 +424,11 @@ export default function RoomPage({ roomCode, onBack }) {
   async function sendOffer(remoteSocketId, pc) {
     if (pc.signalingState !== "stable") {
       return;
+    }
+
+    const peer = peersRef.current.get(remoteSocketId);
+    if (peer) {
+      syncLocalTracksToPeer(peer);
     }
 
     const offer = await pc.createOffer();
@@ -497,8 +493,24 @@ export default function RoomPage({ roomCode, onBack }) {
   function replaceSenderTrackForAll(kind, track) {
     peersRef.current.forEach((peer) => {
       const sender = kind === "audio" ? peer.audioSender : peer.videoSender;
-      sender.replaceTrack(track || null);
+      if (sender) {
+        sender.replaceTrack(track?.readyState === "live" ? track : null);
+      }
     });
+  }
+
+  function syncLocalTracksToPeer(peer) {
+    if (!peer) {
+      return;
+    }
+
+    const audioTrack = audioTrackRef.current?.readyState === "live" ? audioTrackRef.current : null;
+    const videoTrack = (screenTrackRef.current || cameraTrackRef.current)?.readyState === "live"
+      ? screenTrackRef.current || cameraTrackRef.current
+      : null;
+
+    peer.audioSender?.replaceTrack(audioTrack);
+    peer.videoSender?.replaceTrack(videoTrack);
   }
 
   async function toggleMicrophone() {
@@ -678,6 +690,7 @@ export default function RoomPage({ roomCode, onBack }) {
       const listedDevices = await navigator.mediaDevices.enumerateDevices();
       setDevices({
         audio: listedDevices.filter((device) => device.kind === "audioinput"),
+        output: listedDevices.filter((device) => device.kind === "audiooutput"),
         video: listedDevices.filter((device) => device.kind === "videoinput")
       });
       setIsDevicesModalOpen(true);
@@ -686,10 +699,12 @@ export default function RoomPage({ roomCode, onBack }) {
     }
   }
 
-  async function saveDevices({ audioId, videoId }) {
+  async function saveDevices({ audioId, outputId, videoId }) {
     setSelectedAudioId(audioId);
+    setSelectedOutputId(outputId);
     setSelectedVideoId(videoId);
     localStorage.setItem(AUDIO_DEVICE_KEY, audioId);
+    localStorage.setItem(OUTPUT_DEVICE_KEY, outputId);
     localStorage.setItem(VIDEO_DEVICE_KEY, videoId);
     setIsDevicesModalOpen(false);
 
@@ -972,7 +987,7 @@ export default function RoomPage({ roomCode, onBack }) {
       <ToastStack toasts={toasts} />
       <div className="audio-sinks" aria-hidden="true">
         {voiceParticipants.filter((participant) => !participant.isLocal && !callParticipants.some((visual) => visual.socketId === participant.socketId)).map((participant) => (
-          <AudioParticipant key={participant.socketId} stream={participant.stream} volume={participant.volume} />
+          <AudioParticipant key={participant.socketId} stream={participant.stream} volume={participant.volume} outputDeviceId={selectedOutputId} />
         ))}
       </div>
       <Sidebar
@@ -1033,6 +1048,7 @@ export default function RoomPage({ roomCode, onBack }) {
                 key={participant.socketId}
                 {...participant}
                 notify={notify}
+                outputDeviceId={selectedOutputId}
                 onVolumeChange={(volume) => changeRemoteVolume(participant.socketId, volume)}
               />
             ))}
@@ -1079,6 +1095,7 @@ export default function RoomPage({ roomCode, onBack }) {
         <DevicesModal
           devices={devices}
           selectedAudioId={selectedAudioId}
+          selectedOutputId={selectedOutputId}
           selectedVideoId={selectedVideoId}
           onClose={() => setIsDevicesModalOpen(false)}
           onSave={saveDevices}

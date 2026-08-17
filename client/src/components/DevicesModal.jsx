@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 
-export default function DevicesModal({ devices, selectedAudioId, selectedVideoId, onClose, onSave }) {
+export default function DevicesModal({ devices, selectedAudioId, selectedOutputId, selectedVideoId, onClose, onSave }) {
   const [audioId, setAudioId] = useState(selectedAudioId || "");
+  const [outputId, setOutputId] = useState(selectedOutputId || "");
   const [videoId, setVideoId] = useState(selectedVideoId || "");
 
   useEffect(() => {
     setAudioId(selectedAudioId || "");
+    setOutputId(selectedOutputId || "");
     setVideoId(selectedVideoId || "");
-  }, [selectedAudioId, selectedVideoId]);
+  }, [selectedAudioId, selectedOutputId, selectedVideoId]);
 
   function submit(event) {
     event.preventDefault();
-    onSave({ audioId, videoId });
+    onSave({ audioId, outputId, videoId });
   }
 
   return (
@@ -24,6 +26,13 @@ export default function DevicesModal({ devices, selectedAudioId, selectedVideoId
           <select value={audioId} onChange={(event) => setAudioId(event.target.value)}>
             <option value="">Padrao do navegador</option>
             {devices.audio.map((device) => <option key={device.deviceId} value={device.deviceId}>{device.label || "Microfone"}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span>Saida de audio</span>
+          <select value={outputId} onChange={(event) => setOutputId(event.target.value)}>
+            <option value="">Padrao do sistema</option>
+            {(devices.output || []).map((device) => <option key={device.deviceId} value={device.deviceId}>{device.label || "Saida de audio"}</option>)}
           </select>
         </label>
         <label className="field">

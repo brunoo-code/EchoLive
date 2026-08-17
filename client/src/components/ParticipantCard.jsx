@@ -11,6 +11,7 @@ export default function ParticipantCard({
   micEnabled,
   cameraEnabled,
   volume = 100,
+  outputDeviceId = "",
   onVolumeChange,
   notify
 }) {
@@ -28,6 +29,14 @@ export default function ParticipantCard({
       videoRef.current.volume = volume / 100;
     }
   }, [isLocal, volume]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || isLocal || typeof video.setSinkId !== "function") {
+      return;
+    }
+    video.setSinkId(outputDeviceId || "").catch(() => {});
+  }, [isLocal, outputDeviceId]);
 
   async function openFullscreen() {
     const target = videoRef.current || cardRef.current;
@@ -65,7 +74,7 @@ export default function ParticipantCard({
 
       <div className="video-frame">
         {stream ? (
-          <video ref={videoRef} autoPlay playsInline muted={isLocal} />
+          <video className={isScreenSharing ? "screen-video" : "camera-video"} ref={videoRef} autoPlay playsInline muted={isLocal} />
         ) : (
           <div className="video-placeholder">
             <div className="placeholder-avatar" aria-hidden="true">{avatarUrl ? <img src={avatarUrl} alt="" /> : nickname?.slice(0, 1).toUpperCase() || "?"}</div>

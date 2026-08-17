@@ -882,6 +882,7 @@ h2 {
 
 .participants-grid.count-1 {
   grid-template-columns: minmax(0, min(720px, 100%));
+  grid-auto-rows: minmax(280px, min(62vh, 520px));
   justify-content: center;
 }
 
@@ -902,6 +903,11 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--bg-card);
+}
+
+.participants-grid.count-1 .participant-card {
+  aspect-ratio: 16 / 9;
+  min-height: 280px;
 }
 
 .participant-card:hover {
@@ -1005,6 +1011,14 @@ video {
   display: block;
   object-fit: cover;
   background: #050812;
+}
+
+video.camera-video {
+  object-fit: cover;
+}
+
+video.screen-video {
+  object-fit: contain;
 }
 
 .video-placeholder {

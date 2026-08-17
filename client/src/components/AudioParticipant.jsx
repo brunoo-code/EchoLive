@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function AudioParticipant({ stream, volume = 100 }) {
+export default function AudioParticipant({ stream, volume = 100, outputDeviceId = "" }) {
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -17,6 +17,14 @@ export default function AudioParticipant({ stream, volume = 100 }) {
       audioRef.current.volume = volume / 100;
     }
   }, [volume]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || typeof audio.setSinkId !== "function") {
+      return;
+    }
+    audio.setSinkId(outputDeviceId || "").catch(() => {});
+  }, [outputDeviceId]);
 
   return <audio ref={audioRef} autoPlay muted={false} playsInline aria-hidden="true" />;
 }

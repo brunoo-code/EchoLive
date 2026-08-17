@@ -137,7 +137,7 @@ Essa reducao usa recursos nativos do navegador e pode reduzir ruido de teclado, 
 - `Sair voz` encerra apenas a midia e as conexoes WebRTC; o usuario continua online e pode usar o chat.
 - `Entrar voz` recria a captura e reconecta a voz sem duplicar o participante.
 - O indicador de fala usa um analisador local do navegador e transmite somente um estado booleano.
-- Microfone e camera podem ser escolhidos no menu de dispositivos; a preferencia fica em `localStorage`.
+- Microfone, saida de audio e camera podem ser escolhidos no menu de dispositivos; as preferencias ficam em `localStorage`. A saida usa `setSinkId` quando o navegador oferece suporte e cai no dispositivo padrao caso contrario.
 - O avatar local aceita PNG, JPG ou WEBP de ate 1 MB e tambem fica somente no navegador.
 
 ## Chat e uploads temporarios
