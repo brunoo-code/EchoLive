@@ -20,6 +20,7 @@ const OUTPUT_DEVICE_KEY = "echolive.audioOutputDeviceId";
 const AVATAR_KEY = "echolive.avatarUrl";
 
 export default function RoomPage({ roomCode, onBack }) {
+  const debugRtc = new URLSearchParams(window.location.search).get("debugRtc") === "1";
   const [nickname, setNickname] = useState(() => localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "");
   const [nicknameDraft, setNicknameDraft] = useState(() => localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "");
   const [hasJoined, setHasJoined] = useState(false);
@@ -41,6 +42,7 @@ export default function RoomPage({ roomCode, onBack }) {
   const [roomName, setRoomName] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("voice-general");
   const [messages, setMessages] = useState([]);
+  const [rtcDiagnostics, setRtcDiagnostics] = useState([]);
   const [isDevicesModalOpen, setIsDevicesModalOpen] = useState(false);
   const [devices, setDevices] = useState({ audio: [], video: [] });
   const [selectedAudioId, setSelectedAudioId] = useState(() => localStorage.getItem(AUDIO_DEVICE_KEY) || "");
@@ -102,6 +104,29 @@ export default function RoomPage({ roomCode, onBack }) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!debugRtc) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    async function refreshRtcDiagnostics() {
+      const diagnostics = await Promise.all(
+        Array.from(peersRef.current.entries()).map(([peerSocketId, peer]) => collectPeerDiagnostics(peerSocketId, peer))
+      );
+      if (!cancelled) {
+        setRtcDiagnostics(diagnostics);
+      }
+    }
+
+    refreshRtcDiagnostics();
+    const timer = window.setInterval(refreshRtcDiagnostics, 2500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [debugRtc, hasJoined]);
 
   async function enterRoom(rawNickname, lifecycleToken = lifecycleTokenRef.current) {
     const cleanNickname = rawNickname.trim().slice(0, 24);
@@ -394,6 +419,15 @@ export default function RoomPage({ roomCode, onBack }) {
     };
 
     pc.ontrack = (event) => {
+      if (debugRtc) {
+        console.debug("[RTC DEBUG] ontrack", {
+          peer: remoteSocketId,
+          kind: event.track.kind,
+          id: event.track.id,
+          readyState: event.track.readyState,
+          streams: event.streams.map((stream) => stream.getTracks().map((track) => ({ kind: track.kind, id: track.id })))
+        });
+      }
       const stream = remoteStreamsRef.current.get(remoteSocketId) || new MediaStream();
       if (!stream.getTracks().some((track) => track.id === event.track.id)) {
         stream.addTrack(event.track);
@@ -511,6 +545,79 @@ export default function RoomPage({ roomCode, onBack }) {
 
     peer.audioSender?.replaceTrack(audioTrack);
     peer.videoSender?.replaceTrack(videoTrack);
+  }
+
+  async function collectPeerDiagnostics(peerSocketId, peer) {
+    const { pc } = peer;
+    const stats = { audio: { outbound: {}, inbound: {} }, video: { outbound: {}, inbound: {} } };
+    const report = await pc.getStats().catch(() => null);
+
+    report?.forEach((entry) => {
+      if (entry.type !== "outbound-rtp" && entry.type !== "inbound-rtp") {
+        return;
+      }
+      const kind = entry.kind || entry.mediaType;
+      if (kind !== "audio" && kind !== "video") {
+        return;
+      }
+      const direction = entry.type === "outbound-rtp" ? "outbound" : "inbound";
+      stats[kind][direction] = {
+        packetsSent: entry.packetsSent,
+        bytesSent: entry.bytesSent,
+        packetsReceived: entry.packetsReceived,
+        bytesReceived: entry.bytesReceived,
+        framesEncoded: entry.framesEncoded,
+        framesDecoded: entry.framesDecoded
+      };
+    });
+
+    const localTracks = [audioTrackRef.current, cameraTrackRef.current, screenTrackRef.current]
+      .filter(Boolean)
+      .map((track) => ({ kind: track.kind, id: track.id, enabled: track.enabled, muted: track.muted, readyState: track.readyState }));
+    const senders = pc.getSenders().map((sender) => ({
+      kind: sender.track?.kind || null,
+      id: sender.track?.id || null,
+      enabled: sender.track?.enabled ?? null,
+      readyState: sender.track?.readyState || null
+    }));
+    const receivers = pc.getReceivers().map((receiver) => ({
+      kind: receiver.track?.kind || null,
+      id: receiver.track?.id || null,
+      readyState: receiver.track?.readyState || null
+    }));
+    const transceivers = pc.getTransceivers().map((transceiver) => ({
+      mid: transceiver.mid,
+      direction: transceiver.direction,
+      currentDirection: transceiver.currentDirection,
+      sender: transceiver.sender.track?.kind || null,
+      receiver: transceiver.receiver.track?.kind || null
+    }));
+
+    return {
+      peerSocketId,
+      signalingState: pc.signalingState,
+      connectionState: pc.connectionState,
+      iceConnectionState: pc.iceConnectionState,
+      iceGatheringState: pc.iceGatheringState,
+      localTracks,
+      senders,
+      receivers,
+      transceivers,
+      stats,
+      audioElement: (() => {
+        const audio = document.querySelector(`[data-audio-peer="${peerSocketId}"]`);
+        return audio ? { hasSrcObject: Boolean(audio.srcObject), muted: audio.muted, volume: audio.volume, paused: audio.paused } : null;
+      })(),
+      videoElements: Array.from(document.querySelectorAll(`[data-video-peer="${peerSocketId}"]`)).map((video) => ({
+        hasSrcObject: Boolean(video.srcObject), muted: video.muted, volume: video.volume, paused: video.paused, readyState: video.readyState
+      })),
+      remoteStreamTracks: remoteStreamsRef.current.get(peerSocketId)?.getTracks().map((track) => ({
+        kind: track.kind,
+        id: track.id,
+        readyState: track.readyState,
+        muted: track.muted
+      })) || []
+    };
   }
 
   async function toggleMicrophone() {
@@ -985,9 +1092,21 @@ export default function RoomPage({ roomCode, onBack }) {
   return (
     <main className="page room-page app-shell">
       <ToastStack toasts={toasts} />
+      {debugRtc && (
+        <aside className="rtc-debug-panel" aria-label="Diagnostico WebRTC">
+          <strong>RTC DEBUG</strong>
+          <span>Peers: {rtcDiagnostics.length} | IDs: {Array.from(peersRef.current.keys()).join(", ") || "nenhum"}</span>
+          {rtcDiagnostics.map((diagnostic) => (
+            <details key={diagnostic.peerSocketId} open>
+              <summary>Peer {diagnostic.peerSocketId} | {diagnostic.connectionState} / {diagnostic.iceConnectionState}</summary>
+              <pre>{JSON.stringify(diagnostic, null, 2)}</pre>
+            </details>
+          ))}
+        </aside>
+      )}
       <div className="audio-sinks" aria-hidden="true">
         {voiceParticipants.filter((participant) => !participant.isLocal && !callParticipants.some((visual) => visual.socketId === participant.socketId)).map((participant) => (
-          <AudioParticipant key={participant.socketId} stream={participant.stream} volume={participant.volume} outputDeviceId={selectedOutputId} />
+          <AudioParticipant key={participant.socketId} peerSocketId={participant.socketId} stream={participant.stream} volume={participant.volume} outputDeviceId={selectedOutputId} />
         ))}
       </div>
       <Sidebar

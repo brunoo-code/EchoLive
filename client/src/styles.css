@@ -277,6 +277,45 @@ h2 {
   pointer-events: none;
 }
 
+.rtc-debug-panel {
+  position: fixed;
+  z-index: 30;
+  top: 12px;
+  right: 12px;
+  width: min(440px, calc(100vw - 24px));
+  max-height: min(76vh, 720px);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid rgba(250, 204, 21, 0.55);
+  border-radius: 8px;
+  color: #fef9c3;
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.rtc-debug-panel > span,
+.rtc-debug-panel summary {
+  display: block;
+  margin-top: 5px;
+  color: #cbd5e1;
+}
+
+.rtc-debug-panel details {
+  margin-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  padding-top: 6px;
+}
+
+.rtc-debug-panel pre {
+  max-width: 100%;
+  overflow: auto;
+  margin: 6px 0 0;
+  color: #dbeafe;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .app-sidebar,
 .participants-panel,
 .call-stage {

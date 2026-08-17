@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function AudioParticipant({ stream, volume = 100, outputDeviceId = "" }) {
+export default function AudioParticipant({ peerSocketId, stream, volume = 100, outputDeviceId = "" }) {
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -26,5 +26,5 @@ export default function AudioParticipant({ stream, volume = 100, outputDeviceId 
     audio.setSinkId(outputDeviceId || "").catch(() => {});
   }, [outputDeviceId]);
 
-  return <audio ref={audioRef} autoPlay muted={false} playsInline aria-hidden="true" />;
+  return <audio ref={audioRef} data-audio-peer={peerSocketId} autoPlay muted={false} playsInline aria-hidden="true" />;
 }

@@ -74,7 +74,7 @@ export default function ParticipantCard({
 
       <div className="video-frame">
         {stream ? (
-          <video className={isScreenSharing ? "screen-video" : "camera-video"} ref={videoRef} autoPlay playsInline muted={isLocal} />
+          <video className={isScreenSharing ? "screen-video" : "camera-video"} data-video-peer={socketId} ref={videoRef} autoPlay playsInline muted={isLocal} />
         ) : (
           <div className="video-placeholder">
             <div className="placeholder-avatar" aria-hidden="true">{avatarUrl ? <img src={avatarUrl} alt="" /> : nickname?.slice(0, 1).toUpperCase() || "?"}</div>
