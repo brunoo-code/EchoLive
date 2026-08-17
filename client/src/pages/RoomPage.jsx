@@ -18,6 +18,11 @@ const AUDIO_DEVICE_KEY = "echolive.audioDeviceId";
 const VIDEO_DEVICE_KEY = "echolive.videoDeviceId";
 const OUTPUT_DEVICE_KEY = "echolive.audioOutputDeviceId";
 const AVATAR_KEY = "echolive.avatarUrl";
+const SCREEN_SHARE_CONSTRAINTS = {
+  width: { ideal: 1280 },
+  height: { ideal: 720 },
+  frameRate: { ideal: 30, max: 30 }
+};
 
 export default function RoomPage({ roomCode, onBack }) {
   const debugRtc = new URLSearchParams(window.location.search).get("debugRtc") === "1";
@@ -74,6 +79,7 @@ export default function RoomPage({ roomCode, onBack }) {
   const speechSourceRef = useRef(null);
   const speechFrameRef = useRef(null);
   const isInVoiceRef = useRef(true);
+  const statsHistoryRef = useRef(new Map());
 
   const inviteLink = useMemo(() => `${window.location.origin}/room/${roomCode}`, [roomCode]);
 
@@ -553,6 +559,50 @@ export default function RoomPage({ roomCode, onBack }) {
     });
   }
 
+  function getScreenBitrate(peerCount) {
+    if (peerCount <= 1) return 3_500_000;
+    if (peerCount === 2) return 3_000_000;
+    if (peerCount === 3) return 2_500_000;
+    return 2_000_000;
+  }
+
+  async function configureVideoSender(sender, mode, peerCount) {
+    if (!sender) {
+      return;
+    }
+
+    const parameters = sender.getParameters?.();
+    if (!parameters) {
+      return;
+    }
+
+    if (!parameters.encodings?.length) {
+      parameters.encodings = [{}];
+    }
+
+    const encoding = parameters.encodings[0];
+    if (mode === "screen") {
+      encoding.maxBitrate = getScreenBitrate(peerCount);
+      encoding.maxFramerate = 30;
+    } else {
+      delete encoding.maxBitrate;
+      delete encoding.maxFramerate;
+    }
+
+    await sender.setParameters(parameters).catch(() => {});
+  }
+
+  async function replaceVideoTrackForAllPeers(track, mode = "camera") {
+    const peers = Array.from(peersRef.current.values());
+    await Promise.all(peers.map(async (peer) => {
+      if (!peer.videoSender) {
+        return;
+      }
+      await peer.videoSender.replaceTrack(track?.readyState === "live" ? track : null);
+      await configureVideoSender(peer.videoSender, mode, peers.length);
+    }));
+  }
+
   function syncLocalTracksToPeer(peer) {
     if (!peer) {
       return;
@@ -589,15 +639,41 @@ export default function RoomPage({ roomCode, onBack }) {
         return;
       }
       const direction = entry.type === "outbound-rtp" ? "outbound" : "inbound";
-      stats[kind][direction] = {
+      const current = {
         packetsSent: entry.packetsSent,
         bytesSent: entry.bytesSent,
         packetsReceived: entry.packetsReceived,
         bytesReceived: entry.bytesReceived,
         framesEncoded: entry.framesEncoded,
-        framesDecoded: entry.framesDecoded
+        framesDecoded: entry.framesDecoded,
+        framesPerSecond: entry.framesPerSecond,
+        frameWidth: entry.frameWidth,
+        frameHeight: entry.frameHeight,
+        qualityLimitationReason: entry.qualityLimitationReason,
+        qualityLimitationDurations: entry.qualityLimitationDurations,
+        nackCount: entry.nackCount,
+        pliCount: entry.pliCount,
+        firCount: entry.firCount,
+        packetsLost: entry.packetsLost,
+        jitter: entry.jitter
       };
+      const historyKey = `${peerSocketId}:${kind}:${direction}`;
+      const previous = statsHistoryRef.current.get(historyKey);
+      const now = performance.now();
+      if (previous) {
+        const elapsedSeconds = Math.max((now - previous.time) / 1000, 0.001);
+        const bytesKey = direction === "outbound" ? "bytesSent" : "bytesReceived";
+        const framesKey = direction === "outbound" ? "framesEncoded" : "framesDecoded";
+        current.bitrateMbps = Math.max(0, (Number(current[bytesKey] || 0) - Number(previous.stats[bytesKey] || 0)) * 8 / elapsedSeconds / 1_000_000);
+        current.calculatedFps = Math.max(0, (Number(current[framesKey] || 0) - Number(previous.stats[framesKey] || 0)) / elapsedSeconds);
+      }
+      statsHistoryRef.current.set(historyKey, { time: now, stats: current });
+      stats[kind][direction] = current;
     });
+
+    const candidatePair = Array.from(report?.values?.() || []).find((entry) => (
+      entry.type === "candidate-pair" && entry.state === "succeeded" && (entry.nominated || entry.selected)
+    ));
 
     const localTracks = [audioTrackRef.current, cameraTrackRef.current, screenTrackRef.current]
       .filter(Boolean)
@@ -644,6 +720,14 @@ export default function RoomPage({ roomCode, onBack }) {
         remote: summarizeSdp(pc.remoteDescription?.sdp)
       },
       stats,
+      network: candidatePair ? {
+        currentRoundTripTime: candidatePair.currentRoundTripTime,
+        availableOutgoingBitrate: candidatePair.availableOutgoingBitrate,
+        availableIncomingBitrate: candidatePair.availableIncomingBitrate,
+        bytesSent: candidatePair.bytesSent,
+        bytesReceived: candidatePair.bytesReceived
+      } : null,
+      screenTrackSettings: screenTrackRef.current?.getSettings?.() || null,
       audioElement: (() => {
         const audio = document.querySelector(`[data-audio-peer="${peerSocketId}"]`);
         return audio ? { hasSrcObject: Boolean(audio.srcObject), muted: audio.muted, volume: audio.volume, paused: audio.paused } : null;
@@ -715,19 +799,33 @@ export default function RoomPage({ roomCode, onBack }) {
 
   async function toggleScreenShare() {
     if (screenTrackRef.current) {
-      stopScreenShare(true);
+      await stopScreenShare(true);
       return;
     }
 
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      let screenStream;
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: SCREEN_SHARE_CONSTRAINTS, audio: false });
+      } catch {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      }
       const screenTrack = screenStream.getVideoTracks()[0];
+
+      if (!screenTrack) {
+        throw new Error("Screen track unavailable");
+      }
+
+      screenTrack.contentHint = "motion";
+      if (screenTrack.applyConstraints) {
+        await screenTrack.applyConstraints(SCREEN_SHARE_CONSTRAINTS).catch(() => {});
+      }
 
       screenStreamRef.current = screenStream;
       screenTrackRef.current = screenTrack;
-      screenTrack.onended = () => stopScreenShare(false);
+      screenTrack.onended = () => { void stopScreenShare(false); };
 
-      replaceSenderTrackForAll("video", screenTrack);
+      await replaceVideoTrackForAllPeers(screenTrack, "screen");
       setDisplayStream(screenStream);
       updateScreenSharing(true);
       socketRef.current?.emit("screen-share-status", { isScreenSharing: true });
@@ -738,7 +836,7 @@ export default function RoomPage({ roomCode, onBack }) {
     }
   }
 
-  function stopScreenShare(stopTracks) {
+  async function stopScreenShare(stopTracks) {
     if (!screenTrackRef.current) {
       return;
     }
@@ -752,7 +850,7 @@ export default function RoomPage({ roomCode, onBack }) {
 
     const cameraTrack = cameraTrackRef.current;
     const shouldRestoreCamera = Boolean(cameraTrack && cameraTrack.readyState === "live" && cameraTrack.enabled);
-    replaceSenderTrackForAll("video", shouldRestoreCamera ? cameraTrack : null);
+    await replaceVideoTrackForAllPeers(shouldRestoreCamera ? cameraTrack : null, "camera");
     setDisplayStream(shouldRestoreCamera ? localStreamRef.current : null);
     updateScreenSharing(false);
     socketRef.current?.emit("screen-share-status", { isScreenSharing: false });
