@@ -1,5 +1,6 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import BrandMark from "./BrandMark.jsx";
+import Icon from "./Icon.jsx";
 import { useState } from "react";
 
 export default function Sidebar({
@@ -46,7 +47,7 @@ export default function Sidebar({
   return (
     <aside className="app-sidebar" aria-label="Informacoes da sala">
       <div className="brand-block">
-        <div className="brand-mark" aria-hidden="true"><BrandMark size={28} /></div>
+        <div className="brand-mark" aria-hidden="true"><BrandMark size={30} /></div>
         <div>
           <strong>EchoLive</strong>
           <span>Sua call privada</span>
@@ -54,7 +55,7 @@ export default function Sidebar({
       </div>
 
       <section className="sidebar-section room-section">
-        <div className="room-section-heading"><p className="section-label">Sala atual</p><button type="button" className="room-menu-trigger" onClick={() => setIsRoomMenuOpen((value) => !value)} title="Acoes da sala" aria-label="Acoes da sala">...</button></div>
+        <div className="room-section-heading"><p className="section-label">Sala atual</p><button type="button" className="room-menu-trigger" onClick={() => setIsRoomMenuOpen((value) => !value)} title="Acoes da sala" aria-label="Acoes da sala"><Icon name="more" size={17} /></button></div>
         <div className="room-name-line" title={roomName || `Sala ${roomCode}`}>{roomName || `Sala ${roomCode}`}</div>
         <div className="room-code-line"><span>Codigo</span><strong title={roomCode}>{roomCode}</strong></div>
         <p className="sidebar-count">
@@ -66,7 +67,7 @@ export default function Sidebar({
             <input readOnly value={copyFallbackLink} onFocus={(event) => event.target.select()} />
           </label>
         )}
-        {isRoomMenuOpen && <div className="room-context-menu" role="menu"><button type="button" onClick={() => { onCopyInvite(); setIsRoomMenuOpen(false); }}>Copiar convite</button><button type="button" onClick={copyRoomCode}>Copiar codigo</button><button type="button" onClick={onLeaveRoom} className="danger-menu-item">Sair da sala</button></div>}
+        {isRoomMenuOpen && <div className="room-context-menu" role="menu"><button type="button" onClick={() => { onCopyInvite(); setIsRoomMenuOpen(false); }}><Icon name="link" size={15} />Copiar convite</button><button type="button" onClick={copyRoomCode}><Icon name="code" size={15} />Copiar codigo</button><button type="button" onClick={onLeaveRoom} className="danger-menu-item"><Icon name="leave" size={15} />Sair da sala</button></div>}
       </section>
 
       <section className="sidebar-section channel-section">
@@ -76,7 +77,7 @@ export default function Sidebar({
           className={`channel-button ${selectedChannel === "text-general" ? "is-selected" : ""}`}
           onClick={() => onSelectChannel("text-general")}
         >
-          <span className="channel-icon" aria-hidden="true">#</span>
+          <span className="channel-icon channel-hash" aria-hidden="true">#</span>
           <strong>geral</strong>
         </button>
 
@@ -86,7 +87,7 @@ export default function Sidebar({
           className={`channel-button ${selectedChannel === "voice-general" ? "is-selected" : ""}`}
           onClick={() => onSelectChannel("voice-general")}
         >
-          <span className="channel-icon sound-wave-icon" aria-hidden="true" />
+          <span className="channel-icon" aria-hidden="true"><Icon name="voice" size={16} /></span>
           <strong>Geral</strong>
           <span className="channel-count">{participants.length}</span>
         </button>
@@ -94,11 +95,11 @@ export default function Sidebar({
           {participants.map((participant) => (
             <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
               <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}<UserStatusBadge status={participant.status} size="sm" /></span>
-              <span className="member-name" title={participant.nickname}>{participant.nickname}</span>
+              <span className="member-name" title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</span>
               <span className="member-status" aria-label="Status de midia">
-                <i className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}>mic</i>
-                <i className={`status-icon status-camera ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"} aria-label={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}>cam</i>
-                {participant.isScreenSharing && <i className="status-icon status-screen is-sharing" title="Compartilhando tela" aria-label="Compartilhando tela">tela</i>}
+                <i className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}><Icon name="mic" size={14} /></i>
+                <i className={`status-icon status-camera ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"} aria-label={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}><Icon name="camera" size={14} /></i>
+                {participant.isScreenSharing && <i className="status-icon status-screen is-sharing" title="Compartilhando tela" aria-label="Compartilhando tela"><Icon name="screen" size={14} /></i>}
               </span>
             </div>
           ))}
@@ -107,9 +108,7 @@ export default function Sidebar({
 
       <div className="sidebar-lower-region">
         <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">
-          <div className="connected-voice-heading"><span className="voice-live-dot" aria-hidden="true" /> <strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong>{isInVoice && <span className="connection-quality">{connectionQuality}</span>}</div>
-          <span className="connected-voice-channel">Geral</span>
-          {isInVoice && <button type="button" className="connected-leave" onClick={onLeaveVoice} title="Sair da voz" aria-label="Sair da voz">Sair da voz</button>}
+          <div className="connected-voice-heading"><span className="voice-state-icon" aria-hidden="true"><Icon name={isInVoice ? "voice" : "headphones"} size={16} /></span><span className="connected-voice-copy"><strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong><span className="connected-voice-channel">Geral</span></span>{isInVoice && <span className="connection-quality" title={`Qualidade da conexao: ${connectionQuality}`}><i aria-hidden="true" />{connectionQuality}</span>}{isInVoice ? <button type="button" className="connected-voice-action" onClick={onLeaveVoice} title="Sair da voz" aria-label="Sair da voz"><Icon name="leave" size={15} /></button> : <button type="button" className="connected-voice-action" onClick={onJoinVoice} title="Entrar na voz" aria-label="Entrar na voz"><Icon name="voice" size={15} /></button>}</div>
         </section>
 
         <footer className="sidebar-user-footer">
@@ -124,9 +123,9 @@ export default function Sidebar({
           </div>
         </button>
         <div className="sidebar-user-controls" aria-label="Controles do usuario">
-          {isInVoice ? <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} title={micEnabled ? "Desligar microfone" : "Ligar microfone"} aria-label={micEnabled ? "Desligar microfone" : "Ligar microfone"}>mic</button> : <span />}
-          {isInVoice ? <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} title={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}>audio</button> : <span />}
-          {isInVoice ? <button type="button" className={`control-glyph ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} title={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"}>cam</button> : <span />}
+          {isInVoice ? <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} title={micEnabled ? "Desligar microfone" : "Ligar microfone"} aria-label={micEnabled ? "Desligar microfone" : "Ligar microfone"}><Icon name="mic" size={16} /></button> : <span />}
+          {isInVoice ? <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} title={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}><Icon name="headphones" size={16} /></button> : <span />}
+          {isInVoice ? <button type="button" className={`control-glyph ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} title={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"}><Icon name="camera" size={16} /></button> : <span />}
         </div>
         </footer>
       </div>

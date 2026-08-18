@@ -12,6 +12,7 @@ import Sidebar from "../components/Sidebar.jsx";
 import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
 import RoomRail from "../components/RoomRail.jsx";
 import ProfilePopover from "../components/ProfilePopover.jsx";
+import Icon from "../components/Icon.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
 import { requestInitialMedia, requestSingleKind, stopStream } from "../utils/media.js";
@@ -1534,7 +1535,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
 
         {!isInVoice ? (
           <section className="empty-call-state">
-            <div className="empty-call-icon" aria-hidden="true">VOL</div>
+            <div className="empty-call-icon" aria-hidden="true"><Icon name="voice" size={22} /></div>
             <strong>Voce saiu da voz.</strong>
             <span>O chat continua disponivel enquanto voce estiver online na sala.</span>
             <button type="button" className="small-button" onClick={joinVoiceChannel}>Entrar na voz</button>

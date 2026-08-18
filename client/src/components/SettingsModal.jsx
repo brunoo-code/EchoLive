@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import UserStatusBadge from "./UserStatusBadge.jsx";
+import Icon from "./Icon.jsx";
 
 const sections = ["profile", "account", "voice", "appearance", "preferences"];
 const labels = { profile: "Perfil", account: "Conta", voice: "Voz e video", appearance: "Aparencia", preferences: "Preferencias" };
@@ -40,9 +41,9 @@ export default function SettingsModal({ initialSection = "profile", theme, onThe
 
   return <div className="modal-backdrop" role="presentation">
     <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <header className="settings-header"><div><p className="section-label">Preferencias</p><h2 id="settings-title">Configuracoes</h2></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar configuracoes">x</button></header>
+      <header className="settings-header"><div><p className="section-label">Preferencias</p><h2 id="settings-title">Configuracoes</h2></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar configuracoes" title="Fechar"><Icon name="close" size={17} /></button></header>
       <div className="settings-layout">
-        <nav className="settings-nav" aria-label="Secoes de configuracoes">{sections.map((section) => <button type="button" key={section} className={active === section ? "settings-nav-active" : ""} onClick={() => setActive(section)}><span className={`settings-nav-icon settings-nav-icon-${section}`} aria-hidden="true" /><span className="settings-nav-copy"><strong>{labels[section]}</strong><small>{descriptions[section]}</small></span></button>)}</nav>
+        <nav className="settings-nav" aria-label="Secoes de configuracoes">{sections.map((section) => <button type="button" key={section} className={active === section ? "settings-nav-active" : ""} onClick={() => setActive(section)}><span className="settings-nav-icon" aria-hidden="true"><Icon name={section === "profile" ? "user" : section === "account" ? "account" : section === "voice" ? "voice" : section === "appearance" ? "palette" : "sliders"} size={16} /></span><span className="settings-nav-copy"><strong>{labels[section]}</strong><small>{descriptions[section]}</small></span></button>)}</nav>
         <div className="settings-content">
           {active === "profile" && <section className="settings-section">
             <h3>Perfil</h3>

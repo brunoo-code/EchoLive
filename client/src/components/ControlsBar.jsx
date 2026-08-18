@@ -1,3 +1,5 @@
+import Icon from "./Icon.jsx";
+
 export default function ControlsBar({
   isScreenSharing,
   onToggleScreenShare
@@ -10,7 +12,7 @@ export default function ControlsBar({
         onClick={onToggleScreenShare}
         aria-label={isScreenSharing ? "Parar compartilhamento" : "Compartilhar tela"}
       >
-        <span className="control-icon" aria-hidden="true">Tela</span>
+        <span className="control-icon" aria-hidden="true"><Icon name="screen" size={15} /></span>
         <span>{isScreenSharing ? "Parar tela" : "Compartilhar"}</span>
       </button>
     </footer>

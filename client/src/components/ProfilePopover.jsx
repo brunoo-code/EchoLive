@@ -1,4 +1,5 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
+import Icon from "./Icon.jsx";
 
 export default function ProfilePopover({ profile, nickname, avatarUrl, onStatusChange, onEditProfile, onOpenSettings, onClose }) {
   const displayName = profile.displayName || nickname || "Usuario";
@@ -10,9 +11,9 @@ export default function ProfilePopover({ profile, nickname, avatarUrl, onStatusC
       <div className="profile-popover-identity"><strong title={displayName}>{displayName}</strong><span>@{nickname || "nickname"}</span><small title={profile.customStatus || ""}>{profile.customStatus || (currentStatus === "dnd" ? "Nao perturbe" : "Online")}</small></div>
     </div>
     <div className="profile-status-options" aria-label="Status do perfil">
-      <button type="button" className={currentStatus === "online" ? "is-selected" : ""} onClick={() => onStatusChange("online")}><UserStatusBadge status="online" size="sm" />Online</button>
-      <button type="button" className={currentStatus === "dnd" ? "is-selected" : ""} onClick={() => onStatusChange("dnd")}><UserStatusBadge status="dnd" size="sm" />Nao perturbe</button>
+      <button type="button" className={currentStatus === "online" ? "is-selected" : ""} onClick={() => onStatusChange("online")}><UserStatusBadge status="online" size="sm" /><span>Online</span>{currentStatus === "online" && <Icon name="check" size={14} />}</button>
+      <button type="button" className={currentStatus === "dnd" ? "is-selected" : ""} onClick={() => onStatusChange("dnd")}><UserStatusBadge status="dnd" size="sm" /><span>Nao perturbe</span>{currentStatus === "dnd" && <Icon name="check" size={14} />}</button>
     </div>
-    <div className="profile-popover-actions"><button type="button" onClick={onEditProfile}>Editar perfil</button><button type="button" onClick={onOpenSettings}>Configuracoes</button></div>
+    <div className="profile-popover-actions"><button type="button" onClick={onEditProfile}><Icon name="edit" size={15} /><span>Editar perfil</span></button><button type="button" onClick={onOpenSettings}><Icon name="settings" size={15} /><span>Configuracoes</span></button></div>
   </section>;
 }

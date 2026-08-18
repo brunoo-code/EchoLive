@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SERVER_URL } from "../utils/webrtc.js";
 import { playUiSound } from "../utils/uiSounds.js";
+import Icon from "./Icon.jsx";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const ACCEPTED_TYPES = new Set([
@@ -180,7 +181,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
         {selectedFile && (
           <div className="selected-file">
             <span>{selectedFile.name} ({formatSize(selectedFile.size)})</span>
-            <button type="button" onClick={() => setSelectedFile(null)} aria-label="Remover anexo">x</button>
+            <button type="button" onClick={() => setSelectedFile(null)} aria-label="Remover anexo" title="Remover anexo"><Icon name="close" size={14} /></button>
           </div>
         )}
         <div className="composer-row">
