@@ -272,8 +272,8 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           </div>
         )}
         <div className="composer-row">
-          <button type="button" className="attach-button" onClick={() => fileInputRef.current?.click()} disabled={isSending}>
-            Anexar
+          <button type="button" className="attach-button" onClick={() => fileInputRef.current?.click()} disabled={isSending} title="Anexar arquivo" aria-label="Anexar arquivo">
+            <Icon name="plus" size={17} />
           </button>
           <input
             ref={fileInputRef}

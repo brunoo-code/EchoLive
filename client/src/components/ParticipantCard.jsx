@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import Icon from "./Icon.jsx";
 
 export default function ParticipantCard({
   socketId,
@@ -90,9 +91,9 @@ export default function ParticipantCard({
       </div>
 
       <div className="participant-actions">
-        <div className="media-status-row">
-          {typeof micEnabled === "boolean" && <span className={micEnabled ? "status-on" : "status-off"}>{micEnabled ? "Microfone" : "Microfone desligado"}</span>}
-          {typeof cameraEnabled === "boolean" && <span className={cameraEnabled ? "status-on" : "status-off"}>{cameraEnabled ? "Camera" : "Camera desligada"}</span>}
+        <div className="media-status-row" aria-label="Status de midia">
+          {typeof micEnabled === "boolean" && <span className={`status-icon status-mic ${micEnabled ? "status-on" : "status-off"}`} title={micEnabled ? "Microfone ligado" : "Microfone desligado"} aria-label={micEnabled ? "Microfone ligado" : "Microfone desligado"}><Icon name={micEnabled ? "mic" : "micOff"} size={14} /></span>}
+          {typeof cameraEnabled === "boolean" && <span className={`status-icon status-camera ${cameraEnabled ? "status-on" : "status-off"}`} title={cameraEnabled ? "Camera ligada" : "Camera desligada"} aria-label={cameraEnabled ? "Camera ligada" : "Camera desligada"}><Icon name={cameraEnabled ? "camera" : "cameraOff"} size={14} /></span>}
         </div>
         {!isLocal && (
           <label className="volume-control">

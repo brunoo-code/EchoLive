@@ -15,14 +15,22 @@ async function readResponse(response) {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`${SERVER_URL}${path}`, {
-    ...options,
-    credentials: "include",
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.headers || {})
-    }
-  });
+  let response;
+  try {
+    response = await fetch(`${SERVER_URL}${path}`, {
+      ...options,
+      credentials: "include",
+      headers: {
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(options.headers || {})
+      }
+    });
+  } catch (error) {
+    const networkError = new Error("Nao foi possivel conectar ao servidor de contas.");
+    networkError.code = "AUTH_NETWORK_ERROR";
+    networkError.cause = error;
+    throw networkError;
+  }
   return readResponse(response);
 }
 
@@ -39,7 +47,7 @@ export function AuthProvider({ children }) {
       setStatus(data.user ? "authenticated" : "guest");
       return data.user || null;
     } catch (error) {
-      if (error.code === "AUTH_UNAVAILABLE" || error.status === 503) {
+      if (error.code === "AUTH_UNAVAILABLE" || error.code === "AUTH_NETWORK_ERROR" || error.status === 503) {
         setAvailability("unavailable");
       }
       setUser(null);
