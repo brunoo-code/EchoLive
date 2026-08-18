@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Icon from "../components/Icon.jsx";
+import SocialRail from "../components/SocialRail.jsx";
 import SocialSidebar, { Avatar } from "../components/SocialSidebar.jsx";
 import SocialEmptyState from "../components/SocialEmptyState.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
@@ -56,6 +57,7 @@ export default function DirectMessagePage({ conversationId, onNavigateHome, onNa
     socket.on("dm:typing", handleTyping);
     return () => {
       active = false;
+      window.clearTimeout(typingTimerRef.current);
       socket.emit("dm:leave", { conversationId });
       socket.off("dm:new-message", handleMessage);
       socket.off("dm:typing", handleTyping);
@@ -87,6 +89,13 @@ export default function DirectMessagePage({ conversationId, onNavigateHome, onNa
     });
   }
 
+  function handleComposerKeyDown(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage(event);
+    }
+  }
+
   async function loadOlder() {
     const first = messages[0];
     if (!first || !hasMore) return;
@@ -95,14 +104,14 @@ export default function DirectMessagePage({ conversationId, onNavigateHome, onNa
     setHasMore(Boolean(data.hasMore));
   }
 
-  if (!otherUser && socialStatus !== "ready" && socialStatus !== "error") return <main className="page social-page"><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
-  if (!otherUser) return <main className="page social-page"><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
+  if (!otherUser && socialStatus !== "ready" && socialStatus !== "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
+  if (!otherUser) return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
 
-  return <main className="page social-page"><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} /><section className="dm-content"><header className="dm-header"><Avatar user={otherUser} size={38} /><div><strong>{otherUser.displayName || otherUser.username}</strong><small>@{otherUser.username} · {isOnline ? "Online" : "Offline"}</small></div><span className={isOnline ? "dm-status is-online" : "dm-status"}>{isOnline ? "Online" : "Offline"}</span></header><div className="dm-messages">{hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}{loading ? <p className="dm-loading">Carregando conversa...</p> : messages.length ? messages.map((message) => <Message key={message.id} message={message} mine={message.senderUserId === user.id} />) : <div className="dm-intro"><Avatar user={otherUser} size={76} /><h2>{otherUser.displayName || otherUser.username}</h2><p>@{otherUser.username}</p><span>Este e o comeco da sua conversa.</span></div>}{typing && <div className="dm-typing"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div>}<div ref={bottomRef} /></div>{error && <p className="social-feedback is-error dm-error">{error}</p>}<form className="dm-composer" onSubmit={sendMessage}><label className="sr-only" htmlFor="dm-message">Mensagem</label><input id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} maxLength={4000} placeholder={`Conversar com ${otherUser.displayName || otherUser.username}`} /><button type="submit" className="primary-button" disabled={!text.trim() || sending} aria-label="Enviar mensagem"><Icon name="link" size={16} /></button></form></section></main>;
+  return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><header className="dm-header"><Avatar user={otherUser} size={38} /><div><strong>{otherUser.displayName || otherUser.username}</strong><small>@{otherUser.username} · {isOnline ? "Online" : "Offline"}</small></div><span className={isOnline ? "dm-status is-online" : "dm-status"}>{isOnline ? "Online" : "Offline"}</span></header><div className="dm-messages">{hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}{loading ? <p className="dm-loading">Carregando conversa...</p> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === user.id} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId} />) : <div className="dm-intro"><Avatar user={otherUser} size={76} /><h2>{otherUser.displayName || otherUser.username}</h2><p>@{otherUser.username}</p><span>Este e o comeco da sua conversa.</span></div>}<div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div><div ref={bottomRef} /></div>{error && <p className="social-feedback is-error dm-error">{error}</p>}<form className="dm-composer" onSubmit={sendMessage}><label className="sr-only" htmlFor="dm-message">Mensagem</label><textarea id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Conversar com ${otherUser.displayName || otherUser.username}`} /><button type="submit" className="primary-button" disabled={!text.trim() || sending} aria-label="Enviar mensagem"><Icon name="send" size={16} /></button></form></section></main>;
 }
 
-function Message({ message, mine }) {
-  return <article className={`dm-message ${mine ? "is-mine" : ""}`}><div className="dm-message-avatar"><Avatar user={message.sender} size={32} /></div><div><div className="dm-message-meta"><strong>{message.sender.displayName || message.sender.username}</strong><small>{formatMessageTime(message.createdAt)}</small></div><p>{message.content}</p></div></article>;
+function Message({ message, mine, compact }) {
+  return <article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={message.sender} size={32} />}</div><div><div className="dm-message-meta">{!compact && <strong>{message.sender.displayName || message.sender.username}</strong>}<small>{formatMessageTime(message.createdAt)}</small></div><p>{message.content}</p></div></article>;
 }
 
 function formatMessageTime(value) {

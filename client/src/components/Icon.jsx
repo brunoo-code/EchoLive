@@ -32,7 +32,9 @@ const iconPaths = {
   warning: <><path d="m8 2 6 12H2L8 2Z" /><path d="M8 6v3M8 11v.2" /></>,
   speaker: <><path d="M2.5 6h3l3-2.5v9l-3-2.5h-3z" /><path d="M11 6a3 3 0 0 1 0 4M12.5 4.5a5 5 0 0 1 0 7" /></>,
   link: <><path d="M6.5 9.5 5 11a2.8 2.8 0 0 1-4-4l2-2a2.8 2.8 0 0 1 4 0" /><path d="m9.5 6.5 1.5-1.5a2.8 2.8 0 0 1 4 4l-2 2a2.8 2.8 0 0 1-4 0" /><path d="m5.5 8.5 5-5" /></>,
-  pulse: <path d="M2 8h3l1.5-4L9 12l1.5-4H14" />
+  pulse: <path d="M2 8h3l1.5-4L9 12l1.5-4H14" />,
+  search: <><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3 3" /></>,
+  send: <path d="m2 2 12 6-12 6 2.4-5.2L10 8 4.4 7.2 2 2Z" />
 };
 
 export default function Icon({ name, size = 16, strokeWidth = 1.8, className = "", title }) {
