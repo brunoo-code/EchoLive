@@ -358,8 +358,8 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (cleanContent.length > 500 || (!cleanContent && !validAttachment)) {
-      socket.emit("message-error", { message: "A mensagem deve ter texto ou um anexo e ter no maximo 500 caracteres." });
+    if (cleanContent.length > 4000 || (!cleanContent && !validAttachment)) {
+      socket.emit("message-error", { message: "A mensagem deve ter texto ou um anexo e ter no maximo 4.000 caracteres." });
       return;
     }
 

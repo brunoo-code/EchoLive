@@ -1,4 +1,4 @@
-const ROOM_CODE_PATTERN = /^[A-Z0-9_-]{3,16}$/;
+const ROOM_CODE_PATTERN = /^[A-Z0-9]{3,9}$/;
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const DEFAULT_MAX_PARTICIPANTS = 10;
 
@@ -19,13 +19,13 @@ export function normalizeRoomCode(code) {
 }
 
 export function normalizeRoomName(name, roomCode = "") {
-  const cleanName = String(name || "").trim().slice(0, 32);
+  const cleanName = String(name || "").trim().slice(0, 24);
   return cleanName || `Sala ${normalizeRoomCode(roomCode)}`;
 }
 
 export function isValidRoomName(name) {
   const cleanName = String(name || "").trim();
-  return cleanName.length <= 32 && !/[<>]/.test(cleanName);
+  return cleanName.length >= 1 && cleanName.length <= 24 && !/[<>]/.test(cleanName);
 }
 
 export function isValidRoomCode(code) {
@@ -320,8 +320,8 @@ export function addRoomMessage(roomCode, message) {
 
   messages.push(message);
 
-  if (messages.length > 100) {
-    messages.splice(0, messages.length - 100);
+  if (messages.length > 200) {
+    messages.splice(0, messages.length - 200);
   }
 
   return message;

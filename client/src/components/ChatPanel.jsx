@@ -100,8 +100,8 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
     event.preventDefault();
     const content = draft.trim();
 
-    if (content.length > 500) {
-      notify("A mensagem deve ter no maximo 500 caracteres.");
+    if (content.length > 4000) {
+      notify("Esta mensagem excede o limite de 4.000 caracteres.");
       return;
     }
 
@@ -196,13 +196,14 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           />
           <input
             className="message-input"
-            maxLength={500}
+            maxLength={4000}
             placeholder="Conversar em #geral"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             disabled={isSending}
             aria-label="Mensagem para o canal geral"
           />
+          {draft.length >= 3400 && <span className="message-counter">{draft.length} / 4000</span>}
           <button className="send-button" type="submit" disabled={isSending}>
             {isSending ? "Enviando" : "Enviar"}
           </button>

@@ -1095,6 +1095,7 @@ h2 {
 }
 
 .composer-row {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
@@ -1104,6 +1105,8 @@ h2 {
   border-radius: 12px;
   background: #0b1220;
 }
+
+.message-counter { position: absolute; right: 86px; bottom: -18px; color: var(--warning); font-size: 0.65rem; }
 
 .message-input {
   min-height: 34px;
@@ -1435,6 +1438,23 @@ h2 {
   font-weight: 750;
 }
 
+.settings-nav-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 7px;
+  vertical-align: -4px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  opacity: 0.75;
+}
+
+.settings-nav-icon-profile { border-radius: 50%; }
+.settings-nav-icon-account { border-radius: 3px; }
+.settings-nav-icon-voice { border-radius: 50%; }
+.settings-nav-icon-appearance { transform: rotate(45deg) scale(0.8); }
+.settings-nav-icon-preferences { border-radius: 2px; }
+
 .settings-nav button:hover:not(:disabled),
 .settings-nav button.settings-nav-active {
   transform: none;
@@ -1459,6 +1479,14 @@ h2 {
 .profile-preview img { width: 100%; height: 100%; object-fit: cover; }
 .profile-upload { position: relative; display: inline-grid; width: auto; place-items: center; padding: 0 12px; }
 .profile-upload input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+.accent-preview { display: flex; align-items: center; gap: 8px; margin: 12px 0 10px; color: var(--text-muted); font-size: 0.78rem; }
+.accent-preview span { width: 18px; height: 18px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255,255,255,0.08); }
+.accent-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.accent-swatches button, .accent-custom { width: 28px; height: 28px; min-height: 28px; padding: 0; border: 2px solid transparent; border-radius: 50%; }
+.accent-swatches button.is-selected { border-color: var(--text-main); box-shadow: 0 0 0 2px var(--accent); }
+.accent-custom { overflow: hidden; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+.accent-custom input { width: 100%; height: 100%; min-height: 0; padding: 0; opacity: 0; cursor: pointer; }
 
 .room-switcher-modal {
   width: min(100%, 520px);

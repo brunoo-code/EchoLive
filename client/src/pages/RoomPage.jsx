@@ -27,6 +27,7 @@ const UI_SOUNDS_KEY = "echolive.uiSounds";
 const CONFIRM_LEAVE_KEY = "echolive.confirmLeaveRoom";
 const PROFILE_KEY = "echolive.profile";
 const RECENT_ROOMS_KEY = "echolive.recentRooms";
+const ACCENT_KEY = "echolive.accentColor";
 const SCREEN_SHARE_CONSTRAINTS = {
   width: { ideal: 1280 },
   height: { ideal: 720 },
@@ -53,6 +54,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "dark");
+  const [accentColor, setAccentColor] = useState(() => localStorage.getItem(ACCENT_KEY) || "#22d3ee");
   const [uiSounds, setUiSounds] = useState(() => localStorage.getItem(UI_SOUNDS_KEY) !== "false");
   const [confirmLeaveRoom, setConfirmLeaveRoom] = useState(() => localStorage.getItem(CONFIRM_LEAVE_KEY) !== "false");
   const [copyFallbackLink, setCopyFallbackLink] = useState("");
@@ -111,6 +113,15 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const safeColor = /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : "#22d3ee";
+    root.style.setProperty("--accent", safeColor);
+    root.style.setProperty("--accent-soft", `${safeColor}1f`);
+    root.style.setProperty("--accent-border", `${safeColor}66`);
+    localStorage.setItem(ACCENT_KEY, safeColor);
+  }, [accentColor]);
 
   useEffect(() => {
     localStorage.setItem(UI_SOUNDS_KEY, String(uiSounds));
@@ -1565,6 +1576,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         <SettingsModal
           theme={theme}
           onThemeChange={setTheme}
+          accentColor={accentColor}
+          onAccentChange={setAccentColor}
           uiSounds={uiSounds}
           onUiSoundsChange={setUiSounds}
           confirmLeaveRoom={confirmLeaveRoom}
