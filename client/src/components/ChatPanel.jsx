@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SERVER_URL } from "../utils/webrtc.js";
+import { playUiSound } from "../utils/uiSounds.js";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const ACCEPTED_TYPES = new Set([
@@ -27,11 +28,29 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ChatPanel({ socket, socketId, roomCode, messages, notify }) {
+export default function ChatPanel({ socket, socketId, roomCode, messages, notify, uiSounds }) {
   const [draft, setDraft] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef(null);
+  const pendingLocalMessagesRef = useRef(0);
+
+  useEffect(() => {
+    function handleMessageCreated(message) {
+      if (message.socketId !== socketId || pendingLocalMessagesRef.current < 1) return;
+      pendingLocalMessagesRef.current -= 1;
+      playUiSound("message-send", uiSounds);
+    }
+    function handleMessageError() {
+      pendingLocalMessagesRef.current = Math.max(0, pendingLocalMessagesRef.current - 1);
+    }
+    socket?.on("message-created", handleMessageCreated);
+    socket?.on("message-error", handleMessageError);
+    return () => {
+      socket?.off("message-created", handleMessageCreated);
+      socket?.off("message-error", handleMessageError);
+    };
+  }, [socket, socketId, uiSounds]);
 
   function validateFile(file) {
     if (!file) {
@@ -96,6 +115,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
         content,
         attachment
       });
+      if (socket?.connected) pendingLocalMessagesRef.current += 1;
       setDraft("");
       setSelectedFile(null);
     } catch (error) {

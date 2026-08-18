@@ -13,6 +13,7 @@ import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
 import { requestInitialMedia, requestSingleKind, stopStream } from "../utils/media.js";
 import { getPeerConnectionConfig, SERVER_URL } from "../utils/webrtc.js";
+import { playUiSound } from "../utils/uiSounds.js";
 
 const NICKNAME_KEY = "echolive.nickname";
 const AUDIO_DEVICE_KEY = "echolive.audioDeviceId";
@@ -800,6 +801,7 @@ export default function RoomPage({ roomCode, onBack }) {
       setMixedMicrophoneEnabled(audioTrackRef.current.enabled);
       updateMicEnabled(audioTrackRef.current.enabled);
       notify(audioTrackRef.current.enabled ? "Microfone ligado." : "Microfone desligado.");
+      playUiSound(audioTrackRef.current.enabled ? "mic-unmute" : "mic-mute", uiSounds);
       return;
     }
 
@@ -819,6 +821,7 @@ export default function RoomPage({ roomCode, onBack }) {
     }
     startSpeakingDetection(result.track);
     notify("Microfone ligado.");
+    playUiSound("mic-unmute", uiSounds);
   }
 
   async function toggleCamera() {
@@ -893,6 +896,7 @@ export default function RoomPage({ roomCode, onBack }) {
       updateScreenSharing(true);
       socketRef.current?.emit("screen-share-status", { isScreenSharing: true });
       notify("Compartilhamento iniciado.");
+      playUiSound("screen-start", uiSounds);
       console.log("[SCREEN] share started");
     } catch {
       notify("Compartilhamento cancelado.");
@@ -969,6 +973,7 @@ export default function RoomPage({ roomCode, onBack }) {
     updateScreenSharing(false);
     socketRef.current?.emit("screen-share-status", { isScreenSharing: false });
     notify("Compartilhamento encerrado.");
+    playUiSound("screen-stop", uiSounds);
     console.log("[SCREEN] share stopped");
   }
 
@@ -1041,6 +1046,7 @@ export default function RoomPage({ roomCode, onBack }) {
     setIsInVoice(false);
     closePeers();
     cleanupLocalMedia();
+    playUiSound("voice-leave", uiSounds);
   }
 
   function joinVoiceChannel() {
@@ -1051,6 +1057,7 @@ export default function RoomPage({ roomCode, onBack }) {
     isInVoiceRef.current = true;
     setIsInVoice(true);
     socketRef.current.emit("join-voice");
+    playUiSound("voice-join", uiSounds);
   }
 
   async function openDevices() {
@@ -1496,6 +1503,7 @@ export default function RoomPage({ roomCode, onBack }) {
             roomCode={roomCode}
             messages={messages}
             notify={notify}
+            uiSounds={uiSounds}
           />
         </section>
       </section>
