@@ -5282,3 +5282,34 @@ video.screen-video {
 @media (max-width: 1200px) { .social-page { grid-template-columns:58px 220px minmax(0, 1fr); }.social-online-panel { display:none; }.social-add-layout { grid-template-columns:minmax(0, 1fr) 190px; } }
 @media (max-width: 720px) { .social-page { display:block; }.social-rail { display:none; }.social-page-gate .social-guest-gate { min-height:100vh; }.social-topbar { display:block; padding:14px 16px; }.social-topbar-title { margin-bottom:8px; }.social-tabs { margin-left:0; overflow:auto; padding-bottom:2px; }.social-tabs button { flex:0 0 auto; padding:0 9px; font-size:12px; }.social-topbar-note { display:none; }.social-add-layout { display:block; }.social-add-eko { display:none; }.social-add-divider { margin-top:20px; }.social-sidebar { min-height:auto; }.social-nav { grid-template-columns:repeat(3, 1fr); }.social-nav-badge { display:none; } }
 @media (prefers-reduced-motion: reduce) { .dm-typing i { animation:none; }.dm-typing { transition:none; } }
+
+/* Etapa 5.1.1: keep the sidebar focused on navigation and direct conversations. */
+.social-sidebar-search { display:flex; align-items:center; gap:8px; margin:12px 12px 2px; border:1px solid var(--border-strong, rgba(255,255,255,.16)); border-radius:7px; background:rgba(255,255,255,.025); color:var(--text-muted, #8e9aaa); padding:0 9px; }
+.social-sidebar-search:focus-within { border-color:var(--accent, #22d3ee); box-shadow:0 0 0 2px var(--accent-soft, rgba(34,211,238,.1)); }
+.social-sidebar-search input { width:100%; min-width:0; min-height:34px; border:0; outline:0; background:transparent; color:var(--text-primary, #f4f7fb); font:inherit; font-size:11px; }
+.social-sidebar-search input::placeholder { color:var(--text-muted, #8e9aaa); opacity:.9; }
+.social-nav { padding-top:9px; padding-bottom:10px; }
+.social-nav button { min-height:36px; }
+.social-nav-badge { display:none; }
+.social-toast-stack { position:fixed; right:24px; bottom:24px; z-index:30; pointer-events:none; }
+.social-toast { display:flex; align-items:center; gap:9px; max-width:min(360px, calc(100vw - 32px)); border:1px solid rgba(255,255,255,.12); border-radius:8px; background:#171d24; box-shadow:0 12px 32px rgba(0,0,0,.34); padding:11px 13px; color:var(--text-primary, #f4f7fb); font-size:12px; line-height:1.35; }
+.social-toast svg { flex:0 0 auto; color:#66e29a; }
+.social-toast.is-error { border-color:rgba(240,109,112,.42); }
+.social-toast.is-error svg { color:#ff8b8e; }
+.social-toast.is-neutral { border-color:rgba(34,211,238,.3); }
+.social-toast.is-neutral svg { color:var(--accent, #22d3ee); }
+.social-add-form { position:static; display:flex !important; flex-wrap:nowrap; align-items:center; gap:10px; }
+.social-add-form input { position:static; flex:1 1 auto; min-width:0; }
+.social-add-form button { position:static !important; flex:0 0 auto; width:auto; min-width:132px; white-space:nowrap; }
+.social-add-form button:disabled { cursor:wait; opacity:.65; }
+.social-add-view > .social-empty-state { margin-top:24px; }
+
+@media (max-width: 720px) {
+  .social-nav { display:block; padding:8px; }
+  .social-nav button { justify-content:flex-start; }
+  .social-add-form { flex-wrap:wrap; }
+  .social-add-form input { flex-basis:calc(100% - 40px); }
+  .social-add-form button { width:100%; }
+  .social-toast-stack { right:16px; bottom:16px; left:16px; }
+  .social-toast { max-width:none; }
+}

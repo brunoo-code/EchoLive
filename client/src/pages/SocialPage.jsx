@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AuthModal from "../components/AuthModal.jsx";
 import BrandMark from "../components/BrandMark.jsx";
 import Icon from "../components/Icon.jsx";
@@ -20,61 +20,103 @@ function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm }) {
   const [activeTab, setActiveTab] = useState("friends");
   const [friendQuery, setFriendQuery] = useState("");
   const [addUsername, setAddUsername] = useState("");
-  const [feedback, setFeedback] = useState("");
-  const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState(null);
+  const [isAdding, setIsAdding] = useState(false);
   const [removeTarget, setRemoveTarget] = useState(null);
+  const feedbackTimerRef = useRef(null);
+
+  useEffect(() => () => window.clearTimeout(feedbackTimerRef.current), []);
+
+  function clearFeedback() {
+    window.clearTimeout(feedbackTimerRef.current);
+    setFeedback(null);
+  }
+
+  function showFeedback(message, kind = "success") {
+    window.clearTimeout(feedbackTimerRef.current);
+    setFeedback({ message, kind });
+    feedbackTimerRef.current = window.setTimeout(() => setFeedback(null), 4200);
+  }
+
+  function changeTab(nextTab) {
+    clearFeedback();
+    setActiveTab(nextTab);
+  }
 
   const onlineFriends = useMemo(() => friends.filter((item) => onlineUserIds.has(item.user.id)), [friends, onlineUserIds]);
   const visibleFriends = activeTab === "online" ? onlineFriends : friends;
 
   async function handleAddFriend(event) {
     event.preventDefault();
-    setFeedback("");
-    setError("");
+    clearFeedback();
+    setIsAdding(true);
     try {
       const result = await sendFriendRequest(addUsername);
-      setFeedback(`Pedido enviado para @${result.relation.user.username}.`);
+      showFeedback(`Pedido enviado para @${result.relation.user.username}.`);
       setAddUsername("");
     } catch (requestError) {
-      setError(requestError.message);
+      showFeedback(requestError.message, "error");
+    } finally {
+      setIsAdding(false);
     }
   }
 
   async function openDm(userId) {
+    clearFeedback();
     try {
       const conversation = await startConversation(userId);
       onNavigateDm(conversation.id);
     } catch (requestError) {
-      setError(requestError.message);
+      showFeedback(requestError.message, "error");
     }
   }
 
   async function confirmRemove(userId) {
+    clearFeedback();
     try {
       await removeFriend(userId);
       setRemoveTarget(null);
-      setFeedback("Amizade removida.");
+      showFeedback("Amizade removida.", "neutral");
     } catch (requestError) {
-      setError(requestError.message);
+      showFeedback(requestError.message, "error");
+    }
+  }
+
+  async function handleAcceptRequest(requestId) {
+    clearFeedback();
+    try {
+      await acceptFriendRequest(requestId);
+      showFeedback("Pedido aceito.");
+    } catch (requestError) {
+      showFeedback(requestError.message, "error");
+    }
+  }
+
+  async function handleDeleteRequest(requestId, received) {
+    clearFeedback();
+    try {
+      await deleteFriendRequest(requestId);
+      showFeedback(received ? "Pedido recusado." : "Pedido cancelado.", "neutral");
+    } catch (requestError) {
+      showFeedback(requestError.message, "error");
     }
   }
 
   const pendingCount = receivedRequests.length + sentRequests.length;
   return <main className="page social-page">
     <SocialRail onHome={onNavigateHome} />
-    <SocialSidebar activeTab={activeTab} onTabChange={setActiveTab} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} pendingCount={pendingCount} />
+    <SocialSidebar activeTab={activeTab} onTabChange={changeTab} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} />
     <section className="social-content">
-      <header className="social-topbar"><div className="social-topbar-title"><Icon name="account" size={18} /><strong>Amigos</strong></div><nav className="social-tabs" aria-label="Visoes de Amigos">{[["friends", "Amigos"], ["online", "Online"], ["all", "Todos"], ["pending", "Pendentes"]].map(([id, label]) => <button type="button" key={id} className={activeTab === id ? "is-active" : ""} onClick={() => setActiveTab(id)}>{label}{id === "pending" && pendingCount > 0 && <b className="social-tab-badge">{pendingCount > 9 ? "9+" : pendingCount}</b>}</button>)}<button type="button" className={`social-tab-add ${activeTab === "add" ? "is-active" : ""}`} onClick={() => setActiveTab("add")}><Icon name="plus" size={14} />Adicionar amigo</button></nav><span className="social-topbar-note">Sua rede no EchoLive</span></header>
-      {activeTab === "add" ? <AddFriendView addUsername={addUsername} setAddUsername={setAddUsername} onSubmit={handleAddFriend} feedback={feedback} error={error} /> : activeTab === "pending" ? <PendingView received={receivedRequests} sent={sentRequests} onAccept={acceptFriendRequest} onDelete={deleteFriendRequest} /> : <FriendsView friends={visibleFriends} allFriends={friends} onlineFriends={onlineFriends} onlineUserIds={onlineUserIds} activeTab={activeTab} search={friendQuery} onSearch={setFriendQuery} onMessage={openDm} removeTarget={removeTarget} setRemoveTarget={setRemoveTarget} onRemove={confirmRemove} onAdd={() => setActiveTab("add")} />}
-      {activeTab !== "add" && error && <p className="social-feedback is-error">{error}</p>}
-      {activeTab !== "add" && feedback && <p className="social-feedback is-success">{feedback}</p>}
+      <header className="social-topbar"><div className="social-topbar-title"><Icon name="account" size={18} /><strong>Amigos</strong></div><nav className="social-tabs" aria-label="Visoes de Amigos">{[["friends", "Amigos"], ["online", "Online"], ["all", "Todos"], ["pending", "Pendentes"]].map(([id, label]) => <button type="button" key={id} className={activeTab === id ? "is-active" : ""} onClick={() => changeTab(id)}>{label}{id === "pending" && pendingCount > 0 && <b className="social-tab-badge">{pendingCount > 9 ? "9+" : pendingCount}</b>}</button>)}<button type="button" className={`social-tab-add ${activeTab === "add" ? "is-active" : ""}`} onClick={() => changeTab("add")}><Icon name="plus" size={14} />Adicionar amigo</button></nav><span className="social-topbar-note">Sua rede no EchoLive</span></header>
+      {activeTab === "add" ? <AddFriendView addUsername={addUsername} setAddUsername={setAddUsername} onSubmit={handleAddFriend} isSubmitting={isAdding} /> : activeTab === "pending" ? <PendingView received={receivedRequests} sent={sentRequests} onAccept={handleAcceptRequest} onDelete={handleDeleteRequest} /> : <FriendsView friends={visibleFriends} allFriends={friends} onlineFriends={onlineFriends} onlineUserIds={onlineUserIds} activeTab={activeTab} search={friendQuery} onSearch={setFriendQuery} onMessage={openDm} removeTarget={removeTarget} setRemoveTarget={setRemoveTarget} onRemove={confirmRemove} onAdd={() => changeTab("add")} />}
     </section>
+    {feedback && <div className="social-toast-stack" aria-live="polite"><div className={`social-toast is-${feedback.kind}`}><Icon name={feedback.kind === "error" ? "info" : feedback.kind === "neutral" ? "check" : "check"} size={15} /><span>{feedback.message}</span></div></div>}
     <aside className="social-online-panel"><h2>Online agora</h2>{onlineFriends.length ? onlineFriends.slice(0, 8).map((item) => <button type="button" className="social-online-row" key={item.user.id} onClick={() => openDm(item.user.id)}><Avatar user={item.user} size={32} /><span><strong>{item.user.displayName || item.user.username}</strong><small>@{item.user.username}</small></span><i className="online-dot" /></button>) : <SocialEmptyState title="Tudo tranquilo por aqui." copy="Nenhum amigo esta online agora." />}</aside>
   </main>;
 }
 
-function AddFriendView({ addUsername, setAddUsername, onSubmit, feedback, error }) {
-  return <div className="social-view social-add-view"><div className="social-add-layout"><div><div className="social-view-heading"><div><span className="section-label">CONEXOES</span><h1>Adicionar amigo</h1><p>Encontre alguem pelo @username.</p></div></div><form className="social-add-form" onSubmit={onSubmit}><label className="sr-only" htmlFor="social-username">Nome de usuario</label><span className="social-input-prefix">@</span><input id="social-username" value={addUsername} onChange={(event) => setAddUsername(event.target.value)} placeholder="nome_de_usuario" maxLength={25} /><button type="submit" className="primary-button" disabled={!addUsername.trim()}>Enviar pedido</button></form>{feedback && <p className="social-feedback is-success">{feedback}</p>}{error && <p className="social-feedback is-error">{error}</p>}</div><div className="social-add-eko"><div className="social-add-eko-mark"><BrandMark size={105} /></div><strong>Encontre alguém para continuar a conversa.</strong><span>O Eko fica por aqui para ajudar.</span></div></div><div className="social-add-divider" /><SocialEmptyState title="Sua rede comeca aqui." copy="Adicione alguem pelo username e continue a conversa quando quiser." /></div>;
+function AddFriendView({ addUsername, setAddUsername, onSubmit, isSubmitting }) {
+  return <div className="social-view social-add-view"><div className="social-add-layout"><div><div className="social-view-heading"><div><span className="section-label">CONEXOES</span><h1>Adicionar amigo</h1><p>Encontre alguem pelo @username.</p></div></div><form className="social-add-form" onSubmit={onSubmit}><label className="sr-only" htmlFor="social-username">Nome de usuario</label><span className="social-input-prefix">@</span><input id="social-username" value={addUsername} onChange={(event) => setAddUsername(event.target.value)} placeholder="nome_de_usuario" maxLength={25} /><button type="submit" className="primary-button" disabled={!addUsername.trim() || isSubmitting}>{isSubmitting ? "Enviando..." : "Enviar pedido"}</button></form></div><div className="social-add-eko"><div className="social-add-eko-mark"><BrandMark size={105} /></div><strong>Encontre alguém para continuar a conversa.</strong><span>O Eko fica por aqui para ajudar.</span></div></div><div className="social-add-divider" /><SocialEmptyState title="Sua rede comeca aqui." copy="Adicione alguem pelo username e continue a conversa quando quiser." /></div>;
 }
 
 function PendingView({ received, sent, onAccept, onDelete }) {
@@ -82,7 +124,7 @@ function PendingView({ received, sent, onAccept, onDelete }) {
 }
 
 function PendingRow({ item, received, onAccept, onDelete }) {
-  return <div className="social-person-row"><Avatar user={item.user} size={42} /><span className="social-person-copy"><strong>{item.user.displayName || item.user.username}</strong><small>@{item.user.username}</small></span><span className="social-row-actions">{received && <button type="button" className="primary-button compact" onClick={() => onAccept(item.id)}><Icon name="check" size={14} />Aceitar</button>}<button type="button" className="text-button compact" onClick={() => onDelete(item.id)}>{received ? "Recusar" : "Cancelar"}</button></span></div>;
+  return <div className="social-person-row"><Avatar user={item.user} size={42} /><span className="social-person-copy"><strong>{item.user.displayName || item.user.username}</strong><small>@{item.user.username}</small></span><span className="social-row-actions">{received && <button type="button" className="primary-button compact" onClick={() => onAccept(item.id)}><Icon name="check" size={14} />Aceitar</button>}<button type="button" className="text-button compact" onClick={() => onDelete(item.id, Boolean(received))}>{received ? "Recusar" : "Cancelar"}</button></span></div>;
 }
 
 function FriendsView({ friends, allFriends, onlineFriends, onlineUserIds, activeTab, search, onSearch, onMessage, removeTarget, setRemoveTarget, onRemove, onAdd }) {
