@@ -557,6 +557,14 @@ h2 {
   font-size: 0.58rem;
   font-weight: 800;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
+.control-glyph {
+  font-size: 0.48rem !important;
+  letter-spacing: 0.02em;
 }
 
 .sidebar-user-controls button:hover:not(:disabled) {
@@ -587,6 +595,14 @@ h2 {
 .brand-block strong {
   display: block;
   font-size: 1.15rem;
+}
+
+.brand-block > div:last-child,
+.room-section,
+.channel-section,
+.connected-voice,
+.sidebar-user-footer {
+  min-width: 0;
 }
 
 .brand-block span,
@@ -626,12 +642,20 @@ h2 {
 }
 
 .room-code-line strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--accent-strong);
   font-size: 1.05rem;
   letter-spacing: 0.08em;
 }
 
 .room-name-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding: 0 4px 5px;
   color: var(--text-main);
   font-size: 0.95rem;
@@ -707,6 +731,8 @@ h2 {
 }
 
 .call-member > span:nth-child(2) {
+  min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -724,9 +750,17 @@ h2 {
 }
 
 .member-status i {
+  display: inline-block;
+  min-width: 21px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-muted);
-  font-size: 0.58rem;
+  font-size: 0.48rem;
   font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .member-status i.is-muted {
@@ -1000,7 +1034,14 @@ h2 {
   gap: 16px;
 }
 
+.room-header > :first-child {
+  min-width: 0;
+}
+
 .room-header h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: clamp(1.55rem, 3vw, 2.25rem);
 }
 
@@ -1012,6 +1053,7 @@ h2 {
 
 .room-meta {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 12px;
   color: #cbd5e1;
@@ -1204,7 +1246,7 @@ h2 {
 
 .settings-modal,
 .confirm-modal {
-  width: min(100%, 520px);
+  width: min(100%, 720px);
   max-height: min(86vh, 720px);
   overflow: auto;
   padding: 22px;
@@ -1221,6 +1263,35 @@ h2 {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 8px;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 22px;
+}
+
+.settings-nav {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding-top: 10px;
+}
+
+.settings-nav span {
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.settings-nav-active {
+  color: var(--text-main) !important;
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.settings-content {
+  min-width: 0;
 }
 
 .settings-header h2,
@@ -1291,6 +1362,17 @@ h2 {
   margin-top: 2px;
   color: var(--accent);
   font-size: 0.78rem;
+}
+
+.participant-topline > *,
+.participant-identity > div:last-child {
+  min-width: 0;
+}
+
+.participant-identity > div:last-child strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-badge,
@@ -1602,7 +1684,19 @@ video.screen-video {
   border: 0;
   border-radius: 6px;
   color: var(--text-muted);
-  font-size: 0.65rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.48rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.status-icon {
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .mini-status .is-muted {
@@ -1687,6 +1781,25 @@ video.screen-video {
   .room-meta {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .settings-nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+    padding-top: 0;
+  }
+
+  .settings-nav span {
+    overflow: hidden;
+    padding: 7px 4px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .participants-grid,

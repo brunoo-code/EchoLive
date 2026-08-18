@@ -13,13 +13,13 @@ export default function ParticipantsPanel({ participants }) {
               {participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}
             </div>
             <div className="online-person-info">
-              <strong>{participant.nickname}</strong>
+              <strong title={participant.nickname}>{participant.nickname}</strong>
               {participant.isLocal && <span className="you-badge">Voce</span>}
             </div>
             <div className="mini-status" aria-label="Status de midia">
-              <span className={participant.micEnabled === false ? "is-muted" : ""} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}>M</span>
-              <span className={participant.cameraEnabled === false ? "is-muted" : ""} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}>C</span>
-              {participant.isScreenSharing && <span className="is-sharing" title="Compartilhando tela">T</span>}
+              <span className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}>mic</span>
+              <span className={`status-icon status-camera ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"} aria-label={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}>cam</span>
+              {participant.isScreenSharing && <span className="status-icon status-screen is-sharing" title="Compartilhando tela" aria-label="Compartilhando tela">tela</span>}
             </div>
           </div>
         ))}

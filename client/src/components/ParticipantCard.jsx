@@ -69,7 +69,7 @@ export default function ParticipantCard({
             {avatarUrl ? <img src={avatarUrl} alt="" /> : nickname?.slice(0, 1).toUpperCase() || "?"}
           </div>
           <div>
-          <strong>{nickname}</strong>
+          <strong title={nickname}>{nickname}</strong>
           {isScreenSharing && <span className="sharing-text">Compartilhando tela</span>}
           </div>
         </div>
@@ -90,12 +90,12 @@ export default function ParticipantCard({
 
       <div className="participant-actions">
         <div className="media-status-row">
-          {typeof micEnabled === "boolean" && <span className={micEnabled ? "status-on" : "status-off"}>{micEnabled ? "Mic" : "Mic off"}</span>}
-          {typeof cameraEnabled === "boolean" && <span className={cameraEnabled ? "status-on" : "status-off"}>{cameraEnabled ? "Cam" : "Cam off"}</span>}
+          {typeof micEnabled === "boolean" && <span className={micEnabled ? "status-on" : "status-off"}>{micEnabled ? "Microfone" : "Microfone desligado"}</span>}
+          {typeof cameraEnabled === "boolean" && <span className={cameraEnabled ? "status-on" : "status-off"}>{cameraEnabled ? "Camera" : "Camera desligada"}</span>}
         </div>
         {!isLocal && (
           <label className="volume-control">
-            <span>Vol</span>
+            <span>Volume</span>
             <input
               type="range"
               min="0"
@@ -106,7 +106,7 @@ export default function ParticipantCard({
           </label>
         )}
           <button type="button" onClick={(event) => { event.stopPropagation(); openFullscreen(); }} aria-label={`Abrir tela cheia para ${nickname}`}>
-          Fullscreen
+          Tela cheia
         </button>
       </div>
     </article>

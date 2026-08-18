@@ -1434,14 +1434,14 @@ export default function RoomPage({ roomCode, onBack }) {
         <header className="room-header">
           <div>
             <p className="eyebrow">EchoLive</p>
-            <h1>{roomName || `Sala ${roomCode}`}</h1>
-            <p className="room-code-subtitle">Sala {roomCode}</p>
+            <h1 title={roomName || `Sala ${roomCode}`}>{roomName || `Sala ${roomCode}`}</h1>
+            <p className="room-code-subtitle" title={`Sala ${roomCode}`}>Sala {roomCode}</p>
           </div>
           <div className="room-meta">
             <span>Participantes: {currentParticipantCount}/{maxParticipants}</span>
             <div className="call-view-controls" aria-label="Modo de visualizacao">
-              <button type="button" className={viewMode === "grid" ? "is-selected" : ""} onClick={() => setViewMode("grid")}>Grid</button>
-              <button type="button" className={viewMode === "focus" ? "is-selected" : ""} onClick={() => { setViewMode("focus"); setFocusedMediaId((current) => current || callParticipants[0]?.socketId || ""); }} disabled={!callParticipants.length}>Foco</button>
+              <button type="button" className={viewMode === "grid" ? "is-selected" : ""} onClick={() => setViewMode("grid")} aria-pressed={viewMode === "grid"}>Grade</button>
+              <button type="button" className={viewMode === "focus" ? "is-selected" : ""} onClick={() => { setViewMode("focus"); setFocusedMediaId((current) => current || callParticipants[0]?.socketId || ""); }} aria-pressed={viewMode === "focus"} disabled={!callParticipants.length}>Foco</button>
             </div>
           </div>
         </header>

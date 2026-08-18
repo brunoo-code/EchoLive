@@ -39,8 +39,8 @@ export default function Sidebar({
 
       <section className="sidebar-section room-section">
         <p className="section-label">Sala atual</p>
-        <div className="room-name-line">{roomName || `Sala ${roomCode}`}</div>
-        <div className="room-code-line"><span>Codigo</span><strong>{roomCode}</strong></div>
+        <div className="room-name-line" title={roomName || `Sala ${roomCode}`}>{roomName || `Sala ${roomCode}`}</div>
+        <div className="room-code-line"><span>Codigo</span><strong title={roomCode}>{roomCode}</strong></div>
         <p className="sidebar-count">
           Participantes: {participantCount}/{maxParticipants || "-"}
         </p>
@@ -89,11 +89,11 @@ export default function Sidebar({
           {participants.map((participant) => (
             <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""}`} key={participant.socketId}>
               <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>
-              <span>{participant.nickname}</span>
+              <span className="member-name" title={participant.nickname}>{participant.nickname}</span>
               <span className="member-status" aria-label="Status de midia">
-                <i className={participant.micEnabled === false ? "is-muted" : ""}>M</i>
-                <i className={participant.cameraEnabled === false ? "is-muted" : ""}>C</i>
-                {participant.isScreenSharing && <i className="is-sharing">T</i>}
+                <i className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}>mic</i>
+                <i className={`status-icon status-camera ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"} aria-label={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}>cam</i>
+                {participant.isScreenSharing && <i className="status-icon status-screen is-sharing" title="Compartilhando tela" aria-label="Compartilhando tela">tela</i>}
               </span>
             </div>
           ))}
@@ -107,16 +107,16 @@ export default function Sidebar({
             <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onAvatarChange} />
           </label>
           <div>
-            <strong>{nickname}</strong>
+            <strong title={nickname}>{nickname}</strong>
             <span>{isInVoice ? "Em chamada" : "Online"}</span>
           </div>
         </div>
         <div className="sidebar-user-controls" aria-label="Controles do usuario">
-          {isInVoice ? <button type="button" className={micEnabled ? "is-active" : "is-muted"} onClick={onToggleMicrophone} title={micEnabled ? "Desligar microfone" : "Ligar microfone"} aria-label={micEnabled ? "Desligar microfone" : "Ligar microfone"}>Mic</button> : <span />}
-          {isInVoice ? <button type="button" className={isDeafened ? "is-muted is-deafened" : "is-active"} onClick={onToggleDeafen} title={isDeafened ? "Deixar de ensurdecer" : "Ensurdecer"} aria-label={isDeafened ? "Deixar de ensurdecer" : "Ensurdecer"}>Deaf</button> : <span />}
-          {isInVoice ? <button type="button" className={cameraEnabled ? "is-active" : "is-muted"} onClick={onToggleCamera} title={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"}>Cam</button> : <span />}
-          <button type="button" onClick={onOpenDevices} title="Configurar dispositivos" aria-label="Configurar dispositivos">Disp</button>
-          <button type="button" onClick={onOpenSettings} title="Abrir configuracoes" aria-label="Abrir configuracoes">Cfg</button>
+          {isInVoice ? <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} title={micEnabled ? "Desligar microfone" : "Ligar microfone"} aria-label={micEnabled ? "Desligar microfone" : "Ligar microfone"}>mic</button> : <span />}
+          {isInVoice ? <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} title={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}>audio</button> : <span />}
+          {isInVoice ? <button type="button" className={`control-glyph ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} title={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"}>cam</button> : <span />}
+          <button type="button" className="control-glyph" onClick={onOpenDevices} title="Abrir dispositivos" aria-label="Abrir dispositivos">disp</button>
+          <button type="button" className="control-glyph" onClick={onOpenSettings} title="Abrir configuracoes" aria-label="Abrir configuracoes">config</button>
           <button type="button" className="leave-room-button" onClick={onLeaveRoom} title="Sair da sala" aria-label="Sair da sala">Sair</button>
         </div>
       </footer>
