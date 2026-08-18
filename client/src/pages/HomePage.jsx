@@ -228,7 +228,7 @@ export default function HomePage({ onRoomCreated }) {
           <div className="home-account-bar" aria-label="Conta EchoLive">
             {status === "loading" && <span className="home-account-loading">Verificando conta...</span>}
             {status === "guest" && <>
-              <div className="home-account-actions"><button type="button" className="home-account-button" onClick={() => setAuthModalMode("login")}>Entrar</button><button type="button" className="home-account-button is-primary" onClick={() => setAuthModalMode("register")}>Criar conta</button></div>
+              <div className="home-account-actions"><button type="button" className="home-account-button" onClick={() => setAuthModalMode("login")}>Entrar</button><button type="button" className="home-account-button is-primary" onClick={openAccountEntry}>Criar conta</button></div>
               {availability === "unavailable" && <small>Contas indisponiveis no momento</small>}
             </>}
             {status === "authenticated" && user && <>
@@ -241,21 +241,21 @@ export default function HomePage({ onRoomCreated }) {
         <div className="home-workspace">
           <section className="home-main-column">
             <div className="home-hero">
-              <h1>Converse do seu jeito.</h1>
+              <h1>Converse do <span>seu jeito.</span></h1>
               <p className="home-subtitle">Entre em uma sala e fale com quem importa.</p>
-              <div className="home-capabilities" aria-label="Recursos do EchoLive"><span><i><Icon name="voice" size={14} /></i>Voz</span><span><i><Icon name="video" size={14} /></i>Video</span><span><i><Icon name="screen" size={14} /></i>Tela</span><span><i><Icon name="chat" size={14} /></i>Chat</span></div>
+              <div className="home-capabilities" aria-label="Recursos do EchoLive"><span className="tone-voice"><i><Icon name="voice" size={14} /></i>Voz</span><span className="tone-video"><i><Icon name="video" size={14} /></i>Video</span><span className="tone-screen"><i><Icon name="screen" size={14} /></i>Tela</span><span className="tone-chat"><i><Icon name="chat" size={14} /></i>Chat</span></div>
             </div>
 
             <section className="home-entry-surface" aria-labelledby="home-entry-title">
-              <div className="home-entry-heading"><h2 id="home-entry-title">Comece uma conversa</h2></div>
-              <p className="home-entry-copy">Entre como visitante. Sem cadastro.</p>
+              <div className="home-entry-heading"><h2 id="home-entry-title"><i className="home-kicker-dot" aria-hidden="true" />Comece uma conversa</h2><span className={`home-entry-status ${nickname.trim() ? "is-ready" : ""}`}><i aria-hidden="true" />{nickname.trim() ? "Pronto para entrar" : "Escolha seu nome"}</span></div>
+              <p className="home-entry-copy"><strong>Entre como visitante.</strong> <span>Sem cadastro.</span></p>
               {nickname.trim() && !isEditingNickname ? <div className="home-identity-preview">
                 <span className="home-identity-icon"><BrandMark size={20} /></span>
-                <span className="home-identity-copy"><strong>Voce entra como</strong><b>{nickname}</b></span>
+                <span className="home-identity-copy"><strong>Voce entra como</strong><b>{nickname}</b><small><i className="home-status-dot" aria-hidden="true" />Visitante</small></span>
                 <button type="button" className="home-identity-edit" onClick={startNicknameEdit}>Editar</button>
               </div> : <div className="home-identity-row">
                 <span className="home-identity-icon"><BrandMark size={20} /></span>
-                <span className="home-identity-copy"><strong>Voce vai entrar como</strong><small>Seu nome fica visivel na sala</small></span>
+                <span className="home-identity-copy"><strong>Voce vai entrar como</strong><small><i className="home-status-dot is-muted" aria-hidden="true" />Seu nome fica visivel na sala</small></span>
                 <label className="home-identity-input">
                   <span className="visually-hidden">Nickname</span>
                   <input id="home-nickname" maxLength={24} autoFocus={isEditingNickname} aria-label="Nickname" placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); confirmNicknameEdit(); } if (event.key === "Escape") { event.preventDefault(); cancelNicknameEdit(); } }} />
@@ -278,14 +278,14 @@ export default function HomePage({ onRoomCreated }) {
                     <button type="button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo"><Icon name="pulse" size={16} /></button>
                   </div>
                 </label>
-                <button id="home-create-room" className="primary-button home-entry-cta" type="button" onClick={createRoom} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
+                <button id="home-create-room" className="primary-button home-entry-cta" type="button" onClick={createRoom} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko} disabled={isCreating}><span>{isCreating ? "Criando..." : "Criar sala"}</span><Icon name="voice" size={15} /></button>
               </>}
               {mode === "join" && <div className="join-form">
                 <label className="field">
                   <span>Codigo da sala</span>
                   <input maxLength={9} placeholder="SALA01" value={joinCode} onChange={(event) => setJoinCode(normalizeCode(event.target.value))} />
                 </label>
-                <button className="secondary-button home-entry-cta" type="button" onClick={() => joinRoom({ preventDefault() {} })} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Entrar na sala</button>
+                <button className="secondary-button home-entry-cta" type="button" onClick={() => joinRoom({ preventDefault() {} })} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko}><span>Entrar na sala</span><Icon name="link" size={15} /></button>
               </div>}
             </section>
 
