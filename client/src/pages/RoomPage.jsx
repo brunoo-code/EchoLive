@@ -9,6 +9,7 @@ import NicknameModal from "../components/NicknameModal.jsx";
 import ParticipantCard from "../components/ParticipantCard.jsx";
 import ParticipantsPanel from "../components/ParticipantsPanel.jsx";
 import Sidebar from "../components/Sidebar.jsx";
+import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
 import { requestInitialMedia, requestSingleKind, stopStream } from "../utils/media.js";
@@ -23,13 +24,15 @@ const AVATAR_KEY = "echolive.avatarUrl";
 const THEME_KEY = "echolive.theme";
 const UI_SOUNDS_KEY = "echolive.uiSounds";
 const CONFIRM_LEAVE_KEY = "echolive.confirmLeaveRoom";
+const PROFILE_KEY = "echolive.profile";
+const RECENT_ROOMS_KEY = "echolive.recentRooms";
 const SCREEN_SHARE_CONSTRAINTS = {
   width: { ideal: 1280 },
   height: { ideal: 720 },
   frameRate: { ideal: 30, max: 30 }
 };
 
-export default function RoomPage({ roomCode, onBack }) {
+export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const debugRtc = new URLSearchParams(window.location.search).get("debugRtc") === "1";
   const [nickname, setNickname] = useState(() => localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "");
   const [nicknameDraft, setNicknameDraft] = useState(() => localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "");
@@ -62,11 +65,14 @@ export default function RoomPage({ roomCode, onBack }) {
   const [isDevicesModalOpen, setIsDevicesModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
+  const [isRoomSwitcherOpen, setIsRoomSwitcherOpen] = useState(false);
+  const [recentRoomsRevision, setRecentRoomsRevision] = useState(0);
   const [devices, setDevices] = useState({ audio: [], video: [] });
   const [selectedAudioId, setSelectedAudioId] = useState(() => localStorage.getItem(AUDIO_DEVICE_KEY) || "");
   const [selectedVideoId, setSelectedVideoId] = useState(() => localStorage.getItem(VIDEO_DEVICE_KEY) || "");
   const [selectedOutputId, setSelectedOutputId] = useState(() => localStorage.getItem(OUTPUT_DEVICE_KEY) || "");
   const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem(AVATAR_KEY) || "");
+  const [profile, setProfile] = useState(() => { try { return { displayName: "", nickname: localStorage.getItem(NICKNAME_KEY) || "", status: "Online", customStatus: "", avatarUrl: localStorage.getItem(AVATAR_KEY) || "", ...JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}") }; } catch { return { displayName: "", nickname: "", status: "Online", customStatus: "", avatarUrl: "" }; } });
   const { toasts, notify } = useToasts();
 
   const socketRef = useRef(null);
@@ -1155,8 +1161,30 @@ export default function RoomPage({ roomCode, onBack }) {
       const nextAvatarUrl = String(reader.result || "");
       localStorage.setItem(AVATAR_KEY, nextAvatarUrl);
       setAvatarUrl(nextAvatarUrl);
+      setProfile((current) => {
+        const next = { ...current, avatarUrl: nextAvatarUrl };
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+        return next;
+      });
     };
     reader.readAsDataURL(file);
+  }
+
+  function saveProfile(nextProfile) {
+    const next = { ...profile, ...nextProfile };
+    setProfile(next);
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+    if (next.avatarUrl) { localStorage.setItem(AVATAR_KEY, next.avatarUrl); setAvatarUrl(next.avatarUrl); }
+    if (next.nickname && next.nickname !== nickname) saveNickname(next.nickname);
+  }
+
+  function recentRooms() {
+    try { return JSON.parse(localStorage.getItem(RECENT_ROOMS_KEY) || "[]").slice(0, 10); } catch { return []; }
+  }
+
+  function switchRoom(nextCode) {
+    cleanupRoom();
+    onNavigateRoom?.(nextCode);
   }
 
   async function copyInvite() {
@@ -1346,7 +1374,7 @@ export default function RoomPage({ roomCode, onBack }) {
 
   const localParticipant = {
     socketId: selfId || "local",
-    nickname,
+    nickname: profile.displayName || nickname,
     avatarUrl,
     stream: displayStream,
     isLocal: true,
@@ -1415,9 +1443,11 @@ export default function RoomPage({ roomCode, onBack }) {
         selectedChannel={selectedChannel}
         onSelectChannel={setSelectedChannel}
         onCopyInvite={copyInvite}
-        onEditNickname={() => setIsNicknameModalOpen(true)}
+        onOpenRoomSwitcher={() => setIsRoomSwitcherOpen(true)}
         copyFallbackLink={copyFallbackLink}
-        nickname={nickname}
+        nickname={profile.displayName || nickname}
+        status={profile.status}
+        customStatus={profile.customStatus}
         isInVoice={isInVoice}
         connectionQuality={connectionQuality}
         micEnabled={micEnabled}
@@ -1504,6 +1534,7 @@ export default function RoomPage({ roomCode, onBack }) {
             messages={messages}
             notify={notify}
             uiSounds={uiSounds}
+            displayName={profile.displayName || nickname}
           />
         </section>
       </section>
@@ -1536,9 +1567,13 @@ export default function RoomPage({ roomCode, onBack }) {
           confirmLeaveRoom={confirmLeaveRoom}
           onConfirmLeaveChange={setConfirmLeaveRoom}
           onOpenDevices={() => { setIsSettingsOpen(false); openDevices(); }}
+          profile={{ ...profile, avatarUrl }}
+          onProfileChange={saveProfile}
+          onAvatarChange={handleAvatarChange}
           onClose={() => setIsSettingsOpen(false)}
         />
       )}
+      {isRoomSwitcherOpen && <RoomSwitcherModal key={recentRoomsRevision} currentRoomCode={roomCode} recentRooms={recentRooms()} onEnter={switchRoom} onRemove={(code) => { const next = recentRooms().filter((room) => room.code !== code); localStorage.setItem(RECENT_ROOMS_KEY, JSON.stringify(next)); setRecentRoomsRevision((value) => value + 1); }} onClear={() => { localStorage.removeItem(RECENT_ROOMS_KEY); setRecentRoomsRevision((value) => value + 1); }} onClose={() => setIsRoomSwitcherOpen(false)} />}
       {isLeaveConfirmOpen && (
         <div className="modal-backdrop" role="presentation">
           <section className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="leave-title">

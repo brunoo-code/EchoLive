@@ -28,7 +28,7 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ChatPanel({ socket, socketId, roomCode, messages, notify, uiSounds }) {
+export default function ChatPanel({ socket, socketId, roomCode, messages, notify, uiSounds, displayName }) {
   const [draft, setDraft] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [isSending, setIsSending] = useState(false);
@@ -149,7 +149,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
             </div>
             <div className="message-body">
               <div className="message-meta">
-                <strong>{message.nickname}</strong>
+                <strong>{message.socketId === socketId ? (displayName || message.nickname) : message.nickname}</strong>
                 <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
               </div>
               {message.content && <p>{message.content}</p>}

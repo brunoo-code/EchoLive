@@ -7,9 +7,11 @@ export default function Sidebar({
   selectedChannel,
   onSelectChannel,
   onCopyInvite,
-  onEditNickname,
+  onOpenRoomSwitcher,
   copyFallbackLink,
   nickname,
+  status = "Online",
+  customStatus = "",
   isInVoice,
   connectionQuality,
   micEnabled,
@@ -53,9 +55,7 @@ export default function Sidebar({
             <input readOnly value={copyFallbackLink} onFocus={(event) => event.target.select()} />
           </label>
         )}
-        <button type="button" className="ghost-button" onClick={onEditNickname}>
-          Alterar nick
-        </button>
+        <button type="button" className="room-add-button" onClick={onOpenRoomSwitcher} title="Entrar ou criar outra sala" aria-label="Entrar ou criar outra sala">+</button>
       </section>
 
       <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">
@@ -108,7 +108,7 @@ export default function Sidebar({
           </label>
           <div>
             <strong title={nickname}>{nickname}</strong>
-            <span>{isInVoice ? "Em chamada" : "Online"}</span>
+            <span title={customStatus || status}>{customStatus || (isInVoice ? "Em chamada" : status)}</span>
           </div>
         </div>
         <div className="sidebar-user-controls" aria-label="Controles do usuario">
