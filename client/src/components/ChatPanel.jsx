@@ -195,11 +195,11 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
     }
   }
 
-  function formatTypingLabel() {
+  function renderTypingLabel() {
     const names = typingUsers.map((user) => user.displayName).filter(Boolean);
-    if (names.length === 1) return `${names[0]} esta digitando`;
-    if (names.length === 2) return `${names[0]} e ${names[1]} estao digitando`;
-    return `${names[0]} e mais ${names.length - 1} pessoas estao digitando`;
+    if (names.length === 1) return <><strong>{names[0]}</strong> esta digitando</>;
+    if (names.length === 2) return <><strong>{names[0]}</strong> e <strong>{names[1]}</strong> estao digitando</>;
+    return <><strong>{names[0]}</strong> e mais {names.length - 1} pessoas estao digitando</>;
   }
 
   return (
@@ -261,7 +261,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
 
       <div className={`typing-indicator${typingUsers.length ? " is-active" : ""}`} aria-live="polite" aria-atomic="true">
         <span className="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-        <span>{typingUsers.length ? formatTypingLabel() : " "}</span>
+        <span>{typingUsers.length ? renderTypingLabel() : " "}</span>
       </div>
 
       <form className="chat-composer" onSubmit={sendMessage}>

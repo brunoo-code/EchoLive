@@ -27,7 +27,7 @@ export default function ControlsBar({
           title={isScreenSharing ? "Parar compartilhamento de tela" : "Compartilhar tela"}
           aria-label={isScreenSharing ? "Parar compartilhamento de tela" : "Compartilhar tela"}
         >
-          <span className="control-icon" aria-hidden="true"><Icon name="screen" size={15} /></span>
+          <span className="control-icon" aria-hidden="true"><Icon name="screenShare" size={15} /></span>
           <span>{isScreenSharing ? "Parar tela" : "Compartilhar"}</span>
           {isScreenSharing && <small>{screenShareLabel}</small>}
         </button>

@@ -314,7 +314,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       setMaxParticipants(maxParticipants || 10);
       setRoomName(joinedRoomName || `Sala ${roomCode}`);
       setRoomParticipants(participants.filter((item) => item.socketId !== socket.id));
-      notify(`${participant.nickname} entrou na sala.`);
       if (isInVoiceRef.current) {
         upsertRemoteParticipants((voiceParticipants || [participant]).filter((item) => item.socketId !== socket.id));
         const peer = createPeer(participant.socketId, false, true);
@@ -331,7 +330,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       setRemoteParticipants((current) =>
         current.filter((remote) => remote.socketId !== participant.socketId)
       );
-      notify(`${participant.nickname} saiu da sala.`);
     });
 
     socket.on("voice-users", async ({ participants }) => {
@@ -489,11 +487,10 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       const applied = await applyScreenSharePreset(activeScreenTrack, safePreset);
       await configureScreenSenders(safePreset);
       notify(applied
-        ? `Transmissao alterada para ${getStreamPresetLabel(safePreset)}.`
-        : `Preferencia definida para ${getStreamPresetLabel(safePreset)}. O navegador manteve a melhor configuracao disponivel.`);
+        ? `${getStreamPresetLabel(safePreset)} aplicado.`
+        : `O navegador manteve a melhor configuracao disponivel.`);
       return;
     }
-    notify(`Transmissao definida para ${getStreamPresetLabel(safePreset)}.`);
   }
 
   async function setupLocalMedia() {
@@ -910,7 +907,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       audioTrackRef.current.enabled = !audioTrackRef.current.enabled;
       setMixedMicrophoneEnabled(audioTrackRef.current.enabled);
       updateMicEnabled(audioTrackRef.current.enabled);
-      notify(audioTrackRef.current.enabled ? "Microfone ligado." : "Microfone desligado.");
       playUiSound(audioTrackRef.current.enabled ? "mic-unmute" : "mic-mute", uiSounds);
       return;
     }
@@ -930,7 +926,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       replaceSenderTrackForAll("audio", result.track);
     }
     startSpeakingDetection(result.track);
-    notify("Microfone ligado.");
     playUiSound("mic-unmute", uiSounds);
   }
 
@@ -943,7 +938,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         setDisplayStream(cameraTrackRef.current.enabled ? localStreamRef.current : null);
       }
 
-      notify(cameraTrackRef.current.enabled ? "Camera ligada." : "Camera desligada.");
       return;
     }
 
@@ -962,7 +956,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       replaceSenderTrackForAll("video", result.track);
     }
 
-    notify("Camera ligada.");
   }
 
   async function toggleScreenShare() {
@@ -1004,11 +997,10 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       setDisplayStream(screenStream);
       updateScreenSharing(true);
       socketRef.current?.emit("screen-share-status", { isScreenSharing: true });
-      notify("Compartilhamento iniciado.");
       playUiSound("screen-start", uiSounds);
       console.log("[SCREEN] share started");
     } catch {
-      notify("Compartilhamento cancelado.");
+      // Cancelamentos do seletor de tela sao uma acao local, sem toast.
     }
   }
 
@@ -1082,7 +1074,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     setDisplayStream(shouldRestoreCamera ? localStreamRef.current : null);
     updateScreenSharing(false);
     socketRef.current?.emit("screen-share-status", { isScreenSharing: false });
-    notify("Compartilhamento encerrado.");
     playUiSound("screen-stop", uiSounds);
     console.log("[SCREEN] share stopped");
   }
@@ -1201,7 +1192,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     setIsDevicesModalOpen(false);
 
     if (!isInVoiceRef.current) {
-      notify("Dispositivos salvos para a proxima entrada na voz.");
       return;
     }
 
@@ -1249,7 +1239,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       }
     }
 
-    notify("Dispositivos atualizados.");
   }
 
   function saveProfile(nextProfile) {
@@ -1258,7 +1247,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
     if (next.avatarUrl) { localStorage.setItem(AVATAR_KEY, next.avatarUrl); setAvatarUrl(next.avatarUrl); } else { localStorage.removeItem(AVATAR_KEY); setAvatarUrl(""); }
     if (next.nickname && next.nickname !== nickname) saveNickname(next.nickname);
-    notify("Perfil atualizado.");
+    notify("Perfil salvo.");
   }
 
   function recentRooms() {
