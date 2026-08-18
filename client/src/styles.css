@@ -190,6 +190,7 @@ input {
 }
 
 .brand-symbol-svg { display: block; color: currentColor; }
+.guest-avatar-mark { width: 100%; height: 100%; }
 .home-capabilities { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px; }
 .home-capabilities span { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); font-size: 0.7rem; }
 .home-capabilities i { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 5px; color: var(--accent-strong); background: var(--accent-soft, rgba(34, 211, 238, 0.1)); font-size: 0.62rem; font-style: normal; font-weight: 800; }
@@ -5084,3 +5085,32 @@ video.screen-video {
 .auth-section-heading small { color: var(--echo-muted); }
 .auth-modal-copy { line-height: 1.48; }
 .auth-submit { min-height: 44px; }
+
+/* Keep the Eko face as the mark itself instead of placing a small icon in a tile. */
+.brand-mark {
+  border-color: transparent;
+  border-radius: 50%;
+  color: #f5f8fc;
+  background: transparent;
+  box-shadow: none;
+}
+.brand-mark .brand-symbol-svg,
+.rail-brand .brand-symbol-svg,
+.auth-modal-mark .brand-symbol-svg {
+  width: 100%;
+  height: 100%;
+}
+.home-brand .brand-mark,
+.home-brand .brand-mark:hover {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.rail-brand {
+  border-radius: 50%;
+}
+.auth-modal-mark {
+  background: transparent;
+  box-shadow: none;
+}
