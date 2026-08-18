@@ -21,7 +21,7 @@ export default function Sidebar({
   isDeafened,
   isSpeaking,
   avatarUrl,
-  onAvatarChange,
+  onProfileClick,
   onToggleMicrophone,
   onToggleCamera,
   onToggleDeafen,
@@ -89,7 +89,7 @@ export default function Sidebar({
         </button>
         <div className="call-member-list">
           {participants.map((participant) => (
-            <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""}`} key={participant.socketId}>
+            <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
               <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}<UserStatusBadge status={participant.status} /></span>
               <span className="member-name" title={participant.nickname}>{participant.nickname}</span>
               <span className="member-status" aria-label="Status de midia">
@@ -103,17 +103,16 @@ export default function Sidebar({
       </section>
 
       <footer className="sidebar-user-footer">
-        <div className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`}>
-          <label className="sidebar-user-avatar" title="Alterar avatar">
+        <button type="button" className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
+          <span className="sidebar-user-avatar">
             {avatarUrl ? <img src={avatarUrl} alt="" /> : nickname?.slice(0, 1).toUpperCase() || "?"}
             <UserStatusBadge status={status} />
-            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onAvatarChange} />
-          </label>
+          </span>
           <div>
             <strong title={nickname}>{nickname}</strong>
             <span title={customStatus || status}>{customStatus || (isInVoice ? "Em chamada" : status)}</span>
           </div>
-        </div>
+        </button>
         <div className="sidebar-user-controls" aria-label="Controles do usuario">
           {isInVoice ? <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} title={micEnabled ? "Desligar microfone" : "Ligar microfone"} aria-label={micEnabled ? "Desligar microfone" : "Ligar microfone"}>mic</button> : <span />}
           {isInVoice ? <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} title={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}>audio</button> : <span />}

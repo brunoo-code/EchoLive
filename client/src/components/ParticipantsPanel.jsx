@@ -1,6 +1,6 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
 
-export default function ParticipantsPanel({ participants }) {
+export default function ParticipantsPanel({ participants, onProfileClick }) {
   return (
     <aside className="participants-panel" aria-label="Participantes online">
       <div className="panel-heading">
@@ -10,7 +10,7 @@ export default function ParticipantsPanel({ participants }) {
 
       <div className="online-list">
         {participants.map((participant) => (
-          <div className={`online-person ${participant.isSpeaking ? "is-speaking" : ""}`} key={participant.socketId}>
+          <div className={`online-person ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-person" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
             <div className="avatar-dot" aria-hidden="true">
               {participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}
               <UserStatusBadge status={participant.status} />

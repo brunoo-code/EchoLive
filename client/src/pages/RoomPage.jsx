@@ -11,6 +11,7 @@ import ParticipantsPanel from "../components/ParticipantsPanel.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
 import RoomRail from "../components/RoomRail.jsx";
+import ProfilePopover from "../components/ProfilePopover.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
 import { requestInitialMedia, requestSingleKind, stopStream } from "../utils/media.js";
@@ -69,6 +70,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
   const [isRoomSwitcherOpen, setIsRoomSwitcherOpen] = useState(false);
+  const [isProfilePopoverOpen, setIsProfilePopoverOpen] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState("profile");
   const [recentRoomsRevision, setRecentRoomsRevision] = useState(0);
   const [devices, setDevices] = useState({ audio: [], video: [] });
   const [selectedAudioId, setSelectedAudioId] = useState(() => localStorage.getItem(AUDIO_DEVICE_KEY) || "");
@@ -130,6 +133,19 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   useEffect(() => {
     localStorage.setItem(CONFIRM_LEAVE_KEY, String(confirmLeaveRoom));
   }, [confirmLeaveRoom]);
+
+  useEffect(() => {
+    if (!isProfilePopoverOpen) return undefined;
+    function closeOnOutside(event) {
+      if (!event.target.closest(".profile-popover, .sidebar-user-summary")) setIsProfilePopoverOpen(false);
+    }
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setIsProfilePopoverOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => { document.removeEventListener("pointerdown", closeOnOutside); document.removeEventListener("keydown", closeOnEscape); };
+  }, [isProfilePopoverOpen]);
 
   useEffect(() => {
     const localFocused = focusedMediaId === "local" || focusedMediaId === selfId;
@@ -1158,36 +1174,13 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     notify("Dispositivos atualizados.");
   }
 
-  function handleAvatarChange(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) {
-      return;
-    }
-    if (!/image\/(png|jpeg|webp)/.test(file.type) || file.size > 1024 * 1024) {
-      notify("Use uma imagem PNG, JPG ou WEBP de ate 1 MB.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const nextAvatarUrl = String(reader.result || "");
-      localStorage.setItem(AVATAR_KEY, nextAvatarUrl);
-      setAvatarUrl(nextAvatarUrl);
-      setProfile((current) => {
-        const next = { ...current, avatarUrl: nextAvatarUrl };
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
-        return next;
-      });
-    };
-    reader.readAsDataURL(file);
-  }
-
   function saveProfile(nextProfile) {
     const next = { ...profile, ...nextProfile };
     setProfile(next);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
-    if (next.avatarUrl) { localStorage.setItem(AVATAR_KEY, next.avatarUrl); setAvatarUrl(next.avatarUrl); }
+    if (next.avatarUrl) { localStorage.setItem(AVATAR_KEY, next.avatarUrl); setAvatarUrl(next.avatarUrl); } else { localStorage.removeItem(AVATAR_KEY); setAvatarUrl(""); }
     if (next.nickname && next.nickname !== nickname) saveNickname(next.nickname);
+    notify("Perfil atualizado.");
   }
 
   function recentRooms() {
@@ -1198,6 +1191,10 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     cleanupRoom();
     onNavigateRoom?.(nextCode);
   }
+
+  function openProfilePopover() { setIsSettingsOpen(false); setIsProfilePopoverOpen(true); }
+  function openProfileSettings() { setIsProfilePopoverOpen(false); setSettingsInitialSection("profile"); setIsSettingsOpen(true); }
+  function openSettings() { setIsProfilePopoverOpen(false); setSettingsInitialSection("profile"); setIsSettingsOpen(true); }
 
   async function copyInvite() {
     try {
@@ -1469,12 +1466,12 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         isDeafened={isDeafened}
         isSpeaking={isSpeaking}
         avatarUrl={avatarUrl}
-        onAvatarChange={handleAvatarChange}
+        onProfileClick={openProfilePopover}
         onToggleMicrophone={toggleMicrophone}
         onToggleCamera={toggleCamera}
         onToggleDeafen={toggleDeafen}
         onOpenDevices={openDevices}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={openSettings}
         onLeaveVoice={leaveVoiceChannel}
         onJoinVoice={joinVoiceChannel}
         onLeaveRoom={requestLeaveRoom}
@@ -1553,7 +1550,9 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         </section>
       </section>
 
-      <ParticipantsPanel participants={onlineParticipants} />
+      <ParticipantsPanel participants={onlineParticipants} onProfileClick={openProfilePopover} />
+
+      {isProfilePopoverOpen && <ProfilePopover profile={profile} nickname={nickname} avatarUrl={avatarUrl} onStatusChange={(status) => saveProfile({ status })} onEditProfile={openProfileSettings} onOpenSettings={openSettings} onClose={() => setIsProfilePopoverOpen(false)} />}
 
       {isNicknameModalOpen && (
         <NicknameModal
@@ -1574,6 +1573,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       )}
       {isSettingsOpen && (
         <SettingsModal
+          initialSection={settingsInitialSection}
           theme={theme}
           onThemeChange={setTheme}
           accentColor={accentColor}
@@ -1585,7 +1585,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
           onOpenDevices={() => { setIsSettingsOpen(false); openDevices(); }}
           profile={{ ...profile, avatarUrl }}
           onProfileChange={saveProfile}
-          onAvatarChange={handleAvatarChange}
           onClose={() => setIsSettingsOpen(false)}
         />
       )}
