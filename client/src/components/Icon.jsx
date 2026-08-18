@@ -19,6 +19,7 @@ const iconPaths = {
   palette: <><path d="M8 2a6 6 0 1 0 0 12h1.5a1.5 1.5 0 0 0 0-3H8.2a1.2 1.2 0 0 1 0-2.4H10A4 4 0 0 0 8 2Z" /><circle cx="5" cy="6" r=".7" fill="currentColor" stroke="none" /><circle cx="7" cy="4.5" r=".7" fill="currentColor" stroke="none" /><circle cx="10" cy="5" r=".7" fill="currentColor" stroke="none" /></>,
   sliders: <><path d="M3 4h10M3 8h10M3 12h10" /><circle cx="6" cy="4" r="1.5" fill="var(--bg-panel)" /><circle cx="10" cy="8" r="1.5" fill="var(--bg-panel)" /><circle cx="5" cy="12" r="1.5" fill="var(--bg-panel)" /></>,
   close: <><path d="m4 4 8 8M12 4l-8 8" /></>,
+  chevron: <path d="m4 6 4 4 4-4" />,
   edit: <><path d="m3 11-.5 3.5L6 14l7-7-3-3-7 7Z" /><path d="m8.5 4.5 3 3" /></>,
   trash: <><path d="M3 4h10M6 4V2h4v2M5 6v6m3-6v6m3-6v6M4 4l.6 10h6.8L12 4" /></>,
   check: <path d="m3 8 3 3 6-7" />,

@@ -32,16 +32,30 @@ const RECENT_ROOMS_KEY = "echolive.recentRooms";
 const ACCENT_KEY = "echolive.accentColor";
 const STREAM_PRESET_KEY = "echolive.streamPreset";
 const STREAM_PRESETS = {
-  "720p30": { width: 1280, height: 720, frameRate: 30 },
-  "720p60": { width: 1280, height: 720, frameRate: 60 },
-  "1080p30": { width: 1920, height: 1080, frameRate: 30 },
-  "1080p60": { width: 1920, height: 1080, frameRate: 60 }
+  "720p30": { width: 1280, height: 720, frameRate: 30, maxBitrate: 3_500_000, label: "720p · 30 FPS" },
+  "720p60": { width: 1280, height: 720, frameRate: 60, maxBitrate: 5_000_000, label: "720p · 60 FPS" },
+  "1080p30": { width: 1920, height: 1080, frameRate: 30, maxBitrate: 6_000_000, label: "1080p · 30 FPS" },
+  "1080p60": { width: 1920, height: 1080, frameRate: 60, maxBitrate: 8_000_000, label: "1080p · 60 FPS" }
 };
-const SCREEN_SHARE_CONSTRAINTS = {
-  width: { ideal: 1280 },
-  height: { ideal: 720 },
-  frameRate: { ideal: 30, max: 30 }
-};
+
+function getScreenShareConstraints(preset = "720p30") {
+  const selectedPreset = STREAM_PRESETS[preset] || STREAM_PRESETS["720p30"];
+  return {
+    width: { ideal: selectedPreset.width },
+    height: { ideal: selectedPreset.height },
+    frameRate: { ideal: selectedPreset.frameRate, max: selectedPreset.frameRate }
+  };
+}
+
+function getStreamPresetLabel(preset = "720p30") {
+  return (STREAM_PRESETS[preset] || STREAM_PRESETS["720p30"]).label;
+}
+
+function getActualScreenLabel(settings, fallbackPreset) {
+  if (!settings?.width || !settings?.height || !settings?.frameRate) return getStreamPresetLabel(fallbackPreset);
+  const resolution = settings.height >= 1000 ? "1080p" : "720p";
+  return `${resolution} · ${Math.round(settings.frameRate)} FPS`;
+}
 
 export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const debugRtc = new URLSearchParams(window.location.search).get("debugRtc") === "1";
@@ -64,7 +78,11 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const [isDeafened, setIsDeafened] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "dark");
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem(ACCENT_KEY) || "#22d3ee");
-  const [streamPreset, setStreamPreset] = useState(() => localStorage.getItem(STREAM_PRESET_KEY) || "720p30");
+  const [streamPreset, setStreamPreset] = useState(() => {
+    const saved = localStorage.getItem(STREAM_PRESET_KEY);
+    return STREAM_PRESETS[saved] ? saved : "720p30";
+  });
+  const [screenShareSettings, setScreenShareSettings] = useState(null);
   const [uiSounds, setUiSounds] = useState(() => localStorage.getItem(UI_SOUNDS_KEY) !== "false");
   const [confirmLeaveRoom, setConfirmLeaveRoom] = useState(() => localStorage.getItem(CONFIRM_LEAVE_KEY) !== "false");
   const [copyFallbackLink, setCopyFallbackLink] = useState("");
@@ -448,21 +466,32 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     });
   }
 
-  function applyVideoPreset(track, preset = streamPreset) {
-    const selectedPreset = STREAM_PRESETS[preset] || STREAM_PRESETS["720p30"];
-    if (!track?.applyConstraints) return;
-    track.applyConstraints({
-      width: { ideal: selectedPreset.width },
-      height: { ideal: selectedPreset.height },
-      frameRate: { ideal: selectedPreset.frameRate, max: selectedPreset.frameRate }
-    }).catch(() => {});
+  async function applyScreenSharePreset(track, preset = streamPreset) {
+    if (!track?.applyConstraints) return false;
+    try {
+      await track.applyConstraints(getScreenShareConstraints(preset));
+      setScreenShareSettings(track.getSettings?.() || null);
+      return true;
+    } catch {
+      setScreenShareSettings(track.getSettings?.() || null);
+      return false;
+    }
   }
 
-  function changeStreamPreset(nextPreset) {
+  async function changeStreamPreset(nextPreset) {
     const safePreset = STREAM_PRESETS[nextPreset] ? nextPreset : "720p30";
     setStreamPreset(safePreset);
     localStorage.setItem(STREAM_PRESET_KEY, safePreset);
-    applyVideoPreset(cameraTrackRef.current, safePreset);
+    const activeScreenTrack = screenTrackRef.current;
+    if (activeScreenTrack?.readyState === "live") {
+      const applied = await applyScreenSharePreset(activeScreenTrack, safePreset);
+      await configureScreenSenders(safePreset);
+      notify(applied
+        ? `Transmissao alterada para ${getStreamPresetLabel(safePreset)}.`
+        : `Preferencia definida para ${getStreamPresetLabel(safePreset)}. O navegador manteve a melhor configuracao disponivel.`);
+      return;
+    }
+    notify(`Transmissao definida para ${getStreamPresetLabel(safePreset)}.`);
   }
 
   async function setupLocalMedia() {
@@ -486,7 +515,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       localStreamRef.current = media.stream;
       audioTrackRef.current = media.audioTrack;
       cameraTrackRef.current = media.videoTrack;
-      applyVideoPreset(media.videoTrack);
       setDisplayStream(media.videoTrack ? media.stream : null);
       updateMicEnabled(Boolean(media.audioTrack?.enabled), false);
       updateCameraEnabled(Boolean(media.videoTrack?.enabled), false);
@@ -667,14 +695,15 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     });
   }
 
-  function getScreenBitrate(peerCount) {
-    if (peerCount <= 1) return 3_500_000;
-    if (peerCount === 2) return 3_000_000;
-    if (peerCount === 3) return 2_500_000;
-    return 2_000_000;
+  function getScreenBitrate(preset, peerCount) {
+    const baseBitrate = (STREAM_PRESETS[preset] || STREAM_PRESETS["720p30"]).maxBitrate;
+    if (peerCount <= 1) return baseBitrate;
+    if (peerCount === 2) return Math.min(baseBitrate, 4_500_000);
+    if (peerCount === 3) return Math.min(baseBitrate, 3_500_000);
+    return Math.min(baseBitrate, 2_500_000);
   }
 
-  async function configureVideoSender(sender, mode, peerCount) {
+  async function configureVideoSender(sender, mode, peerCount, preset = streamPreset) {
     if (!sender) {
       return;
     }
@@ -690,8 +719,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
 
     const encoding = parameters.encodings[0];
     if (mode === "screen") {
-      encoding.maxBitrate = getScreenBitrate(peerCount);
-      encoding.maxFramerate = 30;
+      encoding.maxBitrate = getScreenBitrate(preset, peerCount);
+      encoding.maxFramerate = (STREAM_PRESETS[preset] || STREAM_PRESETS["720p30"]).frameRate;
     } else {
       delete encoding.maxBitrate;
       delete encoding.maxFramerate;
@@ -700,15 +729,20 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     await sender.setParameters(parameters).catch(() => {});
   }
 
-  async function replaceVideoTrackForAllPeers(track, mode = "camera") {
+  async function replaceVideoTrackForAllPeers(track, mode = "camera", preset = streamPreset) {
     const peers = Array.from(peersRef.current.values());
     await Promise.all(peers.map(async (peer) => {
       if (!peer.videoSender) {
         return;
       }
       await peer.videoSender.replaceTrack(track?.readyState === "live" ? track : null);
-      await configureVideoSender(peer.videoSender, mode, peers.length);
+      await configureVideoSender(peer.videoSender, mode, peers.length, preset);
     }));
+  }
+
+  async function configureScreenSenders(preset = streamPreset) {
+    const peers = Array.from(peersRef.current.values());
+    await Promise.all(peers.map((peer) => configureVideoSender(peer.videoSender, "screen", peers.length, preset)));
   }
 
   function syncLocalTracksToPeer(peer) {
@@ -722,7 +756,12 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       : null;
 
     peer.audioSender?.replaceTrack(audioTrack);
-    peer.videoSender?.replaceTrack(videoTrack);
+    if (peer.videoSender) {
+      peer.videoSender.replaceTrack(videoTrack).then(() => {
+        if (screenTrackRef.current) return configureVideoSender(peer.videoSender, "screen", peersRef.current.size, streamPreset);
+        return undefined;
+      }).catch(() => {});
+    }
   }
 
   function summarizeSdp(sdp = "") {
@@ -913,7 +952,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     }
 
     cameraTrackRef.current = result.track;
-    applyVideoPreset(result.track);
     localStreamRef.current?.addTrack(result.track);
     updateCameraEnabled(true);
 
@@ -933,8 +971,9 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
 
     try {
       let screenStream;
+      const screenConstraints = getScreenShareConstraints(streamPreset);
       try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: SCREEN_SHARE_CONSTRAINTS, audio: true });
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: screenConstraints, audio: true });
       } catch (error) {
         if (!['TypeError', 'OverconstrainedError', 'NotSupportedError'].includes(error?.name)) {
           throw error;
@@ -948,9 +987,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       }
 
       screenTrack.contentHint = "motion";
-      if (screenTrack.applyConstraints) {
-        await screenTrack.applyConstraints(SCREEN_SHARE_CONSTRAINTS).catch(() => {});
-      }
+      await applyScreenSharePreset(screenTrack, streamPreset);
 
       screenStreamRef.current = screenStream;
       screenTrackRef.current = screenTrack;
@@ -961,7 +998,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         createDisplayAudioMix(displayAudioTrackRef.current);
       }
 
-      await replaceVideoTrackForAllPeers(screenTrack, "screen");
+      await replaceVideoTrackForAllPeers(screenTrack, "screen", streamPreset);
       setDisplayStream(screenStream);
       updateScreenSharing(true);
       socketRef.current?.emit("screen-share-status", { isScreenSharing: true });
@@ -1034,6 +1071,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     displayAudioTrackRef.current = null;
     screenTrackRef.current = null;
     screenStreamRef.current = null;
+    setScreenShareSettings(null);
 
     const cameraTrack = cameraTrackRef.current;
     const shouldRestoreCamera = Boolean(cameraTrack && cameraTrack.readyState === "live" && cameraTrack.enabled);
@@ -1069,6 +1107,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     stopStream(localStreamRef.current);
     screenStreamRef.current = null;
     screenTrackRef.current = null;
+    setScreenShareSettings(null);
     localStreamRef.current = null;
     audioTrackRef.current = null;
     cameraTrackRef.current = null;
@@ -1197,7 +1236,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         previousTrack?.stop();
         localStreamRef.current?.addTrack(result.track);
         cameraTrackRef.current = result.track;
-        applyVideoPreset(result.track);
         if (!screenTrackRef.current) {
           replaceSenderTrackForAll("video", result.track);
           setDisplayStream(result.track.enabled ? localStreamRef.current : null);
@@ -1440,12 +1478,14 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     (left, right) => Number(right.isScreenSharing) - Number(left.isScreenSharing)
   );
   const focusedParticipant = callParticipants.find((participant) => participant.socketId === focusedMediaId) || callParticipants[0];
+  const screenShareLabel = getActualScreenLabel(screenShareSettings, streamPreset);
 
   function renderParticipantCard(participant, compact = false) {
     return (
       <ParticipantCard
         key={`${compact ? "thumb" : "main"}-${participant.socketId}`}
         {...participant}
+        screenShareLabel={participant.isLocal ? screenShareLabel : ""}
         compact={compact}
         isDeafened={isDeafened}
         notify={notify}
@@ -1559,7 +1599,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
             <strong>{profile.displayName || nickname}</strong>
             <span>Voce esta na voz com {voiceParticipants.length} participante{voiceParticipants.length === 1 ? "" : "s"}.</span>
             <small>Nenhuma camera ou tela ativa no momento.</small>
-            <div className="empty-call-actions"><button type="button" onClick={toggleCamera}>Ligar camera</button><button type="button" onClick={toggleScreenShare}>Compartilhar tela</button></div>
+            <div className="empty-call-actions"><button type="button" onClick={toggleCamera}>Ligar camera</button></div>
             <div className="voice-roster-inline">
               {voiceParticipants.map((participant) => <span key={participant.socketId} title={participant.nickname}>{participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>)}
             </div>
@@ -1569,6 +1609,9 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         {isInVoice && <ControlsBar
           isScreenSharing={isScreenSharing}
           onToggleScreenShare={toggleScreenShare}
+          streamPreset={streamPreset}
+          screenShareLabel={screenShareLabel}
+          onStreamPresetChange={changeStreamPreset}
         />}
         </section>
 

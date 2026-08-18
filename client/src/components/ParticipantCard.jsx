@@ -6,6 +6,7 @@ export default function ParticipantCard({
   stream,
   isLocal = false,
   isScreenSharing = false,
+  screenShareLabel = "",
   isSpeaking = false,
   avatarUrl = "",
   micEnabled,
@@ -70,7 +71,7 @@ export default function ParticipantCard({
           </div>
           <div>
           <strong title={nickname}>{nickname}</strong>
-          {isScreenSharing && <span className="sharing-text">Compartilhando tela</span>}
+          {isScreenSharing && <span className="sharing-text">Compartilhando tela{isLocal && screenShareLabel ? ` · ${screenShareLabel}` : ""}</span>}
           </div>
         </div>
         <span className="status-badge">{isLocal ? "Voce" : "Remoto"}</span>
@@ -85,7 +86,7 @@ export default function ParticipantCard({
             <span>Sem video</span>
           </div>
         )}
-        {isScreenSharing && <div className="screen-badge">Tela compartilhada</div>}
+        {isScreenSharing && <div className="screen-badge">{isLocal && screenShareLabel ? screenShareLabel : "Tela compartilhada"}</div>}
       </div>
 
       <div className="participant-actions">
