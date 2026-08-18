@@ -1,3 +1,5 @@
+import UserStatusBadge from "./UserStatusBadge.jsx";
+
 export default function Sidebar({
   roomCode,
   roomName,
@@ -88,7 +90,7 @@ export default function Sidebar({
         <div className="call-member-list">
           {participants.map((participant) => (
             <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""}`} key={participant.socketId}>
-              <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>
+              <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}<UserStatusBadge status={participant.status} /></span>
               <span className="member-name" title={participant.nickname}>{participant.nickname}</span>
               <span className="member-status" aria-label="Status de midia">
                 <i className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}>mic</i>
@@ -104,6 +106,7 @@ export default function Sidebar({
         <div className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`}>
           <label className="sidebar-user-avatar" title="Alterar avatar">
             {avatarUrl ? <img src={avatarUrl} alt="" /> : nickname?.slice(0, 1).toUpperCase() || "?"}
+            <UserStatusBadge status={status} />
             <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onAvatarChange} />
           </label>
           <div>

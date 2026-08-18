@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { SERVER_URL } from "../utils/webrtc.js";
 import { playUiSound } from "../utils/uiSounds.js";
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const ACCEPTED_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -10,7 +10,11 @@ const ACCEPTED_TYPES = new Set([
   "image/gif",
   "video/mp4",
   "video/webm",
-  "video/quicktime"
+  "video/quicktime",
+  "application/pdf", "application/zip", "application/x-zip-compressed", "audio/mpeg", "audio/wav", "audio/ogg", "text/plain",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 ]);
 
 function formatTime(value) {
@@ -63,7 +67,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      notify("O arquivo deve ter no maximo 25 MB.");
+      notify("Este arquivo excede o limite de 100 MB.");
       return false;
     }
 
@@ -159,8 +163,10 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
                     <a href={`${SERVER_URL}${message.attachment.url}`} target="_blank" rel="noreferrer">
                       <img src={`${SERVER_URL}${message.attachment.url}`} alt={message.attachment.name || "Imagem anexada"} />
                     </a>
-                  ) : (
+                  ) : message.attachment.type === "video" ? (
                     <video controls preload="metadata" src={`${SERVER_URL}${message.attachment.url}`} />
+                  ) : (
+                    <a className="file-attachment" href={`${SERVER_URL}${message.attachment.url}`} target="_blank" rel="noreferrer" download>{message.attachment.name || "Arquivo"}</a>
                   )}
                   <span>{message.attachment.name} - {formatSize(message.attachment.size)}</span>
                 </div>
@@ -185,7 +191,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
             ref={fileInputRef}
             className="visually-hidden"
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+            accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,application/pdf,application/zip,audio/mpeg,audio/wav,audio/ogg,text/plain,.docx,.xlsx,.pptx"
             onChange={handleFileChange}
           />
           <input

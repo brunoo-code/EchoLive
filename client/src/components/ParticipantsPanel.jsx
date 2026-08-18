@@ -1,3 +1,5 @@
+import UserStatusBadge from "./UserStatusBadge.jsx";
+
 export default function ParticipantsPanel({ participants }) {
   return (
     <aside className="participants-panel" aria-label="Participantes online">
@@ -11,6 +13,7 @@ export default function ParticipantsPanel({ participants }) {
           <div className={`online-person ${participant.isSpeaking ? "is-speaking" : ""}`} key={participant.socketId}>
             <div className="avatar-dot" aria-hidden="true">
               {participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}
+              <UserStatusBadge status={participant.status} />
             </div>
             <div className="online-person-info">
               <strong title={participant.nickname}>{participant.nickname}</strong>

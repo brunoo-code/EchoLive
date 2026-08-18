@@ -38,7 +38,7 @@ const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || process.env.RENDER_EXTERNAL_U
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST_DIR = path.resolve(SERVER_DIR, "../../client/dist");
 const UPLOAD_DIR = path.resolve(SERVER_DIR, "../uploads");
-const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
+const MAX_UPLOAD_SIZE = 100 * 1024 * 1024;
 const ALLOWED_UPLOADS = new Map([
   ["image/png", [".png"]],
   ["image/jpeg", [".jpg", ".jpeg"]],
@@ -46,7 +46,17 @@ const ALLOWED_UPLOADS = new Map([
   ["image/gif", [".gif"]],
   ["video/mp4", [".mp4"]],
   ["video/webm", [".webm"]],
-  ["video/quicktime", [".mov"]]
+  ["video/quicktime", [".mov"]],
+  ["application/pdf", [".pdf"]],
+  ["application/zip", [".zip"]],
+  ["application/x-zip-compressed", [".zip"]],
+  ["audio/mpeg", [".mp3"]],
+  ["audio/wav", [".wav"]],
+  ["audio/ogg", [".ogg"]],
+  ["text/plain", [".txt"]],
+  ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", [".docx"]],
+  ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", [".xlsx"]],
+  ["application/vnd.openxmlformats-officedocument.presentationml.presentation", [".pptx"]]
 ]);
 
 const app = express();
@@ -77,7 +87,7 @@ app.post("/rooms/:roomCode/upload", (request, response) => {
   upload.single("file")(request, response, async (error) => {
     if (error) {
       const status = error.code === "LIMIT_FILE_SIZE" ? 413 : 400;
-      response.status(status).json({ error: "Arquivo invalido ou maior que 25 MB." });
+      response.status(status).json({ error: "Arquivo invalido ou maior que 100 MB." });
       return;
     }
 
@@ -101,7 +111,7 @@ app.post("/rooms/:roomCode/upload", (request, response) => {
       return response.status(400).json({ error: "Tipo de arquivo nao permitido." });
     }
 
-    const type = file.mimetype.startsWith("image/") ? "image" : "video";
+    const type = file.mimetype.startsWith("image/") ? "image" : file.mimetype.startsWith("video/") ? "video" : "file";
     return response.json({
       attachment: {
         type,
@@ -336,7 +346,7 @@ io.on("connection", (socket) => {
     const validChannel = channelId === "general";
     const validAttachment = Boolean(
       attachment &&
-        (attachment.type === "image" || attachment.type === "video") &&
+        (attachment.type === "image" || attachment.type === "video" || attachment.type === "file") &&
         typeof attachment.url === "string" &&
         /^\/uploads\/[A-Za-z0-9._-]+$/.test(attachment.url) &&
         Number.isInteger(attachment.size) &&

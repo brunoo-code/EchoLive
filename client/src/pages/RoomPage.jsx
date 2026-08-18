@@ -10,6 +10,7 @@ import ParticipantCard from "../components/ParticipantCard.jsx";
 import ParticipantsPanel from "../components/ParticipantsPanel.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
+import RoomRail from "../components/RoomRail.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
 import { requestInitialMedia, requestSingleKind, stopStream } from "../utils/media.js";
@@ -72,7 +73,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const [selectedVideoId, setSelectedVideoId] = useState(() => localStorage.getItem(VIDEO_DEVICE_KEY) || "");
   const [selectedOutputId, setSelectedOutputId] = useState(() => localStorage.getItem(OUTPUT_DEVICE_KEY) || "");
   const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem(AVATAR_KEY) || "");
-  const [profile, setProfile] = useState(() => { try { return { displayName: "", nickname: localStorage.getItem(NICKNAME_KEY) || "", status: "Online", customStatus: "", avatarUrl: localStorage.getItem(AVATAR_KEY) || "", ...JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}") }; } catch { return { displayName: "", nickname: "", status: "Online", customStatus: "", avatarUrl: "" }; } });
+  const [profile, setProfile] = useState(() => { try { const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}"); return { displayName: "", nickname: localStorage.getItem(NICKNAME_KEY) || "", status: "online", customStatus: "", avatarUrl: localStorage.getItem(AVATAR_KEY) || "", ...saved, status: saved.status === "dnd" ? "dnd" : "online" }; } catch { return { displayName: "", nickname: "", status: "online", customStatus: "", avatarUrl: "" }; } });
   const { toasts, notify } = useToasts();
 
   const socketRef = useRef(null);
@@ -1381,7 +1382,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     isScreenSharing,
     isSpeaking,
     micEnabled,
-    cameraEnabled
+    cameraEnabled,
+    status: profile.status
   };
   const onlineParticipants = [localParticipant, ...roomParticipants];
   const voiceParticipants = isInVoice ? [localParticipant, ...remoteParticipants] : [];
@@ -1434,6 +1436,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
           <AudioParticipant key={participant.socketId} peerSocketId={participant.socketId} stream={participant.stream} volume={participant.volume} isDeafened={isDeafened} outputDeviceId={selectedOutputId} />
         ))}
       </div>
+      <RoomRail roomCode={roomCode} roomName={roomName} recentRooms={recentRooms()} onHome={onBack} onOpenSwitcher={() => setIsRoomSwitcherOpen(true)} />
       <Sidebar
         roomCode={roomCode}
         roomName={roomName}
