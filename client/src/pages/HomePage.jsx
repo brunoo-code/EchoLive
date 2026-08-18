@@ -32,6 +32,7 @@ export default function HomePage({ onRoomCreated }) {
   const [joinCode, setJoinCode] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [authModalMode, setAuthModalMode] = useState(null);
+  const [homeIntent, setHomeIntent] = useState("quick");
   const { toasts, notify } = useToasts();
   const { availability, logout, status, user } = useAuth();
 
@@ -137,6 +138,17 @@ export default function HomePage({ onRoomCreated }) {
     onRoomCreated(room.code);
   }
 
+  function focusQuickEntry() {
+    setHomeIntent("quick");
+    setMode("create");
+    document.getElementById("home-entry-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function openAccountEntry() {
+    setHomeIntent("account");
+    setAuthModalMode("register");
+  }
+
   return (
     <main className="page home-page">
       <ToastStack toasts={toasts} />
@@ -210,16 +222,13 @@ export default function HomePage({ onRoomCreated }) {
           </section>
 
           <aside className="home-aside">
-            <EkoGuide state={mode === "create" ? "speaking" : "normal"} />
-            <section className="home-ways-note" aria-label="O que voce pode fazer no EchoLive">
-              <div className="home-note-heading"><span className="home-note-icon"><Icon name="voice" size={16} /></span><span><strong>Fale, veja, compartilhe</strong><small>Uma sala para cada momento</small></span></div>
-              <div className="home-way-list"><span><Icon name="voice" size={14} />Converse por voz</span><span><Icon name="video" size={14} />Ligue a camera</span><span><Icon name="screen" size={14} />Mostre sua tela</span></div>
-            </section>
-            <section className="home-account-note" aria-label="Identidade do EchoLive">
-              <div className="home-note-heading"><span className="home-note-icon"><Icon name="account" size={16} /></span><span><strong>Uma identidade para continuar</strong><small>{status === "authenticated" && user ? `Tudo pronto, ${user.displayName}.` : "Entre quando quiser manter seu perfil."}</small></span></div>
-              <p>Com uma conta, sua identidade continua com voce.</p>
-              <div className="home-future-points"><span><Icon name="user" size={14} />Amigos</span><span><Icon name="chat" size={14} />Mensagens</span><span><Icon name="voice" size={14} />Presenca</span></div>
-            </section>
+            <EkoGuide
+              state={mode === "create" ? "speaking" : "normal"}
+              intent={homeIntent}
+              onIntentChange={setHomeIntent}
+              onQuickEntry={focusQuickEntry}
+              onCreateAccount={openAccountEntry}
+            />
           </aside>
         </div>
         <footer className="home-footer"><span>EchoLive</span><span>Salas temporarias para conversar agora.</span></footer>

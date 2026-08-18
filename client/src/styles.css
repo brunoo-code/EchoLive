@@ -4129,3 +4129,84 @@ video.screen-video {
   .home-aside { order: -1; }
   .home-ways-note { display: none; }
 }
+
+/* Eko interaction: one open illustration, two contextual intentions, no card stack. */
+.home-aside { gap: 0; }
+.eko-guide { display: grid; gap: 0; padding: 0; }
+.eko-visual {
+  min-height: 248px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.eko-visual::after { width: 160px; height: 46px; background: rgba(97, 220, 235, 0.1); filter: blur(22px); }
+.eko-svg { width: min(100%, 268px); }
+.eko-intent-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 5px;
+}
+.eko-intent {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 55px;
+  gap: 11px;
+  padding: 8px 8px 8px 2px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--home-muted);
+  background: transparent;
+  text-align: left;
+  transition: opacity var(--transition-normal), color var(--transition-normal), transform var(--transition-normal);
+}
+.eko-intent::after {
+  position: absolute;
+  left: 2px;
+  bottom: 1px;
+  width: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--home-cyan);
+  content: "";
+  transition: width var(--transition-normal);
+}
+.eko-intent:hover,
+.eko-intent:focus-visible,
+.eko-intent.is-active { color: var(--home-ink); background: transparent; transform: translateX(2px); }
+.eko-intent:hover::after,
+.eko-intent:focus-visible::after,
+.eko-intent.is-active::after { width: 28px; }
+.eko-intent:not(.is-active) { opacity: 0.58; }
+.eko-intent-list:hover .eko-intent:not(:hover),
+.eko-intent-list:focus-within .eko-intent:not(:focus-visible) { opacity: 0.42; }
+.eko-intent-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--home-blue);
+  background: rgba(140, 185, 255, 0.08);
+  transition: color var(--transition-normal), background var(--transition-normal);
+}
+.eko-intent:hover .eko-intent-icon,
+.eko-intent:focus-visible .eko-intent-icon,
+.eko-intent.is-active .eko-intent-icon { color: var(--home-cyan); background: rgba(97, 220, 235, 0.12); }
+.eko-intent > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.eko-intent strong { color: inherit; font-size: 0.8rem; font-weight: 800; }
+.eko-intent small { color: var(--home-muted); font-size: 0.7rem; line-height: 1.35; }
+.eko-intent.is-active small,
+.eko-intent:hover small,
+.eko-intent:focus-visible small { color: #c2d3e8; }
+.eko-visual[data-intent="account"] .eko-svg { animation-name: eko-account-float; }
+.eko-visual[data-intent="account"] .eko-eye { filter: brightness(1.08); }
+.eko-visual[data-intent="account"] .eko-antenna { transform: rotate(4deg); transform-origin: 116px 22px; }
+@keyframes eko-account-float { 0%, 100% { transform: translateY(0) rotate(1deg); } 50% { transform: translateY(-4px) rotate(-1deg); } }
+
+@media (max-width: 720px) {
+  .eko-visual { min-height: 210px; }
+  .eko-intent { min-height: 58px; padding-right: 5px; }
+}

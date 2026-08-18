@@ -1,12 +1,10 @@
-export default function EkoGuide({ state = "normal" }) {
+import Icon from "./Icon.jsx";
+
+export default function EkoGuide({ state = "normal", intent = "quick", onIntentChange, onQuickEntry, onCreateAccount }) {
   const isSpeaking = state === "speaking";
 
-  return <section className="eko-guide" aria-label="Eko, guia do EchoLive">
-    <div className="eko-guide-heading">
-      <span className="eko-kicker"><i aria-hidden="true" /> Guia do EchoLive</span>
-      <span className="eko-state">{isSpeaking ? "falando" : "por aqui"}</span>
-    </div>
-    <div className={`eko-visual eko-visual-${isSpeaking ? "speaking" : "normal"}`}>
+  return <section className="eko-guide" aria-label="Eko e atalhos do EchoLive">
+    <div className={`eko-visual eko-visual-${isSpeaking ? "speaking" : "normal"}`} data-intent={intent}>
       <span className="eko-orbit eko-orbit-one" aria-hidden="true" />
       <span className="eko-orbit eko-orbit-two" aria-hidden="true" />
       <svg className="eko-svg" viewBox="0 0 220 180" role="img" aria-label="Eko">
@@ -28,9 +26,27 @@ export default function EkoGuide({ state = "normal" }) {
       </svg>
       {isSpeaking && <span className="eko-speaking-wave" aria-hidden="true"><b /><b /><b /></span>}
     </div>
-    <div className="eko-speech-list">
-      <p className="eko-speech eko-speech-primary">So quer conversar agora? Uma sala rapida resolve.</p>
-      <p className="eko-speech">Com uma conta, sua identidade continua com voce.</p>
+    <div className="eko-intent-list" aria-label="Escolha como quer começar">
+      <button
+        type="button"
+        className={`eko-intent ${intent === "quick" ? "is-active" : ""}`}
+        onMouseEnter={() => onIntentChange?.("quick")}
+        onFocus={() => onIntentChange?.("quick")}
+        onClick={onQuickEntry}
+      >
+        <span className="eko-intent-icon"><Icon name="voice" size={15} /></span>
+        <span><strong>Entrar rapido</strong><small>Uma sala rapida resolve.</small></span>
+      </button>
+      <button
+        type="button"
+        className={`eko-intent ${intent === "account" ? "is-active" : ""}`}
+        onMouseEnter={() => onIntentChange?.("account")}
+        onFocus={() => onIntentChange?.("account")}
+        onClick={onCreateAccount}
+      >
+        <span className="eko-intent-icon"><Icon name="account" size={15} /></span>
+        <span><strong>Criar uma conta</strong><small>Seu perfil continua com voce.</small></span>
+      </button>
     </div>
   </section>;
 }
