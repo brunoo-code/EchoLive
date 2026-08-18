@@ -15,12 +15,14 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeField, setActiveField] = useState("");
 
   useEffect(() => {
     if (open) {
       setMode(initialMode);
       setError("");
       setFieldErrors({});
+      setActiveField("");
     }
   }, [initialMode, open]);
 
@@ -85,7 +87,7 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
   const isRegister = mode === "register";
 
   return <div className="modal-backdrop auth-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className={`auth-modal ${isRegister ? "is-register" : "is-login"}`} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+    <section className={`auth-modal ${isRegister ? "is-register" : "is-login"} ${activeField ? `is-${activeField}-focus` : ""}`} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
       <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar"><Icon name="close" size={18} /></button>
       <div className="auth-modal-brand"><span className="auth-modal-mark"><BrandMark size={32} /></span><span>EchoLive</span></div>
       <p className="eyebrow">{isRegister ? "Sua identidade" : "Sua conta EchoLive"}</p>
@@ -96,23 +98,23 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
         {isRegister && <div className="auth-section-heading"><strong>Sua identidade</strong><small>Como voce vai aparecer por aqui.</small></div>}
         <label className="field">
           <span>Nome de usuario</span>
-          <input autoFocus autoComplete="username" maxLength={24} value={username} onChange={(event) => { setUsername(event.target.value); setFieldErrors((current) => ({ ...current, username: "" })); }} placeholder="seu_usuario" aria-invalid={Boolean(fieldErrors.username)} aria-describedby={fieldErrors.username ? "auth-username-error" : undefined} />
+          <input autoFocus autoComplete="username" maxLength={24} value={username} onFocus={() => setActiveField("username")} onBlur={() => setActiveField("")} onChange={(event) => { setUsername(event.target.value); setFieldErrors((current) => ({ ...current, username: "" })); }} placeholder="seu_usuario" aria-invalid={Boolean(fieldErrors.username)} aria-describedby={fieldErrors.username ? "auth-username-error" : undefined} />
           {fieldErrors.username && <small id="auth-username-error" className="field-error">{fieldErrors.username}</small>}
         </label>
         {isRegister && <label className="field">
           <span>Nome de exibicao</span>
-          <input autoComplete="name" maxLength={40} value={displayName} onChange={(event) => { setDisplayName(event.target.value); setFieldErrors((current) => ({ ...current, displayName: "" })); }} placeholder="Seu nome" aria-invalid={Boolean(fieldErrors.displayName)} aria-describedby={fieldErrors.displayName ? "auth-display-name-error" : undefined} />
+          <input autoComplete="name" maxLength={40} value={displayName} onFocus={() => setActiveField("displayName")} onBlur={() => setActiveField("")} onChange={(event) => { setDisplayName(event.target.value); setFieldErrors((current) => ({ ...current, displayName: "" })); }} placeholder="Seu nome" aria-invalid={Boolean(fieldErrors.displayName)} aria-describedby={fieldErrors.displayName ? "auth-display-name-error" : undefined} />
           {fieldErrors.displayName && <small id="auth-display-name-error" className="field-error">{fieldErrors.displayName}</small>}
         </label>}
         {isRegister && <div className="auth-section-heading auth-security-heading"><strong>Seguranca</strong><small>Uma senha so sua.</small></div>}
         <label className="field">
           <span>Senha</span>
-          <input type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={8} maxLength={128} value={password} onChange={(event) => { setPassword(event.target.value); setFieldErrors((current) => ({ ...current, password: "" })); }} placeholder="Minimo de 8 caracteres" aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? "auth-password-error" : undefined} />
+          <input type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={8} maxLength={128} value={password} onFocus={() => setActiveField("password")} onBlur={() => setActiveField("")} onChange={(event) => { setPassword(event.target.value); setFieldErrors((current) => ({ ...current, password: "" })); }} placeholder="Minimo de 8 caracteres" aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? "auth-password-error" : undefined} />
           {fieldErrors.password && <small id="auth-password-error" className="field-error">{fieldErrors.password}</small>}
         </label>
         {isRegister && <label className="field">
           <span>Confirmar senha</span>
-          <input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={confirmation} onChange={(event) => { setConfirmation(event.target.value); setFieldErrors((current) => ({ ...current, confirmation: "" })); }} aria-invalid={Boolean(fieldErrors.confirmation)} aria-describedby={fieldErrors.confirmation ? "auth-confirmation-error" : undefined} />
+          <input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={confirmation} onFocus={() => setActiveField("confirmation")} onBlur={() => setActiveField("")} onChange={(event) => { setConfirmation(event.target.value); setFieldErrors((current) => ({ ...current, confirmation: "" })); }} aria-invalid={Boolean(fieldErrors.confirmation)} aria-describedby={fieldErrors.confirmation ? "auth-confirmation-error" : undefined} />
           {fieldErrors.confirmation && <small id="auth-confirmation-error" className="field-error">{fieldErrors.confirmation}</small>}
         </label>}
         {error && <p className="auth-error" role="alert">{error}</p>}

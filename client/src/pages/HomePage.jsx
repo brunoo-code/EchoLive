@@ -113,6 +113,7 @@ export default function HomePage({ onRoomCreated }) {
       return;
     }
 
+    celebrateEko("quickCelebrate");
     setIsCreating(true);
     const socket = io(SERVER_URL);
 
@@ -151,6 +152,7 @@ export default function HomePage({ onRoomCreated }) {
       return;
     }
 
+    celebrateEko("quickCelebrate");
     saveRecentRoom(cleanRoomCode, `Sala ${cleanRoomCode}`, setRecentRooms);
     onRoomCreated(cleanRoomCode);
   }

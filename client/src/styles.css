@@ -4599,6 +4599,11 @@ video.screen-video {
 .auth-modal input { min-height: 45px; border-color: rgba(205, 211, 222, 0.13); border-radius: 9px; color: var(--echo-text); background: rgba(8, 10, 14, 0.46); }
 .auth-modal input:hover { border-color: rgba(139, 169, 255, 0.3); }
 .auth-modal input:focus { border-color: rgba(103, 212, 229, 0.55); box-shadow: 0 0 0 3px rgba(103, 212, 229, 0.1); }
+.auth-modal-mark { transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease; }
+.auth-modal.is-username-focus .auth-modal-mark { transform: translateY(-1px); box-shadow: 0 9px 18px rgba(139, 169, 255, 0.16); }
+.auth-modal.is-displayName-focus .auth-modal-mark { filter: brightness(1.04); }
+.auth-modal.is-password-focus .auth-modal-mark,
+.auth-modal.is-confirmation-focus .auth-modal-mark { transform: translateY(2px); filter: brightness(0.92); box-shadow: 0 4px 12px rgba(103, 212, 229, 0.08); }
 .auth-section-heading { display: grid; gap: 3px; margin: 2px 0 12px; padding-top: 2px; }
 .auth-section-heading strong { color: var(--echo-text-soft); font-size: 0.78rem; font-weight: 700; }
 .auth-section-heading small { color: var(--echo-dim); font-size: 0.7rem; }
@@ -4611,6 +4616,14 @@ video.screen-video {
 .auth-modal input[aria-invalid="true"] { border-color: rgba(240, 125, 134, 0.62); }
 .auth-unavailable { color: #e8c982; border-color: rgba(232, 201, 130, 0.26); background: rgba(232, 201, 130, 0.08); }
 @keyframes auth-modal-enter { from { opacity: 0; transform: translateY(7px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* A single readable wave: the right arm is painted above the torso and returns to idle. */
+@keyframes eko-hand-wave {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(2px, -8px) rotate(-24deg); }
+  45% { transform: translate(0, -7px) rotate(-12deg); }
+  65% { transform: translate(2px, -8px) rotate(-26deg); }
+}
 
 /* Keep the social language visible inside the call without changing call behavior. */
 .room-page { background: var(--echo-bg); }
@@ -4641,4 +4654,101 @@ video.screen-video {
   .home-entry-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
   .auth-modal { width: calc(100% - 24px); padding: 24px 20px; }
   .auth-modal h2 { max-width: 18ch; font-size: 1.38rem; }
+}
+
+/* Final room polish: familiar desktop ergonomics with EchoLive state colors. */
+.room-page {
+  --room-surface: var(--echo-surface);
+  --room-surface-hover: var(--echo-surface-hover);
+  --room-text: var(--echo-text);
+  --room-muted: var(--echo-muted);
+  --room-line: rgba(205, 211, 222, 0.11);
+  color: var(--room-text);
+  background: var(--echo-bg);
+}
+.room-page .room-rail { background: #0e1014; border-color: var(--room-line); }
+.room-page .rail-brand { color: #142126; background: var(--echo-cyan); box-shadow: 0 5px 14px rgba(103, 212, 229, 0.08); }
+.room-page .rail-brand:hover, .room-page .rail-brand:focus-visible { color: #102024; background: #7bd9e4; transform: translateY(-1px); }
+.room-page .rail-room { position: relative; border-color: transparent; filter: saturate(0.72); transition: filter 160ms ease, border-color 160ms ease, transform 180ms ease; }
+.room-page .rail-room:hover, .room-page .rail-room.is-active { filter: saturate(1); border-color: rgba(103, 212, 229, 0.42); transform: translateY(-1px); }
+.room-page .rail-room.is-active::before { position: absolute; top: 50%; left: -8px; width: 3px; height: 22px; border-radius: 0 3px 3px 0; background: var(--echo-cyan); content: ""; transform: translateY(-50%); }
+.room-page .rail-add { color: var(--echo-green); background: rgba(99, 211, 155, 0.08); }
+.room-page .rail-add:hover, .room-page .rail-add:focus-visible { color: var(--echo-green); background: rgba(99, 211, 155, 0.16); }
+.room-page .app-sidebar, .room-page .participants-panel { color: var(--room-text); background: #15181e; border-color: var(--room-line); }
+.room-page .app-sidebar .brand-block strong { color: var(--room-text); }
+.room-page .app-sidebar .brand-block span, .room-page .sidebar-count, .room-page .room-code-line span { color: var(--room-muted); }
+.room-page .app-sidebar .section-label { color: #9aa4b4; font-size: 0.67rem; font-weight: 650; }
+.room-page .room-name-line { color: var(--room-text); font-weight: 700; }
+.room-page .room-code-line strong { color: var(--echo-blue); }
+.room-page .channel-button { color: #aeb6c3; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease; }
+.room-page .channel-button:hover:not(:disabled) { color: var(--room-text); background: rgba(255, 255, 255, 0.055); }
+.room-page .channel-button.is-selected { color: var(--room-text); background: rgba(103, 212, 229, 0.09); box-shadow: inset 2px 0 var(--echo-cyan); }
+.room-page .channel-button.is-selected .channel-icon { color: var(--echo-cyan); }
+.room-page .voice-label { margin-top: 14px; }
+.room-page .call-member { color: #b4bdca; }
+.room-page .call-member:hover, .room-page .call-member.is-local-member { color: var(--room-text); background: rgba(255, 255, 255, 0.05); }
+.room-page .call-member.is-speaking { background: rgba(99, 211, 155, 0.08); box-shadow: inset 2px 0 var(--echo-green); }
+.room-page .call-member.is-speaking .member-avatar { box-shadow: 0 0 0 2px var(--echo-green), 0 0 0 5px rgba(99, 211, 155, 0.11); }
+.room-page .status-icon { color: #9ca5b1; }
+.room-page .status-icon.is-muted { color: var(--echo-danger); opacity: 0.82; }
+.room-page .status-icon.status-screen.is-sharing { color: var(--echo-cyan); }
+.room-page .connected-voice { color: var(--room-text); border-color: rgba(99, 211, 155, 0.22); background: rgba(99, 211, 155, 0.055); }
+.room-page .connected-voice.is-away { border-color: var(--room-line); background: rgba(255, 255, 255, 0.025); }
+.room-page .connected-voice.is-connected .voice-state-icon, .room-page .connected-voice.is-connected .connected-voice-copy strong, .room-page .connected-voice.is-connected .connection-quality { color: var(--echo-green); }
+.room-page .connected-voice-action { color: #abb4c1; }
+.room-page .connected-voice-action:hover, .room-page .connected-voice-action:focus-visible { color: var(--echo-danger); background: rgba(240, 125, 134, 0.1); }
+.room-page .sidebar-user-summary { color: var(--room-text); background: rgba(255, 255, 255, 0.045); }
+.room-page .sidebar-user-summary:hover, .room-page .sidebar-user-summary:focus-visible { background: var(--room-surface-hover); }
+.room-page .sidebar-user-summary.is-speaking { box-shadow: 0 0 0 1px var(--echo-green), 0 0 14px rgba(99, 211, 155, 0.12); }
+.room-page .sidebar-user-summary > div span { color: var(--room-muted); }
+.room-page .sidebar-user-controls .control-glyph { color: #aeb6c3; }
+.room-page .sidebar-user-controls .control-glyph:hover, .room-page .sidebar-user-controls .control-glyph:focus-visible { color: var(--room-text); background: rgba(255, 255, 255, 0.08); }
+.room-page .sidebar-user-controls .control-glyph.is-muted { color: var(--echo-danger); }
+
+.room-page .participants-panel { padding-top: 17px; }
+.room-page .panel-heading { color: var(--room-text); }
+.room-page .panel-heading > span { font-size: 0.82rem; font-weight: 650; }
+.room-page .panel-count { color: var(--room-muted); font-size: 0.72rem; font-weight: 550; }
+.room-page .online-indicator { background: var(--echo-green); box-shadow: 0 0 0 4px rgba(99, 211, 155, 0.08); }
+.room-page .online-person { color: var(--room-text); transition: color 160ms ease, background-color 160ms ease, box-shadow 180ms ease; }
+.room-page .online-person:hover { background: var(--room-surface-hover); }
+.room-page .online-person.is-local-person { border-left-color: var(--echo-cyan); }
+.room-page .online-person.is-speaking { background: rgba(99, 211, 155, 0.07); box-shadow: inset 2px 0 var(--echo-green), 0 0 0 1px rgba(99, 211, 155, 0.12); }
+.room-page .online-person.is-speaking .avatar-dot { box-shadow: 0 0 0 2px var(--echo-green), 0 0 0 5px rgba(99, 211, 155, 0.1); }
+.room-page .you-badge { color: var(--echo-cyan); background: rgba(103, 212, 229, 0.08); }
+
+.room-page .room-header { padding-bottom: 2px; }
+.room-page .call-context-line { color: var(--room-muted); font-size: 0.8rem; }
+.room-page .room-meta { color: var(--room-muted); font-size: 0.75rem; font-weight: 550; }
+.room-page .call-view-controls { gap: 0; padding: 3px; border: 1px solid var(--room-line); border-radius: 8px; background: rgba(8, 10, 14, 0.35); }
+.room-page .call-view-controls button { min-height: 26px; border-color: transparent; border-radius: 5px; color: var(--room-muted); background: transparent; font-weight: 600; }
+.room-page .call-view-controls button.is-selected, .room-page .call-view-controls button:hover:not(:disabled) { color: var(--room-text); border-color: transparent; background: rgba(103, 212, 229, 0.12); }
+.room-page .participant-card { border-color: var(--room-line); border-radius: 11px; background: var(--room-surface); }
+.room-page .participant-card:hover { background: var(--room-surface-hover); }
+.room-page .participant-card.is-speaking { border-color: rgba(99, 211, 155, 0.56); box-shadow: 0 0 0 2px rgba(99, 211, 155, 0.1); }
+.room-page .participant-card.is-sharing { border-color: rgba(103, 212, 229, 0.42); box-shadow: 0 0 0 2px rgba(103, 212, 229, 0.08); }
+.room-page .participant-topline, .room-page .participant-actions { color: var(--room-text); }
+.room-page .status-badge { color: var(--room-muted); background: rgba(255, 255, 255, 0.06); }
+.room-page .sharing-text, .room-page .screen-badge { color: var(--echo-cyan); }
+.room-page .video-placeholder { color: var(--room-muted); }
+.room-page .video-placeholder .placeholder-avatar { background: var(--echo-surface-elevated); color: var(--echo-text-soft); box-shadow: 0 0 0 7px rgba(103, 212, 229, 0.06); }
+.room-page .media-status-row { color: var(--room-muted); font-size: 0.72rem; }
+.room-page .media-status-row .status-on { color: var(--echo-green); }
+.room-page .media-status-row .status-off { color: var(--echo-danger); }
+.room-page .volume-control { color: var(--room-muted); font-size: 0.68rem; }
+.room-page .volume-control input { accent-color: var(--echo-cyan); }
+.room-page .participant-actions button { color: var(--echo-blue); background: transparent; }
+.room-page .participant-actions button:hover, .room-page .participant-actions button:focus-visible { color: var(--echo-cyan); background: rgba(103, 212, 229, 0.08); }
+.room-page .call-controls { border-color: var(--room-line); background: rgba(25, 29, 36, 0.9); }
+.room-page .control-button { color: var(--room-text); border-color: var(--room-line); background: var(--room-surface); }
+.room-page .control-button:hover, .room-page .control-button:focus-visible { border-color: rgba(103, 212, 229, 0.36); background: var(--room-surface-hover); }
+.room-page .control-button.is-on { color: var(--echo-cyan); border-color: rgba(103, 212, 229, 0.28); background: rgba(103, 212, 229, 0.09); }
+.room-page .screen-preset-trigger { color: var(--room-muted); border-color: var(--room-line); background: transparent; }
+.room-page .screen-preset-trigger:hover, .room-page .screen-preset-trigger:focus-visible { color: var(--echo-cyan); background: rgba(103, 212, 229, 0.08); }
+.room-page .empty-call-state { color: var(--room-muted); }
+.room-page .empty-call-state strong { font-size: 1.05rem; }
+.room-page .empty-call-state small { max-width: 330px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-modal-mark, .room-page .rail-room, .room-page .online-person { transition: none; }
 }
