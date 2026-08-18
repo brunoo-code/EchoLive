@@ -1,6 +1,7 @@
 import { deleteExpiredSessions, deleteSession, findSessionUser, createSession, getSessionDurationSeconds } from "./db/sessions.js";
 import { createUser, findUserByUsername, updateUserDisplayName } from "./db/users.js";
 import { isDatabaseAvailable, isDatabaseConfigured } from "./db/pool.js";
+import { getBcrypt } from "./password.js";
 
 const SESSION_COOKIE = "echolive_session";
 const attemptLog = new Map();
@@ -139,7 +140,7 @@ export function registerAuthRoutes(app) {
     if (validation.error) return response.status(400).json({ error: validation.error, code: validation.code || "INVALID_REGISTER_INPUT" });
 
     try {
-      const bcrypt = await import("bcryptjs");
+      const bcrypt = await getBcrypt();
       const passwordHash = await bcrypt.hash(validation.value.password, 12);
       const user = await createUser({ ...validation.value, passwordHash });
       const session = await createSession(user.id);
@@ -164,7 +165,7 @@ export function registerAuthRoutes(app) {
 
     try {
       const user = await findUserByUsername(username);
-      const bcrypt = await import("bcryptjs");
+      const bcrypt = await getBcrypt();
       const valid = user ? await bcrypt.compare(password, user.passwordHash) : false;
       if (!valid) return response.status(401).json({ error: "Usuario ou senha invalidos." });
       const session = await createSession(user.id);

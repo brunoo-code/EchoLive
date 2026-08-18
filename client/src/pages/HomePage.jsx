@@ -66,11 +66,13 @@ export default function HomePage({ onRoomCreated }) {
 
   function createRoom() {
     const cleanNickname = saveNickname();
+    if (!cleanNickname) return;
+
     const cleanCode = normalizeCode(createCode.trim());
     const rawName = roomName.trim();
     const cleanName = rawName.slice(0, 24);
 
-    if (!cleanNickname || !ROOM_CODE_PATTERN.test(cleanCode)) {
+    if (!ROOM_CODE_PATTERN.test(cleanCode)) {
       notify("Use um codigo de sala entre 3 e 9 caracteres, com letras e numeros.");
       return;
     }
