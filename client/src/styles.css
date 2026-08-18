@@ -726,7 +726,7 @@ h2 {
 
 .sidebar-user-controls {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
 }
 
@@ -830,7 +830,7 @@ h2 {
 .room-code-line {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   padding: 2px 4px;
 }
@@ -843,11 +843,16 @@ h2 {
 
 .room-code-line strong {
   min-width: 0;
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--accent-strong);
-  font-size: 1.05rem;
+  background: var(--bg-card);
+  font-size: 0.76rem;
   letter-spacing: 0.08em;
 }
 
@@ -930,7 +935,8 @@ h2 {
   align-items: center;
   min-width: 0;
   gap: 8px;
-  padding: 5px 6px;
+  min-height: 32px;
+  padding: 5px 7px;
   border-radius: 8px;
   color: var(--text-muted);
   font-size: 0.86rem;
@@ -983,8 +989,8 @@ h2 {
   display: grid;
   position: relative;
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   place-items: center;
   border-radius: 50%;
   color: #06202a;
@@ -1260,6 +1266,12 @@ h2 {
 
 .room-header > :first-child {
   min-width: 0;
+}
+
+.call-context-line {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
 }
 
 .room-header h1 {
@@ -1664,6 +1676,49 @@ h2 {
 
 .settings-readonly strong {
   color: var(--text-main);
+}
+
+.stream-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.stream-preset {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+  min-height: 62px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  text-align: left;
+}
+
+.stream-preset strong {
+  color: var(--text-main);
+  font-size: 0.82rem;
+}
+
+.stream-preset span,
+.settings-help {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.stream-preset:hover,
+.stream-preset.is-selected {
+  border-color: var(--accent);
+  color: var(--text-main);
+  background: var(--accent-soft, rgba(34, 211, 238, 0.1));
+}
+
+.settings-help {
+  display: block;
+  margin-top: 9px;
 }
 
 .settings-toggle {
@@ -2170,5 +2225,3 @@ video.screen-video {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-  font-size: 0.88rem;
-  font-weight: 800;

@@ -29,6 +29,13 @@ const CONFIRM_LEAVE_KEY = "echolive.confirmLeaveRoom";
 const PROFILE_KEY = "echolive.profile";
 const RECENT_ROOMS_KEY = "echolive.recentRooms";
 const ACCENT_KEY = "echolive.accentColor";
+const STREAM_PRESET_KEY = "echolive.streamPreset";
+const STREAM_PRESETS = {
+  "720p30": { width: 1280, height: 720, frameRate: 30 },
+  "720p60": { width: 1280, height: 720, frameRate: 60 },
+  "1080p30": { width: 1920, height: 1080, frameRate: 30 },
+  "1080p60": { width: 1920, height: 1080, frameRate: 60 }
+};
 const SCREEN_SHARE_CONSTRAINTS = {
   width: { ideal: 1280 },
   height: { ideal: 720 },
@@ -56,6 +63,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const [isDeafened, setIsDeafened] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "dark");
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem(ACCENT_KEY) || "#22d3ee");
+  const [streamPreset, setStreamPreset] = useState(() => localStorage.getItem(STREAM_PRESET_KEY) || "720p30");
   const [uiSounds, setUiSounds] = useState(() => localStorage.getItem(UI_SOUNDS_KEY) !== "false");
   const [confirmLeaveRoom, setConfirmLeaveRoom] = useState(() => localStorage.getItem(CONFIRM_LEAVE_KEY) !== "false");
   const [copyFallbackLink, setCopyFallbackLink] = useState("");
@@ -78,7 +86,15 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const [selectedVideoId, setSelectedVideoId] = useState(() => localStorage.getItem(VIDEO_DEVICE_KEY) || "");
   const [selectedOutputId, setSelectedOutputId] = useState(() => localStorage.getItem(OUTPUT_DEVICE_KEY) || "");
   const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem(AVATAR_KEY) || "");
-  const [profile, setProfile] = useState(() => { try { const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}"); return { displayName: "", nickname: localStorage.getItem(NICKNAME_KEY) || "", status: "online", customStatus: "", avatarUrl: localStorage.getItem(AVATAR_KEY) || "", ...saved, status: saved.status === "dnd" ? "dnd" : "online" }; } catch { return { displayName: "", nickname: "", status: "online", customStatus: "", avatarUrl: "" }; } });
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
+      const nextProfile = { displayName: "", nickname: localStorage.getItem(NICKNAME_KEY) || "", status: "online", customStatus: "", avatarUrl: localStorage.getItem(AVATAR_KEY) || "", ...saved };
+      return { ...nextProfile, status: nextProfile.status === "dnd" ? "dnd" : "online" };
+    } catch {
+      return { displayName: "", nickname: "", status: "online", customStatus: "", avatarUrl: "" };
+    }
+  });
   const { toasts, notify } = useToasts();
 
   const socketRef = useRef(null);
@@ -431,6 +447,23 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     });
   }
 
+  function applyVideoPreset(track, preset = streamPreset) {
+    const selectedPreset = STREAM_PRESETS[preset] || STREAM_PRESETS["720p30"];
+    if (!track?.applyConstraints) return;
+    track.applyConstraints({
+      width: { ideal: selectedPreset.width },
+      height: { ideal: selectedPreset.height },
+      frameRate: { ideal: selectedPreset.frameRate, max: selectedPreset.frameRate }
+    }).catch(() => {});
+  }
+
+  function changeStreamPreset(nextPreset) {
+    const safePreset = STREAM_PRESETS[nextPreset] ? nextPreset : "720p30";
+    setStreamPreset(safePreset);
+    localStorage.setItem(STREAM_PRESET_KEY, safePreset);
+    applyVideoPreset(cameraTrackRef.current, safePreset);
+  }
+
   async function setupLocalMedia() {
     if (localStreamRef.current) {
       return;
@@ -452,6 +485,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       localStreamRef.current = media.stream;
       audioTrackRef.current = media.audioTrack;
       cameraTrackRef.current = media.videoTrack;
+      applyVideoPreset(media.videoTrack);
       setDisplayStream(media.videoTrack ? media.stream : null);
       updateMicEnabled(Boolean(media.audioTrack?.enabled), false);
       updateCameraEnabled(Boolean(media.videoTrack?.enabled), false);
@@ -878,6 +912,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     }
 
     cameraTrackRef.current = result.track;
+    applyVideoPreset(result.track);
     localStreamRef.current?.addTrack(result.track);
     updateCameraEnabled(true);
 
@@ -1161,6 +1196,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         previousTrack?.stop();
         localStreamRef.current?.addTrack(result.track);
         cameraTrackRef.current = result.track;
+        applyVideoPreset(result.track);
         if (!screenTrackRef.current) {
           replaceSenderTrackForAll("video", result.track);
           setDisplayStream(result.track.enabled ? localStreamRef.current : null);
@@ -1470,7 +1506,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         onToggleMicrophone={toggleMicrophone}
         onToggleCamera={toggleCamera}
         onToggleDeafen={toggleDeafen}
-        onOpenDevices={openDevices}
         onLeaveVoice={leaveVoiceChannel}
         onJoinVoice={joinVoiceChannel}
         onLeaveRoom={requestLeaveRoom}
@@ -1480,9 +1515,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         <section className={`call-stage channel-view ${isVoiceChannel ? "" : "is-hidden"}`}>
         <header className="room-header">
           <div>
-            <p className="eyebrow">EchoLive</p>
-            <h1 title={roomName || `Sala ${roomCode}`}>{roomName || `Sala ${roomCode}`}</h1>
-            <p className="room-code-subtitle" title={`Sala ${roomCode}`}>Sala {roomCode}</p>
+            <p className="eyebrow">EchoLive / Chamada</p>
+            <p className="call-context-line">Estado da chamada</p>
           </div>
           <div className="room-meta">
             <span>Participantes: {currentParticipantCount}/{maxParticipants}</span>
@@ -1583,6 +1617,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
           confirmLeaveRoom={confirmLeaveRoom}
           onConfirmLeaveChange={setConfirmLeaveRoom}
           onOpenDevices={() => { setIsSettingsOpen(false); openDevices(); }}
+          streamPreset={streamPreset}
+          onStreamPresetChange={changeStreamPreset}
           profile={{ ...profile, avatarUrl }}
           onProfileChange={saveProfile}
           onClose={() => setIsSettingsOpen(false)}

@@ -27,7 +27,6 @@ export default function Sidebar({
   onToggleMicrophone,
   onToggleCamera,
   onToggleDeafen,
-  onOpenDevices,
   onLeaveVoice,
   onJoinVoice,
   onLeaveRoom
@@ -128,7 +127,6 @@ export default function Sidebar({
           {isInVoice ? <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} title={micEnabled ? "Desligar microfone" : "Ligar microfone"} aria-label={micEnabled ? "Desligar microfone" : "Ligar microfone"}>mic</button> : <span />}
           {isInVoice ? <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} title={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}>audio</button> : <span />}
           {isInVoice ? <button type="button" className={`control-glyph ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} title={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"}>cam</button> : <span />}
-          <button type="button" className="control-glyph" onClick={onOpenDevices} title="Abrir dispositivos" aria-label="Abrir dispositivos">disp</button>
         </div>
         </footer>
       </div>
