@@ -1454,7 +1454,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         selectedChannel={selectedChannel}
         onSelectChannel={setSelectedChannel}
         onCopyInvite={copyInvite}
-        onOpenRoomSwitcher={() => setIsRoomSwitcherOpen(true)}
+        notify={notify}
         copyFallbackLink={copyFallbackLink}
         nickname={profile.displayName || nickname}
         status={profile.status}
@@ -1471,7 +1471,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         onToggleCamera={toggleCamera}
         onToggleDeafen={toggleDeafen}
         onOpenDevices={openDevices}
-        onOpenSettings={openSettings}
         onLeaveVoice={leaveVoiceChannel}
         onJoinVoice={joinVoiceChannel}
         onLeaveRoom={requestLeaveRoom}

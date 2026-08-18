@@ -11,7 +11,7 @@ export default function Sidebar({
   selectedChannel,
   onSelectChannel,
   onCopyInvite,
-  onOpenRoomSwitcher,
+  notify,
   copyFallbackLink,
   nickname,
   status = "Online",
@@ -28,15 +28,19 @@ export default function Sidebar({
   onToggleCamera,
   onToggleDeafen,
   onOpenDevices,
-  onOpenSettings,
   onLeaveVoice,
   onJoinVoice,
   onLeaveRoom
 }) {
   const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
 
-  function copyRoomCode() {
-    navigator.clipboard?.writeText(roomCode).catch(() => {});
+  async function copyRoomCode() {
+    try {
+      await navigator.clipboard.writeText(roomCode);
+      notify?.("Codigo copiado.");
+    } catch {
+      notify?.("Nao foi possivel copiar o codigo.");
+    }
     setIsRoomMenuOpen(false);
   }
 
@@ -57,17 +61,13 @@ export default function Sidebar({
         <p className="sidebar-count">
           Participantes: {participantCount}/{maxParticipants || "-"}
         </p>
-        <button type="button" onClick={onCopyInvite} aria-label="Copiar convite da sala">
-          Copiar convite
-        </button>
         {copyFallbackLink && (
           <label className="field compact-field">
             <span>Copie manualmente</span>
             <input readOnly value={copyFallbackLink} onFocus={(event) => event.target.select()} />
           </label>
         )}
-        <button type="button" className="room-add-button" onClick={onOpenRoomSwitcher} title="Entrar ou criar outra sala" aria-label="Entrar ou criar outra sala">+</button>
-        {isRoomMenuOpen && <div className="room-context-menu" role="menu"><button type="button" onClick={onCopyInvite}>Copiar convite</button><button type="button" onClick={copyRoomCode}>Copiar codigo</button><button type="button" onClick={onOpenRoomSwitcher}>Entrar em outra sala</button><button type="button" onClick={onLeaveRoom} className="danger-menu-item">Sair da sala</button></div>}
+        {isRoomMenuOpen && <div className="room-context-menu" role="menu"><button type="button" onClick={() => { onCopyInvite(); setIsRoomMenuOpen(false); }}>Copiar convite</button><button type="button" onClick={copyRoomCode}>Copiar codigo</button><button type="button" onClick={onLeaveRoom} className="danger-menu-item">Sair da sala</button></div>}
       </section>
 
       <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">
@@ -100,7 +100,7 @@ export default function Sidebar({
         <div className="call-member-list">
           {participants.map((participant) => (
             <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
-              <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}<UserStatusBadge status={participant.status} /></span>
+              <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}<UserStatusBadge status={participant.status} size="sm" /></span>
               <span className="member-name" title={participant.nickname}>{participant.nickname}</span>
               <span className="member-status" aria-label="Status de midia">
                 <i className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}>mic</i>
@@ -116,7 +116,7 @@ export default function Sidebar({
         <button type="button" className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
           <span className="sidebar-user-avatar">
             {avatarUrl ? <img src={avatarUrl} alt="" /> : nickname?.slice(0, 1).toUpperCase() || "?"}
-            <UserStatusBadge status={status} />
+            <UserStatusBadge status={status} size="md" />
           </span>
           <div>
             <strong title={nickname}>{nickname}</strong>
@@ -128,8 +128,6 @@ export default function Sidebar({
           {isInVoice ? <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} title={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}>audio</button> : <span />}
           {isInVoice ? <button type="button" className={`control-glyph ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} title={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"}>cam</button> : <span />}
           <button type="button" className="control-glyph" onClick={onOpenDevices} title="Abrir dispositivos" aria-label="Abrir dispositivos">disp</button>
-          <button type="button" className="control-glyph" onClick={onOpenSettings} title="Abrir configuracoes" aria-label="Abrir configuracoes">config</button>
-          <button type="button" className="leave-room-button" onClick={onLeaveRoom} title="Sair da sala" aria-label="Sair da sala">Sair</button>
         </div>
       </footer>
     </aside>

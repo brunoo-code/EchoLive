@@ -634,7 +634,7 @@ h2 {
 .profile-status-options, .profile-popover-actions { display: grid; gap: 4px; margin-top: 10px; }
 .profile-status-options button, .profile-popover-actions button { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 8px; border-color: transparent; border-radius: 7px; color: var(--text-muted); background: transparent; text-align: left; font-size: 0.78rem; }
 .profile-status-options button:hover, .profile-popover-actions button:hover, .profile-status-options button.is-selected { transform: none; color: var(--text-main); background: var(--accent-soft, rgba(34, 211, 238, 0.1)); }
-.profile-status-options .user-status-badge { position: relative; right: auto; bottom: auto; width: 9px; height: 9px; border: 0; }
+.profile-status-options .user-status-badge { position: relative; right: auto; bottom: auto; border: 0; }
 .profile-popover-actions { padding-top: 8px; border-top: 1px solid var(--border); }
 
 .sidebar-user-avatar {
@@ -657,15 +657,19 @@ h2 {
   position: absolute;
   right: -1px;
   bottom: -1px;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border: 2px solid var(--bg-sidebar);
   border-radius: 50%;
   background: var(--success);
 }
 
+.user-status-badge--sm { width: 10px; height: 10px; }
+.user-status-badge--md { width: 12px; height: 12px; }
+.user-status-badge--lg { width: 15px; height: 15px; }
+
 .user-status-badge--dnd { background: var(--danger); }
-.user-status-badge--dnd::after { content: ""; position: absolute; top: 2px; left: 1px; width: 5px; height: 2px; background: #fff; }
+.user-status-badge--dnd::after { content: ""; position: absolute; top: 50%; left: 18%; width: 64%; height: 3px; transform: translateY(-50%); background: #fff; border-radius: 3px; }
 
 .sidebar-user-avatar input {
   position: absolute;
@@ -713,7 +717,7 @@ h2 {
 
 .sidebar-user-controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
 }
 
@@ -1536,7 +1540,7 @@ h2 {
 .profile-edit-preview strong, .profile-edit-preview span, .profile-edit-preview small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .profile-edit-preview span, .profile-edit-preview small { color: var(--text-muted); font-size: 0.75rem; }
 .profile-edit-preview small { display: flex; align-items: center; gap: 5px; }
-.profile-edit-preview small .user-status-badge { position: relative; right: auto; bottom: auto; width: 8px; height: 8px; border: 0; }
+.profile-edit-preview small .user-status-badge { position: relative; right: auto; bottom: auto; border: 0; }
 .profile-photo-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .profile-upload { position: relative; display: inline-grid; width: auto; place-items: center; padding: 0 12px; }
 .profile-upload input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }

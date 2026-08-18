@@ -13,7 +13,7 @@ export default function ParticipantsPanel({ participants, onProfileClick }) {
           <div className={`online-person ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-person" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
             <div className="avatar-dot" aria-hidden="true">
               {participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}
-              <UserStatusBadge status={participant.status} />
+              <UserStatusBadge status={participant.status} size="md" />
             </div>
             <div className="online-person-info">
               <strong title={participant.nickname}>{participant.nickname}</strong>
