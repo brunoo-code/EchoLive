@@ -11,14 +11,18 @@ export default function Sidebar({
   copyFallbackLink,
   nickname,
   isInVoice,
+  connectionQuality,
   micEnabled,
   cameraEnabled,
+  isDeafened,
   isSpeaking,
   avatarUrl,
   onAvatarChange,
   onToggleMicrophone,
   onToggleCamera,
+  onToggleDeafen,
   onOpenDevices,
+  onOpenSettings,
   onLeaveVoice,
   onJoinVoice,
   onLeaveRoom
@@ -52,6 +56,12 @@ export default function Sidebar({
         <button type="button" className="ghost-button" onClick={onEditNickname}>
           Alterar nick
         </button>
+      </section>
+
+      <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">
+        <div className="connected-voice-heading"><span className="voice-live-dot" aria-hidden="true" /> <strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong>{isInVoice && <span className="connection-quality">{connectionQuality}</span>}</div>
+        <span className="connected-voice-channel">Geral</span>
+        {isInVoice && <button type="button" className="connected-leave" onClick={onLeaveVoice} title="Sair da voz" aria-label="Sair da voz">Sair da voz</button>}
       </section>
 
       <section className="sidebar-section channel-section">
@@ -103,9 +113,10 @@ export default function Sidebar({
         </div>
         <div className="sidebar-user-controls" aria-label="Controles do usuario">
           {isInVoice ? <button type="button" className={micEnabled ? "is-active" : "is-muted"} onClick={onToggleMicrophone} title={micEnabled ? "Desligar microfone" : "Ligar microfone"} aria-label={micEnabled ? "Desligar microfone" : "Ligar microfone"}>Mic</button> : <span />}
+          {isInVoice ? <button type="button" className={isDeafened ? "is-muted is-deafened" : "is-active"} onClick={onToggleDeafen} title={isDeafened ? "Deixar de ensurdecer" : "Ensurdecer"} aria-label={isDeafened ? "Deixar de ensurdecer" : "Ensurdecer"}>Deaf</button> : <span />}
           {isInVoice ? <button type="button" className={cameraEnabled ? "is-active" : "is-muted"} onClick={onToggleCamera} title={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"}>Cam</button> : <span />}
           <button type="button" onClick={onOpenDevices} title="Configurar dispositivos" aria-label="Configurar dispositivos">Disp</button>
-          {isInVoice ? <button type="button" onClick={onLeaveVoice} title="Sair da voz" aria-label="Sair da voz">Sair voz</button> : <button type="button" onClick={onJoinVoice} title="Entrar na voz" aria-label="Entrar na voz">Entrar voz</button>}
+          <button type="button" onClick={onOpenSettings} title="Abrir configuracoes" aria-label="Abrir configuracoes">Cfg</button>
           <button type="button" className="leave-room-button" onClick={onLeaveRoom} title="Sair da sala" aria-label="Sair da sala">Sair</button>
         </div>
       </footer>

@@ -4,6 +4,7 @@ import ControlsBar from "../components/ControlsBar.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
 import AudioParticipant from "../components/AudioParticipant.jsx";
 import DevicesModal from "../components/DevicesModal.jsx";
+import SettingsModal from "../components/SettingsModal.jsx";
 import NicknameModal from "../components/NicknameModal.jsx";
 import ParticipantCard from "../components/ParticipantCard.jsx";
 import ParticipantsPanel from "../components/ParticipantsPanel.jsx";
@@ -18,6 +19,9 @@ const AUDIO_DEVICE_KEY = "echolive.audioDeviceId";
 const VIDEO_DEVICE_KEY = "echolive.videoDeviceId";
 const OUTPUT_DEVICE_KEY = "echolive.audioOutputDeviceId";
 const AVATAR_KEY = "echolive.avatarUrl";
+const THEME_KEY = "echolive.theme";
+const UI_SOUNDS_KEY = "echolive.uiSounds";
+const CONFIRM_LEAVE_KEY = "echolive.confirmLeaveRoom";
 const SCREEN_SHARE_CONSTRAINTS = {
   width: { ideal: 1280 },
   height: { ideal: 720 },
@@ -42,13 +46,21 @@ export default function RoomPage({ roomCode, onBack }) {
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isDeafened, setIsDeafened] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "dark");
+  const [uiSounds, setUiSounds] = useState(() => localStorage.getItem(UI_SOUNDS_KEY) !== "false");
+  const [confirmLeaveRoom, setConfirmLeaveRoom] = useState(() => localStorage.getItem(CONFIRM_LEAVE_KEY) !== "false");
   const [copyFallbackLink, setCopyFallbackLink] = useState("");
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("voice-general");
   const [messages, setMessages] = useState([]);
+  const [viewMode, setViewMode] = useState("grid");
+  const [focusedMediaId, setFocusedMediaId] = useState("");
   const [rtcDiagnostics, setRtcDiagnostics] = useState([]);
   const [isDevicesModalOpen, setIsDevicesModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
   const [devices, setDevices] = useState({ audio: [], video: [] });
   const [selectedAudioId, setSelectedAudioId] = useState(() => localStorage.getItem(AUDIO_DEVICE_KEY) || "");
   const [selectedVideoId, setSelectedVideoId] = useState(() => localStorage.getItem(VIDEO_DEVICE_KEY) || "");
@@ -66,6 +78,10 @@ export default function RoomPage({ roomCode, onBack }) {
   const cameraTrackRef = useRef(null);
   const screenStreamRef = useRef(null);
   const screenTrackRef = useRef(null);
+  const displayAudioTrackRef = useRef(null);
+  const mixedAudioTrackRef = useRef(null);
+  const audioMixContextRef = useRef(null);
+  const microphoneGainRef = useRef(null);
   const iceConfigRef = useRef({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
   const hasJoinedRef = useRef(false);
   const connectionStartedRef = useRef(false);
@@ -82,6 +98,28 @@ export default function RoomPage({ roomCode, onBack }) {
   const statsHistoryRef = useRef(new Map());
 
   const inviteLink = useMemo(() => `${window.location.origin}/room/${roomCode}`, [roomCode]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem(UI_SOUNDS_KEY, String(uiSounds));
+  }, [uiSounds]);
+
+  useEffect(() => {
+    localStorage.setItem(CONFIRM_LEAVE_KEY, String(confirmLeaveRoom));
+  }, [confirmLeaveRoom]);
+
+  useEffect(() => {
+    const localFocused = focusedMediaId === "local" || focusedMediaId === selfId;
+    const localMediaActive = Boolean(displayStream && (cameraEnabled || isScreenSharing));
+    const remoteMediaActive = remoteParticipants.some((participant) => participant.socketId === focusedMediaId && participant.stream && (participant.cameraEnabled || participant.isScreenSharing));
+    if (focusedMediaId && !((localFocused && localMediaActive) || remoteMediaActive)) {
+      setFocusedMediaId("");
+    }
+  }, [focusedMediaId, selfId, displayStream, cameraEnabled, isScreenSharing, remoteParticipants]);
 
   useEffect(() => {
     const lifecycleToken = Symbol("room-lifecycle");
@@ -675,7 +713,7 @@ export default function RoomPage({ roomCode, onBack }) {
       entry.type === "candidate-pair" && entry.state === "succeeded" && (entry.nominated || entry.selected)
     ));
 
-    const localTracks = [audioTrackRef.current, cameraTrackRef.current, screenTrackRef.current]
+    const localTracks = [audioTrackRef.current, displayAudioTrackRef.current, cameraTrackRef.current, screenTrackRef.current]
       .filter(Boolean)
       .map((track) => ({ kind: track.kind, id: track.id, enabled: track.enabled, muted: track.muted, readyState: track.readyState }));
     const senders = pc.getSenders().map((sender) => ({
@@ -728,6 +766,18 @@ export default function RoomPage({ roomCode, onBack }) {
         bytesReceived: candidatePair.bytesReceived
       } : null,
       screenTrackSettings: screenTrackRef.current?.getSettings?.() || null,
+      displayAudioAvailable: Boolean(displayAudioTrackRef.current),
+      displayAudioTracks: displayAudioTrackRef.current ? [{
+        id: displayAudioTrackRef.current.id,
+        enabled: displayAudioTrackRef.current.enabled,
+        readyState: displayAudioTrackRef.current.readyState
+      }] : [],
+      audioMode: displayAudioTrackRef.current ? "microphone+display" : "microphone",
+      mixedAudioTrack: mixedAudioTrackRef.current ? {
+        id: mixedAudioTrackRef.current.id,
+        enabled: mixedAudioTrackRef.current.enabled,
+        readyState: mixedAudioTrackRef.current.readyState
+      } : null,
       audioElement: (() => {
         const audio = document.querySelector(`[data-audio-peer="${peerSocketId}"]`);
         return audio ? { hasSrcObject: Boolean(audio.srcObject), muted: audio.muted, volume: audio.volume, paused: audio.paused } : null;
@@ -747,6 +797,7 @@ export default function RoomPage({ roomCode, onBack }) {
   async function toggleMicrophone() {
     if (audioTrackRef.current) {
       audioTrackRef.current.enabled = !audioTrackRef.current.enabled;
+      setMixedMicrophoneEnabled(audioTrackRef.current.enabled);
       updateMicEnabled(audioTrackRef.current.enabled);
       notify(audioTrackRef.current.enabled ? "Microfone ligado." : "Microfone desligado.");
       return;
@@ -761,7 +812,11 @@ export default function RoomPage({ roomCode, onBack }) {
     audioTrackRef.current = result.track;
     localStreamRef.current?.addTrack(result.track);
     updateMicEnabled(true);
-    replaceSenderTrackForAll("audio", result.track);
+    if (displayAudioTrackRef.current) {
+      createDisplayAudioMix(displayAudioTrackRef.current);
+    } else {
+      replaceSenderTrackForAll("audio", result.track);
+    }
     startSpeakingDetection(result.track);
     notify("Microfone ligado.");
   }
@@ -806,8 +861,11 @@ export default function RoomPage({ roomCode, onBack }) {
     try {
       let screenStream;
       try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: SCREEN_SHARE_CONSTRAINTS, audio: false });
-      } catch {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: SCREEN_SHARE_CONSTRAINTS, audio: true });
+      } catch (error) {
+        if (!['TypeError', 'OverconstrainedError', 'NotSupportedError'].includes(error?.name)) {
+          throw error;
+        }
         screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
       }
       const screenTrack = screenStream.getVideoTracks()[0];
@@ -823,7 +881,12 @@ export default function RoomPage({ roomCode, onBack }) {
 
       screenStreamRef.current = screenStream;
       screenTrackRef.current = screenTrack;
+      displayAudioTrackRef.current = screenStream.getAudioTracks()[0] || null;
       screenTrack.onended = () => { void stopScreenShare(false); };
+
+      if (displayAudioTrackRef.current) {
+        createDisplayAudioMix(displayAudioTrackRef.current);
+      }
 
       await replaceVideoTrackForAllPeers(screenTrack, "screen");
       setDisplayStream(screenStream);
@@ -836,21 +899,72 @@ export default function RoomPage({ roomCode, onBack }) {
     }
   }
 
+  function createDisplayAudioMix(displayAudioTrack) {
+    teardownDisplayAudioMix();
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+      return;
+    }
+
+    try {
+      const context = new AudioContextClass();
+      const destination = context.createMediaStreamDestination();
+      const displaySource = context.createMediaStreamSource(new MediaStream([displayAudioTrack]));
+      const displayGain = context.createGain();
+      displayGain.gain.value = 1;
+      displaySource.connect(displayGain).connect(destination);
+
+      const microphoneTrack = audioTrackRef.current;
+      if (microphoneTrack?.readyState === "live") {
+        const microphoneSource = context.createMediaStreamSource(new MediaStream([microphoneTrack]));
+        const microphoneGain = context.createGain();
+        microphoneGain.gain.value = microphoneTrack.enabled ? 1 : 0;
+        microphoneSource.connect(microphoneGain).connect(destination);
+        microphoneGainRef.current = microphoneGain;
+      }
+
+      audioMixContextRef.current = context;
+      mixedAudioTrackRef.current = destination.stream.getAudioTracks()[0] || null;
+      replaceSenderTrackForAll("audio", mixedAudioTrackRef.current);
+      if (context.state === "suspended") {
+        context.resume().catch(() => {});
+      }
+    } catch {
+      teardownDisplayAudioMix();
+    }
+  }
+
+  function teardownDisplayAudioMix() {
+    microphoneGainRef.current = null;
+    audioMixContextRef.current?.close?.().catch(() => {});
+    audioMixContextRef.current = null;
+    mixedAudioTrackRef.current?.stop();
+    mixedAudioTrackRef.current = null;
+  }
+
+  function setMixedMicrophoneEnabled(enabled) {
+    if (microphoneGainRef.current) {
+      microphoneGainRef.current.gain.value = enabled ? 1 : 0;
+    }
+  }
+
   async function stopScreenShare(stopTracks) {
     if (!screenTrackRef.current) {
       return;
     }
 
-    if (stopTracks) {
-      stopStream(screenStreamRef.current);
-    }
+    stopStream(screenStreamRef.current);
 
+    teardownDisplayAudioMix();
+    displayAudioTrackRef.current = null;
     screenTrackRef.current = null;
     screenStreamRef.current = null;
 
     const cameraTrack = cameraTrackRef.current;
     const shouldRestoreCamera = Boolean(cameraTrack && cameraTrack.readyState === "live" && cameraTrack.enabled);
     await replaceVideoTrackForAllPeers(shouldRestoreCamera ? cameraTrack : null, "camera");
+    replaceSenderTrackForAll("audio", audioTrackRef.current);
     setDisplayStream(shouldRestoreCamera ? localStreamRef.current : null);
     updateScreenSharing(false);
     socketRef.current?.emit("screen-share-status", { isScreenSharing: false });
@@ -874,6 +988,8 @@ export default function RoomPage({ roomCode, onBack }) {
 
   function cleanupLocalMedia() {
     stopSpeakingDetection();
+    teardownDisplayAudioMix();
+    displayAudioTrackRef.current = null;
     stopStream(screenStreamRef.current);
     stopStream(localStreamRef.current);
     screenStreamRef.current = null;
@@ -901,6 +1017,18 @@ export default function RoomPage({ roomCode, onBack }) {
   function leaveRoom() {
     cleanupRoom();
     onBack();
+  }
+
+  function requestLeaveRoom() {
+    if (confirmLeaveRoom) {
+      setIsLeaveConfirmOpen(true);
+      return;
+    }
+    leaveRoom();
+  }
+
+  function toggleDeafen() {
+    setIsDeafened((current) => !current);
   }
 
   function leaveVoiceChannel() {
@@ -969,7 +1097,11 @@ export default function RoomPage({ roomCode, onBack }) {
         previousTrack?.stop();
         localStreamRef.current?.addTrack(result.track);
         audioTrackRef.current = result.track;
-        replaceSenderTrackForAll("audio", result.track);
+        if (displayAudioTrackRef.current) {
+          createDisplayAudioMix(displayAudioTrackRef.current);
+        } else {
+          replaceSenderTrackForAll("audio", result.track);
+        }
         updateMicEnabled(result.track.enabled);
         startSpeakingDetection(result.track);
       } else {
@@ -1219,11 +1351,31 @@ export default function RoomPage({ roomCode, onBack }) {
   const onlineParticipants = [localParticipant, ...roomParticipants];
   const voiceParticipants = isInVoice ? [localParticipant, ...remoteParticipants] : [];
   const currentParticipantCount = Math.max(participantCount, onlineParticipants.length);
+  const connectionQuality = !isInVoice ? "Offline" : rtcDiagnostics.some((diagnostic) => diagnostic.connectionState === "failed" || diagnostic.warnings.length) ? "Instavel" : "Boa";
   const callParticipants = voiceParticipants.filter(
     (participant) => participant.isScreenSharing || (participant.cameraEnabled && participant.stream)
   ).sort(
     (left, right) => Number(right.isScreenSharing) - Number(left.isScreenSharing)
   );
+  const focusedParticipant = callParticipants.find((participant) => participant.socketId === focusedMediaId) || callParticipants[0];
+
+  function renderParticipantCard(participant, compact = false) {
+    return (
+      <ParticipantCard
+        key={`${compact ? "thumb" : "main"}-${participant.socketId}`}
+        {...participant}
+        compact={compact}
+        isDeafened={isDeafened}
+        notify={notify}
+        outputDeviceId={selectedOutputId}
+        onFocus={(socketId) => {
+          setFocusedMediaId(socketId);
+          setViewMode("focus");
+        }}
+        onVolumeChange={(volume) => changeRemoteVolume(participant.socketId, volume)}
+      />
+    );
+  }
 
   const isVoiceChannel = selectedChannel === "voice-general";
 
@@ -1244,7 +1396,7 @@ export default function RoomPage({ roomCode, onBack }) {
       )}
       <div className="audio-sinks" aria-hidden="true">
         {voiceParticipants.filter((participant) => !participant.isLocal && !callParticipants.some((visual) => visual.socketId === participant.socketId)).map((participant) => (
-          <AudioParticipant key={participant.socketId} peerSocketId={participant.socketId} stream={participant.stream} volume={participant.volume} outputDeviceId={selectedOutputId} />
+          <AudioParticipant key={participant.socketId} peerSocketId={participant.socketId} stream={participant.stream} volume={participant.volume} isDeafened={isDeafened} outputDeviceId={selectedOutputId} />
         ))}
       </div>
       <Sidebar
@@ -1260,17 +1412,21 @@ export default function RoomPage({ roomCode, onBack }) {
         copyFallbackLink={copyFallbackLink}
         nickname={nickname}
         isInVoice={isInVoice}
+        connectionQuality={connectionQuality}
         micEnabled={micEnabled}
         cameraEnabled={cameraEnabled}
+        isDeafened={isDeafened}
         isSpeaking={isSpeaking}
         avatarUrl={avatarUrl}
         onAvatarChange={handleAvatarChange}
         onToggleMicrophone={toggleMicrophone}
         onToggleCamera={toggleCamera}
+        onToggleDeafen={toggleDeafen}
         onOpenDevices={openDevices}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         onLeaveVoice={leaveVoiceChannel}
         onJoinVoice={joinVoiceChannel}
-        onLeaveRoom={leaveRoom}
+        onLeaveRoom={requestLeaveRoom}
       />
 
       <section className="central-stage">
@@ -1283,6 +1439,10 @@ export default function RoomPage({ roomCode, onBack }) {
           </div>
           <div className="room-meta">
             <span>Participantes: {currentParticipantCount}/{maxParticipants}</span>
+            <div className="call-view-controls" aria-label="Modo de visualizacao">
+              <button type="button" className={viewMode === "grid" ? "is-selected" : ""} onClick={() => setViewMode("grid")}>Grid</button>
+              <button type="button" className={viewMode === "focus" ? "is-selected" : ""} onClick={() => { setViewMode("focus"); setFocusedMediaId((current) => current || callParticipants[0]?.socketId || ""); }} disabled={!callParticipants.length}>Foco</button>
+            </div>
           </div>
         </header>
 
@@ -1299,17 +1459,18 @@ export default function RoomPage({ roomCode, onBack }) {
             <button type="button" className="small-button" onClick={joinVoiceChannel}>Entrar na voz</button>
           </section>
         ) : callParticipants.length > 0 ? (
-          <section className={`participants-grid count-${callParticipants.length} ${callParticipants.some((participant) => participant.isScreenSharing) ? "has-sharing" : ""}`}>
-            {callParticipants.map((participant) => (
-              <ParticipantCard
-                key={participant.socketId}
-                {...participant}
-                notify={notify}
-                outputDeviceId={selectedOutputId}
-                onVolumeChange={(volume) => changeRemoteVolume(participant.socketId, volume)}
-              />
-            ))}
-          </section>
+          viewMode === "focus" && focusedParticipant ? (
+            <section className="focus-layout">
+              <div className="focus-main">{renderParticipantCard(focusedParticipant)}</div>
+              <div className="focus-thumbnails">
+                {callParticipants.filter((participant) => participant.socketId !== focusedParticipant.socketId).map((participant) => renderParticipantCard(participant, true))}
+              </div>
+            </section>
+          ) : (
+            <section className={`participants-grid count-${callParticipants.length} ${callParticipants.some((participant) => participant.isScreenSharing) ? "has-sharing" : ""}`}>
+              {callParticipants.map((participant) => renderParticipantCard(participant))}
+            </section>
+          )
         ) : (
           <section className="empty-call-state">
             <div className="empty-call-icon" aria-hidden="true">VOL</div>
@@ -1357,6 +1518,31 @@ export default function RoomPage({ roomCode, onBack }) {
           onClose={() => setIsDevicesModalOpen(false)}
           onSave={saveDevices}
         />
+      )}
+      {isSettingsOpen && (
+        <SettingsModal
+          theme={theme}
+          onThemeChange={setTheme}
+          uiSounds={uiSounds}
+          onUiSoundsChange={setUiSounds}
+          confirmLeaveRoom={confirmLeaveRoom}
+          onConfirmLeaveChange={setConfirmLeaveRoom}
+          onOpenDevices={() => { setIsSettingsOpen(false); openDevices(); }}
+          onClose={() => setIsSettingsOpen(false)}
+        />
+      )}
+      {isLeaveConfirmOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="leave-title">
+            <p className="section-label">Sala</p>
+            <h2 id="leave-title">Sair desta sala?</h2>
+            <p>Voce sera desconectado da voz e do chat desta sala.</p>
+            <div className="modal-actions">
+              <button type="button" className="ghost-button" onClick={() => setIsLeaveConfirmOpen(false)}>Cancelar</button>
+              <button type="button" className="danger-button" onClick={() => { setIsLeaveConfirmOpen(false); leaveRoom(); }}>Sair</button>
+            </div>
+          </section>
+        </div>
       )}
     </main>
   );

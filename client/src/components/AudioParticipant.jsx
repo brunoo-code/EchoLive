@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function AudioParticipant({ peerSocketId, stream, volume = 100, outputDeviceId = "" }) {
+export default function AudioParticipant({ peerSocketId, stream, volume = 100, isDeafened = false, outputDeviceId = "" }) {
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -14,9 +14,9 @@ export default function AudioParticipant({ peerSocketId, stream, volume = 100, o
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = volume / 100;
+      audioRef.current.volume = isDeafened ? 0 : volume / 100;
     }
-  }, [volume]);
+  }, [isDeafened, volume]);
 
   useEffect(() => {
     const audio = audioRef.current;

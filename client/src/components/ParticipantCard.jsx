@@ -12,6 +12,9 @@ export default function ParticipantCard({
   cameraEnabled,
   volume = 100,
   outputDeviceId = "",
+  isDeafened = false,
+  compact = false,
+  onFocus,
   onVolumeChange,
   notify
 }) {
@@ -26,9 +29,9 @@ export default function ParticipantCard({
 
   useEffect(() => {
     if (videoRef.current && !isLocal) {
-      videoRef.current.volume = volume / 100;
+      videoRef.current.volume = isDeafened ? 0 : volume / 100;
     }
-  }, [isLocal, volume]);
+  }, [isDeafened, isLocal, volume]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -56,8 +59,9 @@ export default function ParticipantCard({
   return (
     <article
       ref={cardRef}
-      className={`participant-card ${isScreenSharing ? "is-sharing" : ""} ${isSpeaking ? "is-speaking" : ""}`}
+      className={`participant-card ${compact ? "is-compact" : ""} ${isScreenSharing ? "is-sharing" : ""} ${isSpeaking ? "is-speaking" : ""}`}
       data-participant-id={socketId}
+      onClick={() => onFocus?.(socketId)}
     >
       <div className="participant-topline">
         <div className="participant-identity">
@@ -101,7 +105,7 @@ export default function ParticipantCard({
             />
           </label>
         )}
-          <button type="button" onClick={openFullscreen} aria-label={`Abrir tela cheia para ${nickname}`}>
+          <button type="button" onClick={(event) => { event.stopPropagation(); openFullscreen(); }} aria-label={`Abrir tela cheia para ${nickname}`}>
           Fullscreen
         </button>
       </div>
