@@ -70,12 +70,6 @@ export default function Sidebar({
         {isRoomMenuOpen && <div className="room-context-menu" role="menu"><button type="button" onClick={() => { onCopyInvite(); setIsRoomMenuOpen(false); }}>Copiar convite</button><button type="button" onClick={copyRoomCode}>Copiar codigo</button><button type="button" onClick={onLeaveRoom} className="danger-menu-item">Sair da sala</button></div>}
       </section>
 
-      <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">
-        <div className="connected-voice-heading"><span className="voice-live-dot" aria-hidden="true" /> <strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong>{isInVoice && <span className="connection-quality">{connectionQuality}</span>}</div>
-        <span className="connected-voice-channel">Geral</span>
-        {isInVoice && <button type="button" className="connected-leave" onClick={onLeaveVoice} title="Sair da voz" aria-label="Sair da voz">Sair da voz</button>}
-      </section>
-
       <section className="sidebar-section channel-section">
         <p className="section-label">Canais de texto</p>
         <button
@@ -110,6 +104,12 @@ export default function Sidebar({
             </div>
           ))}
         </div>
+      </section>
+
+      <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">
+        <div className="connected-voice-heading"><span className="voice-live-dot" aria-hidden="true" /> <strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong>{isInVoice && <span className="connection-quality">{connectionQuality}</span>}</div>
+        <span className="connected-voice-channel">Geral</span>
+        {isInVoice && <button type="button" className="connected-leave" onClick={onLeaveVoice} title="Sair da voz" aria-label="Sair da voz">Sair da voz</button>}
       </section>
 
       <footer className="sidebar-user-footer">
