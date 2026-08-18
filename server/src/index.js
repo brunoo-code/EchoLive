@@ -167,6 +167,9 @@ const io = new Server(httpServer, {
   }
 });
 
+const typingSockets = new Map();
+const typingTimers = new Map();
+
 function canSignal(socket, to) {
   const voiceParticipants = getVoiceParticipants(getSocketRoom(socket.id));
   return Boolean(
@@ -183,7 +186,28 @@ function emitRoomError(socket, message) {
   socket.emit("room-error", { message });
 }
 
+function clearTyping(socket, announce = true) {
+  const roomCode = typingSockets.get(socket.id);
+  const timer = typingTimers.get(socket.id);
+
+  if (timer) {
+    clearTimeout(timer);
+    typingTimers.delete(socket.id);
+  }
+
+  typingSockets.delete(socket.id);
+
+  if (announce && roomCode) {
+    socket.to(roomCode).emit("typing:update", {
+      socketId: socket.id,
+      typing: false
+    });
+  }
+}
+
 function handleLeave(socket) {
+  clearTyping(socket);
+
   const voiceResult = leaveVoice(socket.id);
   if (voiceResult) {
     socket.to(voiceResult.roomCode).emit("voice-user-left", {
@@ -377,6 +401,28 @@ io.on("connection", (socket) => {
 
     addRoomMessage(roomCode, message);
     io.to(roomCode).emit("message-created", message);
+  });
+
+  socket.on("typing:start", () => {
+    const roomCode = getSocketRoom(socket.id);
+    const participant = roomCode && getParticipants(roomCode).find((item) => item.socketId === socket.id);
+
+    if (!roomCode || !participant) {
+      return;
+    }
+
+    clearTyping(socket, false);
+    typingSockets.set(socket.id, roomCode);
+    socket.to(roomCode).emit("typing:update", {
+      socketId: socket.id,
+      displayName: participant.nickname,
+      typing: true
+    });
+    typingTimers.set(socket.id, setTimeout(() => clearTyping(socket), 4000));
+  });
+
+  socket.on("typing:stop", () => {
+    clearTyping(socket);
   });
 
   socket.on("webrtc-offer", ({ to, offer } = {}) => {

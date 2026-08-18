@@ -37,8 +37,13 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
   const [draft, setDraft] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
   const fileInputRef = useRef(null);
   const pendingLocalMessagesRef = useRef(0);
+  const typingTimeoutRef = useRef(null);
+  const isTypingRef = useRef(false);
+  const knownMessageIdsRef = useRef(new Set());
+  const hasSeenMessageBatchRef = useRef(false);
 
   useEffect(() => {
     function handleMessageCreated(message) {
@@ -56,6 +61,65 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
       socket?.off("message-error", handleMessageError);
     };
   }, [socket, socketId, uiSounds]);
+
+  useEffect(() => {
+    function handleTypingUpdate({ socketId: remoteSocketId, displayName: remoteDisplayName, typing } = {}) {
+      if (!remoteSocketId || remoteSocketId === socketId) return;
+
+      setTypingUsers((current) => {
+        if (!typing) {
+          return current.filter((user) => user.socketId !== remoteSocketId);
+        }
+
+        const nextUser = { socketId: remoteSocketId, displayName: remoteDisplayName || "Alguem" };
+        return current.some((user) => user.socketId === remoteSocketId)
+          ? current.map((user) => user.socketId === remoteSocketId ? nextUser : user)
+          : [...current, nextUser];
+      });
+    }
+
+    socket?.on("typing:update", handleTypingUpdate);
+    return () => socket?.off("typing:update", handleTypingUpdate);
+  }, [socket, socketId]);
+
+  useEffect(() => {
+    if (!hasSeenMessageBatchRef.current && messages.length > 0) {
+      messages.forEach((message) => knownMessageIdsRef.current.add(message.id));
+      hasSeenMessageBatchRef.current = true;
+      return;
+    }
+
+    messages.forEach((message) => knownMessageIdsRef.current.add(message.id));
+  }, [messages]);
+
+  function stopTyping() {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+
+    if (isTypingRef.current) {
+      socket?.emit("typing:stop");
+      isTypingRef.current = false;
+    }
+  }
+
+  function refreshTyping(nextDraft = draft) {
+    if (!socket?.connected || !nextDraft.trim()) {
+      stopTyping();
+      return;
+    }
+
+    if (!isTypingRef.current) {
+      socket.emit("typing:start");
+      isTypingRef.current = true;
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(stopTyping, 2500);
+  }
+
+  useEffect(() => () => stopTyping(), [socket]);
 
   function validateFile(file) {
     if (!file) {
@@ -115,6 +179,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
 
     try {
       const attachment = selectedFile ? await uploadFile(selectedFile) : null;
+      stopTyping();
       socket?.emit("send-message", {
         channelId: "general",
         content,
@@ -128,6 +193,13 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
     } finally {
       setIsSending(false);
     }
+  }
+
+  function formatTypingLabel() {
+    const names = typingUsers.map((user) => user.displayName).filter(Boolean);
+    if (names.length === 1) return `${names[0]} esta digitando`;
+    if (names.length === 2) return `${names[0]} e ${names[1]} estao digitando`;
+    return `${names[0]} e mais ${names.length - 1} pessoas estao digitando`;
   }
 
   return (
@@ -147,16 +219,25 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
             <span>Envie uma mensagem para conversar com a sala.</span>
           </div>
         )}
-        {messages.map((message) => (
-          <article className="chat-message" key={message.id}>
-            <div className="message-avatar" aria-hidden="true">
+        {messages.map((message, index) => {
+          const previousMessage = messages[index - 1];
+          const isContinuation = Boolean(
+            previousMessage &&
+              previousMessage.socketId === message.socketId &&
+              new Date(message.createdAt).getTime() - new Date(previousMessage.createdAt).getTime() < 5 * 60 * 1000
+          );
+          const isNewMessage = hasSeenMessageBatchRef.current && !knownMessageIdsRef.current.has(message.id);
+
+          return (
+          <article className={`chat-message${isContinuation ? " is-grouped" : ""}${isNewMessage ? " is-new" : ""}`} key={message.id}>
+            {isContinuation ? <div className="message-avatar-placeholder" aria-hidden="true"><time>{formatTime(message.createdAt)}</time></div> : <div className="message-avatar" aria-hidden="true">
               {message.nickname?.slice(0, 1).toUpperCase() || "?"}
-            </div>
+            </div>}
             <div className="message-body">
-              <div className="message-meta">
+              {!isContinuation && <div className="message-meta">
                 <strong>{message.socketId === socketId ? (displayName || message.nickname) : message.nickname}</strong>
                 <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
-              </div>
+              </div>}
               {message.content && <p>{message.content}</p>}
               {message.attachment && (
                 <div className="message-attachment">
@@ -174,7 +255,13 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
               )}
             </div>
           </article>
-        ))}
+          );
+        })}
+      </div>
+
+      <div className={`typing-indicator${typingUsers.length ? " is-active" : ""}`} aria-live="polite" aria-atomic="true">
+        <span className="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>{typingUsers.length ? formatTypingLabel() : " "}</span>
       </div>
 
       <form className="chat-composer" onSubmit={sendMessage}>
@@ -200,7 +287,11 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
             maxLength={4000}
             placeholder="Conversar em #geral"
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => {
+              const nextDraft = event.target.value;
+              setDraft(nextDraft);
+              refreshTyping(nextDraft);
+            }}
             disabled={isSending}
             aria-label="Mensagem para o canal geral"
           />
