@@ -10,6 +10,13 @@ import { fileURLToPath } from "node:url";
 import multer from "multer";
 import { Server } from "socket.io";
 import { registerAuthRoutes, startSessionCleanup } from "./auth.js";
+import {
+  attachSocialSocket,
+  authenticateSocket,
+  configureSocialSocket,
+  registerAccountPresence,
+  registerSocialRoutes
+} from "./social.js";
 import { checkDatabase, getDatabaseError, isDatabaseConfigured } from "./db/pool.js";
 import {
   areSocketsInSameRoom,
@@ -147,6 +154,7 @@ app.get("/ice-config", (_request, response) => {
 });
 
 registerAuthRoutes(app);
+registerSocialRoutes(app);
 
 if (existsSync(CLIENT_DIST_DIR)) {
   app.use("/assets", express.static(path.join(CLIENT_DIST_DIR, "assets")));
@@ -167,8 +175,15 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: CLIENT_ORIGIN,
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    credentials: true
   }
+});
+
+configureSocialSocket(io);
+io.use(async (socket, next) => {
+  socket.data.accountUser = await authenticateSocket(socket);
+  next();
 });
 
 // Typing presence is ephemeral and scoped to the connected socket only.
@@ -242,6 +257,9 @@ function handleLeave(socket) {
 }
 
 io.on("connection", (socket) => {
+  registerAccountPresence(io, socket, socket.data.accountUser);
+  attachSocialSocket(io, socket);
+
   socket.on("create-room", ({ roomCode, roomName } = {}) => {
     const result = createRoom(roomCode, roomName);
 

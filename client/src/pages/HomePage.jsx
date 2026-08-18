@@ -21,7 +21,7 @@ function generateCode() {
   return Array.from({ length: 6 }, () => ROOM_ALPHABET[Math.floor(Math.random() * ROOM_ALPHABET.length)]).join("");
 }
 
-export default function HomePage({ onRoomCreated }) {
+export default function HomePage({ onRoomCreated, onNavigateSocial }) {
   const [mode, setMode] = useState("create");
   const [recentRooms, setRecentRooms] = useState(() => readRecentRooms());
   const [roomName, setRoomName] = useState("");
@@ -63,7 +63,7 @@ export default function HomePage({ onRoomCreated }) {
     celebrateEko("quickCelebrate");
     setIsTransitioning(true);
     setIsCreating(true);
-    const socket = io(SERVER_URL);
+    const socket = io(SERVER_URL, { withCredentials: true });
 
     socket.on("connect", () => {
       socket.emit("create-room", { roomCode: cleanCode, roomName: cleanName });
@@ -164,6 +164,7 @@ export default function HomePage({ onRoomCreated }) {
             </>}
             {status === "authenticated" && user && <>
               <div className="home-account-identity"><div className="home-account-avatar">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</div><span><strong>{user.displayName}</strong><small><i className="home-status-dot" aria-hidden="true" />Online · @{user.username}</small></span></div>
+              <button type="button" className="home-account-button" onClick={onNavigateSocial}><Icon name="account" size={14} />Amigos</button>
               <button type="button" className="home-account-button" onClick={() => logout()}>Sair</button>
             </>}
           </div>

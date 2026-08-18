@@ -60,7 +60,7 @@ function getActualScreenLabel(settings, fallbackPreset) {
   return `${resolution} · ${Math.round(settings.frameRate)} FPS`;
 }
 
-export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
+export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateSocial }) {
   const { logout, updateProfile: updateAccountProfile, status: authStatus, user: accountUser } = useAuth();
   const debugRtc = new URLSearchParams(window.location.search).get("debugRtc") === "1";
   const [guestIdentity] = useState(() => getGuestIdentity());
@@ -284,7 +284,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       return;
     }
 
-    const socket = io(SERVER_URL);
+    const socket = io(SERVER_URL, { withCredentials: true });
     socketRef.current = socket;
     setSocketInstance(socket);
 
@@ -1531,7 +1531,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
           <AudioParticipant key={participant.socketId} peerSocketId={participant.socketId} stream={participant.stream} volume={participant.volume} isDeafened={isDeafened} outputDeviceId={selectedOutputId} />
         ))}
       </div>
-      <RoomRail roomCode={roomCode} roomName={roomName} recentRooms={recentRooms()} onHome={onBack} onOpenSwitcher={() => setIsRoomSwitcherOpen(true)} />
+      <RoomRail roomCode={roomCode} roomName={roomName} recentRooms={recentRooms()} onHome={onBack} onSocial={onNavigateSocial} onOpenSwitcher={() => setIsRoomSwitcherOpen(true)} />
       <Sidebar
         roomCode={roomCode}
         roomName={roomName}

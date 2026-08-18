@@ -1,0 +1,275 @@
+import { query, withTransaction } from "./pool.js";
+
+function mapSocialUser(row) {
+  if (!row) return null;
+  return {
+    id: row.user_id || row.id,
+    username: row.username,
+    displayName: row.display_name,
+    avatarUrl: row.avatar_url || ""
+  };
+}
+
+function orderPair(left, right) {
+  return String(left) < String(right) ? [left, right] : [right, left];
+}
+
+export async function findSocialUserByUsername(usernameNormalized) {
+  const result = await query(
+    `SELECT id AS user_id, username, display_name, avatar_url
+     FROM users
+     WHERE username_normalized = $1
+     LIMIT 1`,
+    [usernameNormalized]
+  );
+  return mapSocialUser(result.rows[0]);
+}
+
+export async function listRelationships(userId) {
+  const result = await query(
+    `SELECT f.id, f.status, f.requester_user_id, f.addressee_user_id, f.created_at, f.updated_at,
+            u.id AS user_id, u.username, u.display_name, u.avatar_url
+     FROM friendships f
+     JOIN users u ON u.id = CASE
+       WHEN f.requester_user_id = $1 THEN f.addressee_user_id
+       ELSE f.requester_user_id
+     END
+     WHERE f.requester_user_id = $1 OR f.addressee_user_id = $1
+     ORDER BY f.updated_at DESC, f.id DESC`,
+    [userId]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    status: row.status,
+    direction: row.requester_user_id === userId ? "sent" : "received",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    user: mapSocialUser(row)
+  }));
+}
+
+export async function findRelationshipBetween(userId, otherUserId) {
+  const result = await query(
+    `SELECT id, status, requester_user_id, addressee_user_id
+     FROM friendships
+     WHERE (requester_user_id = $1 AND addressee_user_id = $2)
+        OR (requester_user_id = $2 AND addressee_user_id = $1)
+     LIMIT 1`,
+    [userId, otherUserId]
+  );
+  return result.rows[0] || null;
+}
+
+export async function createFriendRequest(requesterUserId, addresseeUserId) {
+  const result = await query(
+    `INSERT INTO friendships (requester_user_id, addressee_user_id, status)
+     VALUES ($1, $2, 'pending')
+     RETURNING id, status, requester_user_id, addressee_user_id, created_at, updated_at`,
+    [requesterUserId, addresseeUserId]
+  );
+  return result.rows[0];
+}
+
+export async function acceptFriendRequest(requestId, addresseeUserId) {
+  const result = await query(
+    `UPDATE friendships
+     SET status = 'accepted', updated_at = NOW()
+     WHERE id = $1 AND addressee_user_id = $2 AND status = 'pending'
+     RETURNING id, status, requester_user_id, addressee_user_id, updated_at`,
+    [requestId, addresseeUserId]
+  );
+  return result.rows[0] || null;
+}
+
+export async function deleteFriendRequest(requestId, userId) {
+  const result = await query(
+    `DELETE FROM friendships
+     WHERE id = $1
+       AND status = 'pending'
+       AND (requester_user_id = $2 OR addressee_user_id = $2)
+     RETURNING id, requester_user_id, addressee_user_id`,
+    [requestId, userId]
+  );
+  return result.rows[0] || null;
+}
+
+export async function removeFriendship(userId, otherUserId) {
+  const result = await query(
+    `DELETE FROM friendships
+     WHERE status = 'accepted'
+       AND ((requester_user_id = $1 AND addressee_user_id = $2)
+         OR (requester_user_id = $2 AND addressee_user_id = $1))
+     RETURNING id, requester_user_id, addressee_user_id`,
+    [userId, otherUserId]
+  );
+  return result.rows[0] || null;
+}
+
+export async function ensureConversation(userId, otherUserId) {
+  const [userOneId, userTwoId] = orderPair(userId, otherUserId);
+  return withTransaction(async (client) => {
+    const conversationResult = await client.query(
+      `INSERT INTO dm_conversations (user_one_id, user_two_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_one_id, user_two_id)
+       DO UPDATE SET updated_at = dm_conversations.updated_at
+       RETURNING id, user_one_id, user_two_id, created_at, updated_at`,
+      [userOneId, userTwoId]
+    );
+    const conversation = conversationResult.rows[0];
+    await client.query(
+      `INSERT INTO dm_participants (conversation_id, user_id)
+       VALUES ($1, $2), ($1, $3)
+       ON CONFLICT (conversation_id, user_id) DO NOTHING`,
+      [conversation.id, userOneId, userTwoId]
+    );
+    return conversation;
+  });
+}
+
+export async function getConversationForUser(conversationId, userId) {
+  const result = await query(
+    `SELECT c.id, c.user_one_id, c.user_two_id, c.created_at, c.updated_at,
+            other.id AS other_user_id, other.username AS other_username,
+            other.display_name AS other_display_name, other.avatar_url AS other_avatar_url
+     FROM dm_conversations c
+     JOIN dm_participants mine ON mine.conversation_id = c.id AND mine.user_id = $2
+     JOIN users other ON other.id = CASE WHEN c.user_one_id = $2 THEN c.user_two_id ELSE c.user_one_id END
+     WHERE c.id = $1
+     LIMIT 1`,
+    [conversationId, userId]
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    user: {
+      id: row.other_user_id,
+      username: row.other_username,
+      displayName: row.other_display_name,
+      avatarUrl: row.other_avatar_url || ""
+    }
+  };
+}
+
+export async function listConversations(userId) {
+  const result = await query(
+    `SELECT c.id, c.created_at, c.updated_at, p.last_read_at,
+            other.id AS other_user_id, other.username AS other_username,
+            other.display_name AS other_display_name, other.avatar_url AS other_avatar_url,
+            latest.id AS last_message_id, latest.content AS last_message_content,
+            latest.created_at AS last_message_created_at, latest.sender_user_id AS last_message_sender_id,
+            COALESCE(unread.unread_count, 0)::int AS unread_count
+     FROM dm_participants p
+     JOIN dm_conversations c ON c.id = p.conversation_id
+     JOIN users other ON other.id = CASE WHEN c.user_one_id = $1 THEN c.user_two_id ELSE c.user_one_id END
+     LEFT JOIN LATERAL (
+       SELECT m.id, m.content, m.created_at, m.sender_user_id
+       FROM dm_messages m
+       WHERE m.conversation_id = c.id
+       ORDER BY m.created_at DESC, m.id DESC
+       LIMIT 1
+     ) latest ON TRUE
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*) AS unread_count
+       FROM dm_messages m
+       WHERE m.conversation_id = c.id
+         AND m.sender_user_id <> $1
+         AND m.created_at > p.last_read_at
+     ) unread ON TRUE
+     WHERE p.user_id = $1
+     ORDER BY COALESCE(latest.created_at, c.updated_at) DESC, c.id DESC`,
+    [userId]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    unreadCount: row.unread_count,
+    user: {
+      id: row.other_user_id,
+      username: row.other_username,
+      displayName: row.other_display_name,
+      avatarUrl: row.other_avatar_url || ""
+    },
+    lastMessage: row.last_message_id ? {
+      id: row.last_message_id,
+      content: row.last_message_content,
+      createdAt: row.last_message_created_at,
+      senderUserId: row.last_message_sender_id
+    } : null
+  }));
+}
+
+export async function listMessages(conversationId, userId, { before = "", limit = 50 } = {}) {
+  const safeLimit = Math.min(50, Math.max(1, Number(limit) || 50));
+  const params = [conversationId, userId];
+  const beforeClause = before ? "AND m.created_at < $3" : "";
+  if (before) params.push(new Date(before));
+  params.push(safeLimit);
+  const limitIndex = params.length;
+  const result = await query(
+    `SELECT m.id, m.conversation_id, m.sender_user_id, m.content, m.created_at,
+            u.username, u.display_name, u.avatar_url
+     FROM dm_messages m
+     JOIN dm_participants p ON p.conversation_id = m.conversation_id AND p.user_id = $2
+     JOIN users u ON u.id = m.sender_user_id
+     WHERE m.conversation_id = $1 ${beforeClause}
+     ORDER BY m.created_at DESC, m.id DESC
+     LIMIT $${limitIndex}`,
+    params
+  );
+  return {
+    messages: result.rows.reverse().map((row) => ({
+      id: row.id,
+      conversationId: row.conversation_id,
+      senderUserId: row.sender_user_id,
+      content: row.content,
+      createdAt: row.created_at,
+      sender: {
+        id: row.sender_user_id,
+        username: row.username,
+        displayName: row.display_name,
+        avatarUrl: row.avatar_url || ""
+      }
+    })),
+    hasMore: result.rows.length === safeLimit
+  };
+}
+
+export async function createMessage(conversationId, senderUserId, content) {
+  const result = await query(
+    `INSERT INTO dm_messages (conversation_id, sender_user_id, content)
+     SELECT $1, $2, $3
+     WHERE EXISTS (
+       SELECT 1 FROM dm_participants
+       WHERE conversation_id = $1 AND user_id = $2
+     )
+     RETURNING id, conversation_id, sender_user_id, content, created_at`,
+    [conversationId, senderUserId, content]
+  );
+  return result.rows[0] || null;
+}
+
+export async function markConversationRead(conversationId, userId) {
+  const result = await query(
+    `UPDATE dm_participants
+     SET last_read_at = NOW()
+     WHERE conversation_id = $1 AND user_id = $2
+     RETURNING last_read_at`,
+    [conversationId, userId]
+  );
+  return result.rows[0] || null;
+}
+
+export async function getConversationUserIds(conversationId) {
+  const result = await query(
+    `SELECT user_id FROM dm_participants WHERE conversation_id = $1`,
+    [conversationId]
+  );
+  return result.rows.map((row) => row.user_id);
+}

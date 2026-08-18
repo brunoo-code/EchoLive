@@ -1,10 +1,11 @@
 import BrandMark from "./BrandMark.jsx";
 import Icon from "./Icon.jsx";
 
-export default function RoomRail({ roomCode, roomName, recentRooms, onHome, onOpenSwitcher }) {
+export default function RoomRail({ roomCode, roomName, recentRooms, onHome, onSocial, onOpenSwitcher }) {
   const rooms = recentRooms.filter((room) => room.code !== roomCode).slice(0, 4);
   return <nav className="room-rail" aria-label="Navegacao de salas">
     <button type="button" className="rail-brand" onClick={onHome} title="Ir para a Home" aria-label="Ir para a Home"><BrandMark size={24} /></button>
+    <button type="button" className="rail-social" onClick={onSocial} title="Abrir Amigos" aria-label="Abrir Amigos"><Icon name="account" size={17} /></button>
     <div className="rail-divider" />
     <button type="button" className="rail-room is-active" style={{ background: roomColor(roomCode) }} title={`${roomName || `Sala ${roomCode}`} - ${roomCode}`} aria-label={`Sala atual ${roomCode}`}><span>{roomInitials(roomName, roomCode)}</span></button>
     {rooms.map((room) => <button type="button" className="rail-room" key={room.code} onClick={() => onOpenSwitcher()} style={{ background: roomColor(room.code) }} title={`${room.name} - ${room.code}`} aria-label={`${room.name} ${room.code}`}><span>{roomInitials(room.name, room.code)}</span></button>)}

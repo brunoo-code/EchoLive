@@ -36,6 +36,10 @@ function getSessionToken(request) {
   return parseCookies(request.headers.cookie || "")[SESSION_COOKIE] || "";
 }
 
+export function getSessionTokenFromCookieHeader(header = "") {
+  return parseCookies(header)[SESSION_COOKIE] || "";
+}
+
 function unavailable(response) {
   return response.status(503).json({
     error: "Contas estao temporariamente indisponiveis.",
