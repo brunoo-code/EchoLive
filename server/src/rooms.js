@@ -118,7 +118,7 @@ export function hasRoom(roomCode) {
   return rooms.has(normalizeRoomCode(roomCode));
 }
 
-export function joinRoom(roomCode, socketId, nickname) {
+export function joinRoom(roomCode, socketId, nickname, identity = {}) {
   const code = normalizeRoomCode(roomCode);
 
   if (!isValidRoomCode(code)) {
@@ -137,16 +137,43 @@ export function joinRoom(roomCode, socketId, nickname) {
     return { ok: false, error: "Sala cheia." };
   }
 
-  const cleanNickname = normalizeNickname(nickname);
+  let cleanNickname = normalizeNickname(nickname);
 
   if (!isValidNickname(cleanNickname)) {
     return { ok: false, error: "Nickname invalido." };
+  }
+
+  const isGuest = Boolean(identity.isGuest);
+  if (isGuest) {
+    const namesInRoom = new Set(Array.from(room.values()).map((participant) => participant.nickname));
+    let attempt = 0;
+    while (namesInRoom.has(cleanNickname) && attempt < 12) {
+      cleanNickname = `User ${100 + Math.floor(Math.random() * 9900)}`;
+      attempt += 1;
+    }
+  }
+  const displayName = isGuest ? cleanNickname : String(identity.displayName || cleanNickname).trim().slice(0, 40) || cleanNickname;
+  const username = String(identity.username || "").trim().toLowerCase().slice(0, 24);
+  const avatarUrl = !isGuest && typeof identity.avatarUrl === "string" && identity.avatarUrl.length <= 500000 ? identity.avatarUrl : "";
+  let avatarVariant = isGuest && Number.isInteger(identity.avatarVariant) ? Math.abs(identity.avatarVariant) % 6 : 0;
+  if (isGuest) {
+    const usedVariants = new Set(Array.from(room.values()).filter((participant) => participant.isGuest).map((participant) => participant.avatarVariant));
+    let variantAttempts = 0;
+    while (usedVariants.has(avatarVariant) && variantAttempts < 6) {
+      avatarVariant = (avatarVariant + 1) % 6;
+      variantAttempts += 1;
+    }
   }
 
   const participant = {
     ...room.get(socketId),
     socketId,
     nickname: cleanNickname,
+    displayName,
+    username,
+    isGuest,
+    avatarUrl,
+    avatarVariant,
     micEnabled: room.get(socketId)?.micEnabled ?? false,
     cameraEnabled: room.get(socketId)?.cameraEnabled ?? false,
     isScreenSharing: room.get(socketId)?.isScreenSharing ?? false,

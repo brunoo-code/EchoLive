@@ -9,7 +9,6 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
   const { availability, login, register } = useAuth();
   const [mode, setMode] = useState(initialMode);
   const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState("");
@@ -48,9 +47,6 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
     } else if (mode === "register" && !USERNAME_PATTERN.test(cleanUsername)) {
       nextFieldErrors.username = "Use apenas letras, numeros e _.";
     }
-    if (mode === "register" && !displayName.trim()) {
-      nextFieldErrors.displayName = "Informe um nome de exibicao.";
-    }
     if (mode === "register" && (password.length < 8 || password.length > 128)) {
       nextFieldErrors.password = "Use uma senha entre 8 e 128 caracteres.";
     }
@@ -66,7 +62,7 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
     setIsSubmitting(true);
     try {
       if (mode === "register") {
-        await register({ username, displayName, password });
+        await register({ username, password });
       } else {
         await login({ username, password });
       }
@@ -101,11 +97,6 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
           <input autoFocus autoComplete="username" maxLength={24} value={username} onFocus={() => setActiveField("username")} onBlur={() => setActiveField("")} onChange={(event) => { setUsername(event.target.value); setFieldErrors((current) => ({ ...current, username: "" })); }} placeholder="seu_usuario" aria-invalid={Boolean(fieldErrors.username)} aria-describedby={fieldErrors.username ? "auth-username-error" : undefined} />
           {fieldErrors.username && <small id="auth-username-error" className="field-error">{fieldErrors.username}</small>}
         </label>
-        {isRegister && <label className="field">
-          <span>Nome de exibicao</span>
-          <input autoComplete="name" maxLength={40} value={displayName} onFocus={() => setActiveField("displayName")} onBlur={() => setActiveField("")} onChange={(event) => { setDisplayName(event.target.value); setFieldErrors((current) => ({ ...current, displayName: "" })); }} placeholder="Seu nome" aria-invalid={Boolean(fieldErrors.displayName)} aria-describedby={fieldErrors.displayName ? "auth-display-name-error" : undefined} />
-          {fieldErrors.displayName && <small id="auth-display-name-error" className="field-error">{fieldErrors.displayName}</small>}
-        </label>}
         {isRegister && <div className="auth-section-heading auth-security-heading"><strong>Seguranca</strong><small>Uma senha so sua.</small></div>}
         <label className="field">
           <span>Senha</span>

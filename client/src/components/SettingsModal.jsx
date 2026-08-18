@@ -30,7 +30,6 @@ export default function SettingsModal({ initialSection = "profile", theme, onThe
     onProfileChange({
       ...draft,
       displayName: draft.displayName.trim().slice(0, 24),
-      nickname: draft.nickname.trim().slice(0, 24),
       customStatus: draft.customStatus.trim().slice(0, 60),
       status: draft.status === "dnd" ? "dnd" : "online"
     });
@@ -47,10 +46,10 @@ export default function SettingsModal({ initialSection = "profile", theme, onThe
         <div className="settings-content">
           {active === "profile" && <section className="settings-section">
             <h3>Perfil</h3>
-            <div className="profile-edit-preview"><div className="profile-preview">{draft.avatarUrl ? <img src={draft.avatarUrl} alt="" /> : displayName.slice(0, 1).toUpperCase()}<UserStatusBadge status={draft.status} size="lg" /></div><div><strong>{displayName}</strong><span>@{draft.nickname || "nickname"}</span><small><UserStatusBadge status={draft.status} size="sm" />{shortStatus}{draft.customStatus ? ` - ${draft.customStatus}` : ""}</small></div></div>
+            <div className="profile-edit-preview"><div className="profile-preview">{draft.avatarUrl ? <img src={draft.avatarUrl} alt="" /> : displayName.slice(0, 1).toUpperCase()}<UserStatusBadge status={draft.status} size="lg" /></div><div><strong>{displayName}</strong><span>@{draft.username || "username"}</span><small><UserStatusBadge status={draft.status} size="sm" />{shortStatus}{draft.customStatus ? ` - ${draft.customStatus}` : ""}</small></div></div>
             <div className="profile-photo-actions"><label className="ghost-button profile-upload">Alterar foto<input type="file" accept="image/png,image/jpeg,image/webp" onChange={selectAvatar} /></label>{draft.avatarUrl && <button type="button" className="ghost-button" onClick={() => update("avatarUrl", "")}>Remover foto</button>}</div>
             <label className="field"><span>Nome de exibicao</span><input maxLength={24} value={draft.displayName} onChange={(event) => update("displayName", event.target.value)} /></label>
-            <label className="field"><span>Nickname</span><input maxLength={24} value={draft.nickname} onChange={(event) => update("nickname", event.target.value)} /></label>
+            <div className="settings-readonly"><span>Nome de usuario</span><strong>@{draft.username || "username"}</strong></div>
             <label className="field"><span>Status</span><select value={draft.status === "dnd" ? "dnd" : "online"} onChange={(event) => update("status", event.target.value)}><option value="online">Online</option><option value="dnd">Nao perturbe</option></select></label>
             <label className="field"><span>Status personalizado</span><input maxLength={60} placeholder="Defina um status" value={draft.customStatus} onChange={(event) => update("customStatus", event.target.value)} /></label>
             <button type="button" className="primary-button" onClick={saveProfile}>Salvar alteracoes</button>

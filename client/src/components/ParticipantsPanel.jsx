@@ -1,5 +1,6 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import Icon from "./Icon.jsx";
+import BrandMark from "./BrandMark.jsx";
 
 export default function ParticipantsPanel({ participants, onProfileClick }) {
   return (
@@ -10,14 +11,15 @@ export default function ParticipantsPanel({ participants, onProfileClick }) {
 
       <div className="online-list">
         {participants.map((participant) => (
-          <div className={`online-person ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-person" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
+          <div className={`online-person ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-person" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} onKeyDown={(event) => { if (participant.isLocal && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onProfileClick?.(); } }} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
             <div className="avatar-dot" aria-hidden="true">
-              {participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}
+              {participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.isGuest ? <BrandMark size={22} variant={participant.avatarVariant} /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}
               <UserStatusBadge status={participant.status} size="md" />
             </div>
             <div className="online-person-info">
               <strong title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</strong>
               {participant.isLocal && <span className="you-badge">Voce</span>}
+              {participant.isGuest && <span className="visitor-badge">Visitante</span>}
             </div>
             <div className="mini-status" aria-label="Status de midia">
               <span className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}><Icon name={participant.micEnabled === false ? "micOff" : "mic"} size={14} /></span>

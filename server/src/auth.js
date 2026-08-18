@@ -49,7 +49,7 @@ function normalizeUsername(value) {
 
 function validateRegisterInput({ username, displayName, password }) {
   const cleanUsername = String(username || "").trim();
-  const cleanDisplayName = String(displayName || "").trim();
+  const cleanDisplayName = String(displayName || cleanUsername).trim();
   const cleanPassword = String(password || "");
 
   if (!/^[A-Za-z0-9_]{3,24}$/.test(cleanUsername)) {

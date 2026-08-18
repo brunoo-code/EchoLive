@@ -71,10 +71,10 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
-  const register = useCallback(async ({ username, displayName, password }) => {
+  const register = useCallback(async ({ username, password }) => {
     const data = await request("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ username, displayName, password })
+      body: JSON.stringify({ username, displayName: username, password })
     });
     setAvailability("available");
     setUser(data.user);

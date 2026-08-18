@@ -17,6 +17,8 @@ export default function Sidebar({
   nickname,
   status = "Online",
   customStatus = "",
+  isGuest = false,
+  avatarVariant = 0,
   isInVoice,
   connectionQuality,
   micEnabled,
@@ -93,9 +95,10 @@ export default function Sidebar({
         </button>
         <div className="call-member-list">
           {participants.map((participant) => (
-            <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
-              <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}<UserStatusBadge status={participant.status} size="sm" /></span>
+            <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} onKeyDown={(event) => { if (participant.isLocal && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onProfileClick?.(); } }} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
+              <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.isGuest ? <BrandMark size={18} variant={participant.avatarVariant} /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}<UserStatusBadge status={participant.status} size="sm" /></span>
               <span className="member-name" title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</span>
+              {participant.isGuest && <span className="visitor-badge">Visitante</span>}
               <span className="member-status" aria-label="Status de midia">
                 <i className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}><Icon name={participant.micEnabled === false ? "micOff" : "mic"} size={14} /></i>
                 <i className={`status-icon status-camera ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"} aria-label={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}><Icon name={participant.cameraEnabled === false ? "cameraOff" : "camera"} size={14} /></i>
@@ -114,12 +117,12 @@ export default function Sidebar({
         <footer className="sidebar-user-footer">
         <button type="button" className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
           <span className="sidebar-user-avatar">
-            {avatarUrl ? <img src={avatarUrl} alt="" /> : nickname?.slice(0, 1).toUpperCase() || "?"}
+            {avatarUrl ? <img src={avatarUrl} alt="" /> : isGuest ? <BrandMark size={22} variant={avatarVariant} /> : nickname?.slice(0, 1).toUpperCase() || "?"}
             <UserStatusBadge status={status} size="md" />
           </span>
           <div>
             <strong title={nickname}>{nickname}</strong>
-            <span title={customStatus || status}>{customStatus || (isInVoice ? "Em chamada" : status)}</span>
+            <span title={customStatus || status}>{isGuest ? "Visitante" : customStatus || (isInVoice ? "Em chamada" : status)}</span>
           </div>
         </button>
         <div className="sidebar-user-controls" aria-label="Controles do usuario">

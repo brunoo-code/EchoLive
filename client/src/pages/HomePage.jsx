@@ -9,8 +9,6 @@ import AuthModal from "../components/AuthModal.jsx";
 import EkoGuide from "../components/EkoGuide.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 
-const NICKNAME_KEY = "echolive.nickname";
-const LAST_NICKNAME_KEY = "echolive.lastNickname";
 const RECENT_ROOMS_KEY = "echolive.recentRooms";
 const ROOM_CODE_PATTERN = /^[A-Z0-9]{3,9}$/;
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -24,7 +22,6 @@ function generateCode() {
 }
 
 export default function HomePage({ onRoomCreated }) {
-  const [nickname, setNickname] = useState(() => localStorage.getItem(LAST_NICKNAME_KEY) || localStorage.getItem(NICKNAME_KEY) || "");
   const [mode, setMode] = useState("create");
   const [recentRooms, setRecentRooms] = useState(() => readRecentRooms());
   const [roomName, setRoomName] = useState("");
@@ -33,8 +30,6 @@ export default function HomePage({ onRoomCreated }) {
   const [isCreating, setIsCreating] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [authModalMode, setAuthModalMode] = useState(null);
-  const [isEditingNickname, setIsEditingNickname] = useState(() => !nickname.trim());
-  const [nicknameBeforeEdit, setNicknameBeforeEdit] = useState(nickname);
   const [homeIntent, setHomeIntent] = useState("quick");
   const [ekoMode, setEkoMode] = useState("idle");
   const reactionTimerRef = useRef(null);
@@ -43,63 +38,14 @@ export default function HomePage({ onRoomCreated }) {
   const { availability, logout, status, user } = useAuth();
 
   useEffect(() => {
-    const savedNickname = localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "";
-    localStorage.setItem(NICKNAME_KEY, savedNickname);
-    localStorage.removeItem("nickname");
     localStorage.removeItem("echolive.roomCode");
-    setNickname(savedNickname);
-    setNicknameBeforeEdit(savedNickname);
-    setIsEditingNickname(!savedNickname);
   }, []);
-
-  useEffect(() => {
-    if (status !== "authenticated" || !user || nickname.trim()) return;
-    const accountNickname = user.displayName || user.username;
-    localStorage.setItem(NICKNAME_KEY, accountNickname);
-    localStorage.setItem(LAST_NICKNAME_KEY, accountNickname);
-    setNickname(accountNickname);
-    setNicknameBeforeEdit(accountNickname);
-    setIsEditingNickname(false);
-  }, [nickname, status, user]);
 
   useEffect(() => () => {
     if (reactionTimerRef.current) window.clearTimeout(reactionTimerRef.current);
   }, []);
 
-  function saveNickname() {
-    const cleanNickname = nickname.trim().slice(0, 24);
-
-    if (!cleanNickname) {
-      notify("Informe um nickname.");
-      return null;
-    }
-
-    localStorage.setItem(NICKNAME_KEY, cleanNickname);
-    localStorage.setItem(LAST_NICKNAME_KEY, cleanNickname);
-    setNickname(cleanNickname);
-    setNicknameBeforeEdit(cleanNickname);
-    setIsEditingNickname(false);
-    return cleanNickname;
-  }
-
-  function startNicknameEdit() {
-    setNicknameBeforeEdit(nickname);
-    setIsEditingNickname(true);
-  }
-
-  function cancelNicknameEdit() {
-    setNickname(nicknameBeforeEdit);
-    setIsEditingNickname(Boolean(nicknameBeforeEdit.trim()) === false);
-  }
-
-  function confirmNicknameEdit() {
-    if (nickname.trim()) saveNickname();
-  }
-
   function createRoom() {
-    const cleanNickname = saveNickname();
-    if (!cleanNickname) return;
-
     const cleanCode = normalizeCode(createCode.trim());
     const rawName = roomName.trim();
     const cleanName = rawName.slice(0, 24);
@@ -120,7 +66,7 @@ export default function HomePage({ onRoomCreated }) {
     const socket = io(SERVER_URL);
 
     socket.on("connect", () => {
-      socket.emit("create-room", { nickname: cleanNickname, roomCode: cleanCode, roomName: cleanName });
+      socket.emit("create-room", { roomCode: cleanCode, roomName: cleanName });
     });
 
     socket.on("room-created", ({ roomCode: createdRoomCode }) => {
@@ -148,10 +94,8 @@ export default function HomePage({ onRoomCreated }) {
 
   function joinRoom(event) {
     event.preventDefault();
-    const cleanNickname = saveNickname();
     const cleanRoomCode = normalizeCode(joinCode.trim());
 
-    if (!cleanNickname) return;
     if (!ROOM_CODE_PATTERN.test(cleanRoomCode)) {
       notify("Informe um codigo de sala valido.");
       return;
@@ -170,29 +114,8 @@ export default function HomePage({ onRoomCreated }) {
   }
 
   function enterRecent(room) {
-    saveNickname();
     saveRecentRoom(room.code, room.name, setRecentRooms);
     onRoomCreated(room.code);
-  }
-
-  function focusQuickEntry() {
-    changeHomeIntent("quick");
-    celebrateEko("quickCelebrate");
-    setMode("create");
-    window.requestAnimationFrame(() => {
-      const targetId = !nickname.trim()
-        ? "home-nickname"
-        : !roomName.trim()
-          ? "home-room-name"
-          : !createCode.trim()
-            ? "home-create-code"
-            : "home-create-room";
-      const target = document.getElementById(targetId);
-      if (!target) return;
-      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      target.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
-      target.focus({ preventScroll: true });
-    });
   }
 
   function openAccountEntry() {
@@ -240,7 +163,7 @@ export default function HomePage({ onRoomCreated }) {
               {availability === "unavailable" && <small>Contas indisponiveis no momento</small>}
             </>}
             {status === "authenticated" && user && <>
-              <div className="home-account-identity"><div className="home-account-avatar">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</div><span><strong>{user.displayName}</strong><small>@{user.username}</small></span></div>
+              <div className="home-account-identity"><div className="home-account-avatar">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</div><span><strong>{user.displayName}</strong><small><i className="home-status-dot" aria-hidden="true" />Online · @{user.username}</small></span></div>
               <button type="button" className="home-account-button" onClick={() => logout()}>Sair</button>
             </>}
           </div>
@@ -255,20 +178,8 @@ export default function HomePage({ onRoomCreated }) {
             </div>
 
             <section className="home-entry-surface" aria-labelledby="home-entry-title">
-              <div className="home-entry-heading"><h2 id="home-entry-title"><i className="home-kicker-dot" aria-hidden="true" />Comece uma conversa</h2><span className={`home-entry-status ${nickname.trim() ? "is-ready" : ""}`}><i aria-hidden="true" />{nickname.trim() ? "Pronto para entrar" : "Escolha seu nome"}</span></div>
-              <p className="home-entry-copy"><strong>Entre como visitante.</strong> <span>Sem cadastro.</span></p>
-              {nickname.trim() && !isEditingNickname ? <div className="home-identity-preview">
-                <span className="home-identity-icon"><BrandMark size={20} /></span>
-                <span className="home-identity-copy"><strong>Voce entra como</strong><b>{nickname}</b><small><i className="home-status-dot" aria-hidden="true" />Visitante</small></span>
-                <button type="button" className="home-identity-edit" onClick={startNicknameEdit}>Editar</button>
-              </div> : <div className="home-identity-row">
-                <span className="home-identity-icon"><BrandMark size={20} /></span>
-                <span className="home-identity-copy"><strong>Voce vai entrar como</strong><small><i className="home-status-dot is-muted" aria-hidden="true" />Seu nome fica visivel na sala</small></span>
-                <label className="home-identity-input">
-                  <span className="visually-hidden">Nickname</span>
-                  <input id="home-nickname" maxLength={24} autoFocus={isEditingNickname} aria-label="Nickname" placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); confirmNicknameEdit(); } if (event.key === "Escape") { event.preventDefault(); cancelNicknameEdit(); } }} />
-                </label>
-              </div>}
+              <div className="home-entry-heading"><h2 id="home-entry-title"><i className="home-kicker-dot" aria-hidden="true" />Comece uma conversa</h2></div>
+              <p className="home-entry-copy">Entre agora. Sem cadastro.</p>
 
               <div className="home-tabs" role="tablist" aria-label="Entrada na sala">
                 <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => { setMode("create"); changeHomeIntent("quick"); }} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Criar sala</button>
@@ -286,7 +197,7 @@ export default function HomePage({ onRoomCreated }) {
                     <button type="button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo"><Icon name="pulse" size={16} /></button>
                   </div>
                 </label>
-                <button id="home-create-room" className={`primary-button home-entry-cta ${nickname.trim() && roomName.trim() && ROOM_CODE_PATTERN.test(normalizeCode(createCode.trim())) ? "is-ready" : ""}`} type="button" onClick={createRoom} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko} disabled={isCreating}><span>{isCreating ? "Criando..." : "Criar sala"}</span><Icon name="voice" size={15} /></button>
+                <button id="home-create-room" className={`primary-button home-entry-cta ${roomName.trim() && ROOM_CODE_PATTERN.test(normalizeCode(createCode.trim())) ? "is-ready" : ""}`} type="button" onClick={createRoom} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko} disabled={isCreating}><span>{isCreating ? "Criando..." : "Criar sala"}</span><Icon name="voice" size={15} /></button>
               </>}
               {mode === "join" && <div className="join-form">
                 <label className="field">
@@ -306,7 +217,6 @@ export default function HomePage({ onRoomCreated }) {
               activeIntent={homeIntent}
               onIntentChange={changeHomeIntent}
               onIntentEnd={resetEko}
-              onQuickEntry={focusQuickEntry}
               onCreateAccount={openAccountEntry}
             />
           </aside>

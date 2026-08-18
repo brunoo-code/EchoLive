@@ -3,21 +3,23 @@ import { io } from "socket.io-client";
 import ControlsBar from "../components/ControlsBar.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
 import AudioParticipant from "../components/AudioParticipant.jsx";
+import AuthModal from "../components/AuthModal.jsx";
 import DevicesModal from "../components/DevicesModal.jsx";
 import SettingsModal from "../components/SettingsModal.jsx";
-import NicknameModal from "../components/NicknameModal.jsx";
 import ParticipantCard from "../components/ParticipantCard.jsx";
 import ParticipantsPanel from "../components/ParticipantsPanel.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
 import RoomRail from "../components/RoomRail.jsx";
 import ProfilePopover from "../components/ProfilePopover.jsx";
+import BrandMark from "../components/BrandMark.jsx";
 import Icon from "../components/Icon.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
 import { requestInitialMedia, requestSingleKind, stopStream } from "../utils/media.js";
 import { getPeerConnectionConfig, SERVER_URL } from "../utils/webrtc.js";
 import { playUiSound } from "../utils/uiSounds.js";
+import { getGuestAvatarVariant, getGuestIdentity } from "../utils/guestIdentity.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 
 const NICKNAME_KEY = "echolive.nickname";
@@ -59,10 +61,11 @@ function getActualScreenLabel(settings, fallbackPreset) {
 }
 
 export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
-  const { logout, updateProfile: updateAccountProfile, user: accountUser } = useAuth();
+  const { logout, updateProfile: updateAccountProfile, status: authStatus, user: accountUser } = useAuth();
   const debugRtc = new URLSearchParams(window.location.search).get("debugRtc") === "1";
-  const [nickname, setNickname] = useState(() => localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "");
-  const [nicknameDraft, setNicknameDraft] = useState(() => localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "");
+  const [guestIdentity] = useState(() => getGuestIdentity());
+  const [guestAvatarVariant, setGuestAvatarVariant] = useState(() => guestIdentity.avatarVariant);
+  const [nickname, setNickname] = useState("");
   const [hasJoined, setHasJoined] = useState(false);
   const [joinState, setJoinState] = useState("idle");
   const [roomError, setRoomError] = useState("");
@@ -89,7 +92,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const [uiSounds, setUiSounds] = useState(() => localStorage.getItem(UI_SOUNDS_KEY) !== "false");
   const [confirmLeaveRoom, setConfirmLeaveRoom] = useState(() => localStorage.getItem(CONFIRM_LEAVE_KEY) !== "false");
   const [copyFallbackLink, setCopyFallbackLink] = useState("");
-  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState(null);
   const [roomName, setRoomName] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("voice-general");
   const [messages, setMessages] = useState([]);
@@ -197,14 +200,22 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   useEffect(() => {
     const lifecycleToken = Symbol("room-lifecycle");
     lifecycleTokenRef.current = lifecycleToken;
-    if (!localStorage.getItem(NICKNAME_KEY) && localStorage.getItem("nickname")) {
-      localStorage.setItem(NICKNAME_KEY, localStorage.getItem("nickname"));
-    }
     localStorage.removeItem("nickname");
     localStorage.removeItem("echolive.roomCode");
 
-    if (nickname) {
-      enterRoom(nickname, lifecycleToken);
+    if (authStatus !== "loading") {
+      const identity = accountUser
+        ? {
+            nickname: accountUser.displayName || accountUser.username,
+            displayName: accountUser.displayName || accountUser.username,
+            username: accountUser.username,
+            avatarUrl: accountUser.avatarUrl || localStorage.getItem(AVATAR_KEY) || "",
+            isGuest: false,
+            avatarVariant: 0
+          }
+        : guestIdentity;
+      setNickname(identity.nickname);
+      enterRoom(identity.nickname, lifecycleToken, identity);
     }
 
     const handleBeforeUnload = () => {
@@ -220,7 +231,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         cleanupRoom();
       }
     };
-  }, []);
+  }, [accountUser, authStatus, guestIdentity]);
 
   useEffect(() => {
     if (!debugRtc) {
@@ -245,7 +256,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     };
   }, [debugRtc, hasJoined]);
 
-  async function enterRoom(rawNickname, lifecycleToken = lifecycleTokenRef.current) {
+  async function enterRoom(rawNickname, lifecycleToken = lifecycleTokenRef.current, identity = guestIdentity) {
     const cleanNickname = rawNickname.trim().slice(0, 24);
 
     if (!cleanNickname) {
@@ -258,7 +269,11 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     }
 
     connectionStartedRef.current = true;
-    localStorage.setItem(NICKNAME_KEY, cleanNickname);
+    if (!identity.isGuest) {
+      localStorage.setItem(NICKNAME_KEY, cleanNickname);
+    } else {
+      localStorage.removeItem(NICKNAME_KEY);
+    }
     setNickname(cleanNickname);
     setRoomError("");
     setJoinState("joining");
@@ -275,13 +290,29 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
 
     socket.on("connect", () => {
       setSelfId(socket.id);
-      socket.emit("join-room", { roomCode, nickname: cleanNickname });
+      socket.emit("join-room", {
+        roomCode,
+        nickname: cleanNickname,
+        identity: {
+          displayName: identity.displayName || cleanNickname,
+          username: identity.username || "",
+          avatarUrl: identity.isGuest ? "" : identity.avatarUrl || "",
+          avatarVariant: getGuestAvatarVariant(identity.avatarVariant),
+          isGuest: Boolean(identity.isGuest)
+        }
+      });
     });
 
-    socket.on("room-users", async ({ participants, voiceParticipants, count, maxParticipants, roomName: joinedRoomName }) => {
+    socket.on("room-users", async ({ self, participants, voiceParticipants, count, maxParticipants, roomName: joinedRoomName }) => {
       hasJoinedRef.current = true;
       setHasJoined(true);
       setJoinState("joined");
+      if (self?.nickname) {
+        setNickname(self.nickname);
+      }
+      if (self?.isGuest && Number.isInteger(self.avatarVariant)) {
+        setGuestAvatarVariant(self.avatarVariant);
+      }
       setParticipantCount(count);
       setMaxParticipants(maxParticipants || 10);
       setRoomName(joinedRoomName || `Sala ${roomCode}`);
@@ -436,10 +467,9 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
 
       if (participant.socketId === socket.id) {
         setNickname(participant.nickname);
-        setNicknameDraft(participant.nickname);
-        localStorage.setItem(NICKNAME_KEY, participant.nickname);
-        setIsNicknameModalOpen(false);
-        notify("Nickname atualizado.");
+        if (!guestIdentity.isGuest) {
+          localStorage.setItem(NICKNAME_KEY, participant.nickname);
+        }
       }
 
       setRoomParticipants(participants.filter((item) => item.socketId !== socket.id));
@@ -1248,7 +1278,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     setProfile(next);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
     if (next.avatarUrl) { localStorage.setItem(AVATAR_KEY, next.avatarUrl); setAvatarUrl(next.avatarUrl); } else { localStorage.removeItem(AVATAR_KEY); setAvatarUrl(""); }
-    if (next.nickname && next.nickname !== nickname) saveNickname(next.nickname);
     if (accountUser && next.displayName && next.displayName !== accountUser.displayName) {
       updateAccountProfile({ displayName: next.displayName }).catch((error) => notify(error.message));
     }
@@ -1283,11 +1312,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
       setCopyFallbackLink(inviteLink);
       notify("Nao foi possivel copiar automaticamente.");
     }
-  }
-
-  function submitNickname(event) {
-    event.preventDefault();
-    enterRoom(nicknameDraft);
   }
 
   function emitMediaStatus() {
@@ -1395,17 +1419,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     }
   }
 
-  function saveNickname(nextNickname) {
-    const cleanNickname = nextNickname.trim().slice(0, 24);
-
-    if (!cleanNickname) {
-      notify("Informe um nickname.");
-      return;
-    }
-
-    socketRef.current?.emit("update-nickname", { nickname: cleanNickname });
-  }
-
   function changeRemoteVolume(socketId, volume) {
     setRemoteParticipants((current) =>
       current.map((participant) =>
@@ -1414,28 +1427,14 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     );
   }
 
-  if (!nickname || (!hasJoined && joinState === "idle")) {
+  if (authStatus === "loading" || !nickname || (!hasJoined && joinState === "idle")) {
     return (
       <main className="page home-page">
         <ToastStack toasts={toasts} />
         <section className="home-panel">
           <p className="eyebrow">EchoLive</p>
-          <h1>EchoLive</h1>
-          <p className="home-subtitle">Sua sala privada de voz, video e tela.</p>
-          <form onSubmit={submitNickname} className="join-form">
-            <label className="field">
-              <span>Nickname</span>
-              <input
-                maxLength={24}
-                placeholder="Seu nickname"
-                value={nicknameDraft}
-                onChange={(event) => setNicknameDraft(event.target.value)}
-              />
-            </label>
-            <button className="primary-button" type="submit">
-              Entrar na sala
-            </button>
-          </form>
+          <h1>Preparando sua entrada...</h1>
+          <p className="home-subtitle">Sua identidade temporaria sera criada automaticamente.</p>
           <button className="ghost-button" type="button" onClick={onBack}>
             Voltar
           </button>
@@ -1459,17 +1458,25 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     );
   }
 
+  const isGuest = !accountUser;
+  const localDisplayName = accountUser?.displayName || accountUser?.username || nickname || guestIdentity.nickname;
+  const localAvatarUrl = isGuest ? "" : avatarUrl || accountUser?.avatarUrl || "";
+  const localAvatarVariant = isGuest ? guestAvatarVariant : 0;
   const localParticipant = {
     socketId: selfId || "local",
-    nickname: profile.displayName || nickname,
-    avatarUrl,
+    nickname: localDisplayName,
+    displayName: localDisplayName,
+    username: accountUser?.username || "",
+    avatarUrl: localAvatarUrl,
+    avatarVariant: localAvatarVariant,
+    isGuest,
     stream: displayStream,
     isLocal: true,
     isScreenSharing,
     isSpeaking,
     micEnabled,
     cameraEnabled,
-    status: profile.status
+    status: isGuest ? "online" : profile.status
   };
   const onlineParticipants = [localParticipant, ...roomParticipants];
   const voiceParticipants = isInVoice ? [localParticipant, ...remoteParticipants] : [];
@@ -1536,16 +1543,18 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
         onCopyInvite={copyInvite}
         notify={notify}
         copyFallbackLink={copyFallbackLink}
-        nickname={profile.displayName || nickname}
-        status={profile.status}
-        customStatus={profile.customStatus}
+        nickname={localDisplayName}
+        isGuest={isGuest}
+        avatarVariant={localAvatarVariant}
+        status={isGuest ? "online" : profile.status}
+        customStatus={isGuest ? "" : profile.customStatus}
         isInVoice={isInVoice}
         connectionQuality={connectionQuality}
         micEnabled={micEnabled}
         cameraEnabled={cameraEnabled}
         isDeafened={isDeafened}
         isSpeaking={isSpeaking}
-        avatarUrl={avatarUrl}
+        avatarUrl={localAvatarUrl}
         onProfileClick={openProfilePopover}
         onToggleMicrophone={toggleMicrophone}
         onToggleCamera={toggleCamera}
@@ -1598,12 +1607,12 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
           )
         ) : (
           <section className="empty-call-state">
-            <div className="empty-call-avatar">{avatarUrl ? <img src={avatarUrl} alt="" /> : (profile.displayName || nickname || "?").slice(0, 1).toUpperCase()}</div>
+            <div className="empty-call-avatar">{localAvatarUrl ? <img src={localAvatarUrl} alt="" /> : isGuest ? <BrandMark size={38} variant={localAvatarVariant} /> : localDisplayName.slice(0, 1).toUpperCase()}</div>
             <strong>A chamada esta pronta.</strong>
             <span>Compartilhe sua tela ou espere alguem entrar.</span>
             <div className="empty-call-actions"><button type="button" onClick={toggleCamera}>Ligar camera</button></div>
             <div className="voice-roster-inline">
-              {voiceParticipants.map((participant) => <span key={participant.socketId} title={participant.nickname}>{participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>)}
+              {voiceParticipants.map((participant) => <span key={participant.socketId} title={participant.nickname}>{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.isGuest ? <BrandMark size={18} variant={participant.avatarVariant} /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>)}
             </div>
           </section>
         )}
@@ -1625,7 +1634,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
             messages={messages}
             notify={notify}
             uiSounds={uiSounds}
-            displayName={profile.displayName || nickname}
+            displayName={localDisplayName}
             isReady={hasJoined}
           />
         </section>
@@ -1633,15 +1642,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
 
       <ParticipantsPanel participants={onlineParticipants} onProfileClick={openProfilePopover} />
 
-      {isProfilePopoverOpen && <ProfilePopover accountUser={accountUser} profile={profile} nickname={nickname} avatarUrl={avatarUrl} onStatusChange={(status) => saveProfile({ status })} onEditProfile={openProfileSettings} onOpenSettings={openSettings} onLogout={logoutAccount} onClose={() => setIsProfilePopoverOpen(false)} />}
-
-      {isNicknameModalOpen && (
-        <NicknameModal
-          currentNickname={nickname}
-          onClose={() => setIsNicknameModalOpen(false)}
-          onSave={saveNickname}
-        />
-      )}
+      {isProfilePopoverOpen && <ProfilePopover accountUser={accountUser} profile={profile} nickname={nickname} avatarUrl={localAvatarUrl} isGuest={isGuest} guestAvatarVariant={localAvatarVariant} onStatusChange={(status) => saveProfile({ status })} onEditProfile={openProfileSettings} onOpenSettings={openSettings} onLogout={logoutAccount} onCreateAccount={() => { setIsProfilePopoverOpen(false); setAuthModalMode("register"); }} onClose={() => setIsProfilePopoverOpen(false)} />}
       {isDevicesModalOpen && (
         <DevicesModal
           devices={devices}
@@ -1666,7 +1667,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
           onOpenDevices={() => { setIsSettingsOpen(false); openDevices(); }}
           streamPreset={streamPreset}
           onStreamPresetChange={changeStreamPreset}
-          profile={{ ...profile, avatarUrl }}
+          profile={{ ...profile, displayName: accountUser?.displayName || profile.displayName, username: accountUser?.username || "", avatarUrl }}
           onProfileChange={saveProfile}
           onClose={() => setIsSettingsOpen(false)}
         />
@@ -1685,6 +1686,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
           </section>
         </div>
       )}
+      <AuthModal open={Boolean(authModalMode)} initialMode={authModalMode || "register"} onClose={() => setAuthModalMode(null)} />
     </main>
   );
 }

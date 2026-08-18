@@ -1,6 +1,6 @@
 import Icon from "./Icon.jsx";
 
-export default function EkoGuide({ mode = "idle", activeIntent = "quick", onIntentChange, onIntentEnd, onQuickEntry, onCreateAccount }) {
+export default function EkoGuide({ mode = "idle", activeIntent = "quick", onIntentChange, onIntentEnd, onCreateAccount }) {
   const isQuick = mode === "quick" || mode === "quickCelebrate";
 
   return <section className="eko-guide" aria-label="Eko e atalhos do EchoLive">
@@ -30,18 +30,10 @@ export default function EkoGuide({ mode = "idle", activeIntent = "quick", onInte
       {isQuick && <span className="eko-speaking-wave eko-context-wave" aria-hidden="true"><b /><b /><b /></span>}
     </div>
     <div className="eko-intent-list" aria-label="Escolha como quer começar">
-      <button
-        type="button"
-        className={`eko-intent ${activeIntent === "quick" ? "is-active" : ""}`}
-        onMouseEnter={() => onIntentChange?.("quick")}
-        onMouseLeave={onIntentEnd}
-        onFocus={() => onIntentChange?.("quick")}
-        onBlur={onIntentEnd}
-        onClick={() => { onIntentChange?.("quick"); onQuickEntry?.(); }}
-      >
+      <div className={`eko-intent eko-intent-note ${activeIntent === "quick" ? "is-active" : ""}`} aria-label="Sala rapida">
         <span className="eko-intent-icon"><Icon name="voice" size={15} /></span>
-        <span><strong>Entrar rapido <em className="eko-intent-arrow" aria-hidden="true">&rarr;</em></strong><small>Uma sala rapida resolve.</small></span>
-      </button>
+        <span><strong>Uma sala rapida resolve.</strong><small>Entre, converse e siga o seu caminho.</small></span>
+      </div>
       <button
         type="button"
         className={`eko-intent ${activeIntent === "account" ? "is-active" : ""}`}

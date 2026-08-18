@@ -4957,6 +4957,90 @@ video.screen-video {
   .room-page .screen-share-guidance { transition: none; }
 }
 
+/* Visitor identity: recognizable at a glance without turning it into a social profile. */
+.visitor-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 17px;
+  padding: 0 5px;
+  border: 1px solid rgba(103, 212, 229, 0.18);
+  border-radius: 4px;
+  color: var(--room-muted, #9ba6b5);
+  background: rgba(103, 212, 229, 0.06);
+  font-size: 0.58rem;
+  font-weight: 650;
+  line-height: 1;
+}
+.room-page .call-member .visitor-badge {
+  flex: 0 0 auto;
+  margin-left: 1px;
+}
+.room-page .online-person-info .visitor-badge {
+  margin-top: 1px;
+}
+.room-page .participant-identity > div:last-child {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  min-width: 0;
+}
+.guest-profile-popover .profile-popover-header {
+  align-items: center;
+}
+.guest-popover-avatar {
+  color: #f3f7fb;
+  background: rgba(103, 212, 229, 0.1);
+}
+.guest-profile-copy {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+}
+.guest-profile-copy strong {
+  color: var(--text-main);
+  font-size: 0.82rem;
+}
+.guest-profile-copy p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.guest-profile-actions {
+  align-items: stretch;
+}
+.guest-profile-actions .primary-button {
+  justify-content: center;
+  min-height: 36px;
+}
+.guest-profile-actions .text-button {
+  justify-content: center;
+  min-height: 30px;
+  text-align: center;
+}
+.home-entry-copy strong {
+  color: var(--home-text, var(--text-main));
+}
+.eko-intent-note {
+  cursor: default;
+}
+.eko-intent-note:hover,
+.eko-intent-note:focus-visible {
+  transform: none;
+  background: transparent;
+}
+.voice-roster-inline span {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.voice-roster-inline .brand-symbol-svg {
+  width: 18px;
+  height: 18px;
+}
+
 /* Final Home/Auth micro-pass: preserve the composition while removing the last heavy states. */
 .eko-intent {
   min-height: 52px;

@@ -1,7 +1,19 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import Icon from "./Icon.jsx";
+import BrandMark from "./BrandMark.jsx";
 
-export default function ProfilePopover({ accountUser, profile, nickname, avatarUrl, onStatusChange, onEditProfile, onOpenSettings, onLogout, onClose }) {
+export default function ProfilePopover({ accountUser, profile, nickname, avatarUrl, isGuest = false, guestAvatarVariant = 0, onStatusChange, onEditProfile, onOpenSettings, onLogout, onCreateAccount, onClose }) {
+  if (isGuest) {
+    return <section className="profile-popover guest-profile-popover" role="dialog" aria-label="Perfil temporario">
+      <div className="profile-popover-header">
+        <div className="profile-popover-avatar guest-popover-avatar"><BrandMark size={34} variant={guestAvatarVariant} /></div>
+        <div className="profile-popover-identity"><strong>{nickname || "User temporario"}</strong><span>Perfil de sala rapida</span><small>Visitante</small></div>
+      </div>
+      <div className="guest-profile-copy"><strong>Quer deixar esse perfil com a sua cara?</strong><p>Crie uma conta para escolher seu nome, sua foto e manter sua identidade no EchoLive.</p></div>
+      <div className="profile-popover-actions guest-profile-actions"><button type="button" className="primary-button" onClick={onCreateAccount}><Icon name="account" size={15} /><span>Criar conta</span></button><button type="button" className="text-button" onClick={onClose}>Agora nao</button></div>
+    </section>;
+  }
+
   const displayName = accountUser?.displayName || profile.displayName || nickname || "Usuario";
   const accountNickname = accountUser?.username || nickname || "nickname";
   const currentStatus = profile.status === "dnd" ? "dnd" : "online";

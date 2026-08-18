@@ -242,14 +242,7 @@ function handleLeave(socket) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("create-room", ({ nickname, roomCode, roomName } = {}) => {
-    const cleanNickname = normalizeNickname(nickname);
-
-    if (!isValidNickname(cleanNickname)) {
-      emitRoomError(socket, "Nickname invalido.");
-      return;
-    }
-
+  socket.on("create-room", ({ roomCode, roomName } = {}) => {
     const result = createRoom(roomCode, roomName);
 
     if (!result.ok) {
@@ -263,7 +256,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("join-room", ({ roomCode, nickname } = {}) => {
+  socket.on("join-room", ({ roomCode, nickname, identity } = {}) => {
     const code = normalizeRoomCode(roomCode);
     const cleanNickname = normalizeNickname(nickname);
 
@@ -282,7 +275,7 @@ io.on("connection", (socket) => {
       handleLeave(socket);
     }
 
-    const result = joinRoom(code, socket.id, cleanNickname);
+    const result = joinRoom(code, socket.id, cleanNickname, identity);
 
     if (!result.ok) {
       emitRoomError(socket, result.error);
