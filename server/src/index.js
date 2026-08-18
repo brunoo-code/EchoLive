@@ -167,6 +167,7 @@ const io = new Server(httpServer, {
   }
 });
 
+// Typing presence is ephemeral and scoped to the connected socket only.
 const typingSockets = new Map();
 const typingTimers = new Map();
 

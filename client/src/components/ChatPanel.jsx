@@ -33,7 +33,7 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ChatPanel({ socket, socketId, roomCode, messages, notify, uiSounds, displayName }) {
+export default function ChatPanel({ socket, socketId, roomCode, messages, notify, uiSounds, displayName, isReady }) {
   const [draft, setDraft] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [isSending, setIsSending] = useState(false);
@@ -105,7 +105,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
   }
 
   function refreshTyping(nextDraft = draft) {
-    if (!socket?.connected || !nextDraft.trim()) {
+    if (!isReady || !socket?.connected || !nextDraft.trim()) {
       stopTyping();
       return;
     }
@@ -119,7 +119,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
     typingTimeoutRef.current = setTimeout(stopTyping, 2500);
   }
 
-  useEffect(() => () => stopTyping(), [socket]);
+  useEffect(() => () => stopTyping(), [socket, isReady]);
 
   function validateFile(file) {
     if (!file) {

@@ -65,6 +65,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
   const [joinState, setJoinState] = useState("idle");
   const [roomError, setRoomError] = useState("");
   const [selfId, setSelfId] = useState("");
+  const [socketInstance, setSocketInstance] = useState(null);
   const [displayStream, setDisplayStream] = useState(null);
   const [remoteParticipants, setRemoteParticipants] = useState([]);
   const [roomParticipants, setRoomParticipants] = useState([]);
@@ -268,6 +269,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
 
     const socket = io(SERVER_URL);
     socketRef.current = socket;
+    setSocketInstance(socket);
 
     socket.on("connect", () => {
       setSelfId(socket.id);
@@ -1124,6 +1126,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     socketRef.current?.removeAllListeners();
     socketRef.current?.disconnect();
     socketRef.current = null;
+    setSocketInstance(null);
     hasJoinedRef.current = false;
     connectionStartedRef.current = false;
   }
@@ -1617,13 +1620,14 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
 
         <section className={`chat-stage channel-view ${isVoiceChannel ? "is-hidden" : ""}`}>
           <ChatPanel
-            socket={socketRef.current}
+            socket={socketInstance}
             socketId={selfId}
             roomCode={roomCode}
             messages={messages}
             notify={notify}
             uiSounds={uiSounds}
             displayName={profile.displayName || nickname}
+            isReady={hasJoined}
           />
         </section>
       </section>

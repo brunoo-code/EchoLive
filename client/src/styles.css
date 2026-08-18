@@ -3316,3 +3316,208 @@ video.screen-video {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Final reference pass: continuous app shell and quieter list surfaces. */
+.room-page {
+  gap: 0;
+  padding: 0;
+  background: var(--bg-main);
+}
+
+.room-page .room-rail,
+.room-page .app-sidebar,
+.room-page .participants-panel,
+.room-page .call-stage,
+.room-page .chat-stage {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.room-page .room-rail {
+  border-width: 0 1px 0 0;
+  padding: 12px 6px;
+  background: color-mix(in srgb, var(--bg-sidebar) 94%, #000);
+}
+
+.room-page .app-sidebar {
+  border-width: 0 1px 0 0;
+  padding: 14px 12px;
+  background: var(--bg-sidebar);
+}
+
+.room-page .participants-panel {
+  border-width: 0 0 0 1px;
+  padding: 16px 14px;
+  background: var(--bg-sidebar);
+}
+
+.room-page .central-stage {
+  background: var(--bg-main);
+}
+
+.room-page .call-stage {
+  padding: 18px 20px;
+  background: transparent;
+}
+
+.room-page .chat-stage {
+  background: transparent;
+}
+
+.room-page .room-section {
+  gap: 5px;
+  margin-top: 14px;
+  padding: 0 2px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.room-page .room-name-line {
+  padding: 2px 0 0;
+  font-size: 0.94rem;
+}
+
+.room-page .room-code-line {
+  gap: 7px;
+  padding: 0;
+}
+
+.room-page .room-code-line span,
+.room-page .sidebar-count {
+  font-size: 0.68rem;
+}
+
+.room-page .room-code-line strong {
+  padding: 1px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.68rem;
+}
+
+.room-page .channel-section {
+  gap: 5px;
+  margin-top: 16px;
+}
+
+.room-page .channel-button {
+  min-height: 32px;
+  padding-inline: 6px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.room-page .channel-button:hover:not(:disabled),
+.room-page .channel-button.is-selected {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.room-page .channel-button.is-selected {
+  color: var(--text-main);
+}
+
+.room-page .call-member-list {
+  gap: 1px;
+  padding: 2px 0 0 12px;
+  background: transparent;
+}
+
+.room-page .call-member {
+  min-height: 32px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.room-page .call-member:hover,
+.room-page .call-member.is-local-member {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.room-page .sidebar-lower-region {
+  margin-inline: -2px;
+  padding-inline: 2px;
+}
+
+.room-page .connected-voice {
+  padding: 8px 5px 9px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.room-page .sidebar-user-summary {
+  border-color: transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.room-page .sidebar-user-controls button,
+.room-page .sidebar-user-controls > span {
+  border-radius: 6px;
+}
+
+.room-page .panel-heading {
+  margin-bottom: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.room-page .online-list {
+  gap: 1px;
+}
+
+.room-page .online-person {
+  min-height: 50px;
+  padding: 7px 6px;
+  border: 0;
+  border-radius: 6px;
+}
+
+.room-page .online-person:hover {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  transform: none;
+}
+
+.room-page .online-person.is-local-person {
+  border-left: 2px solid var(--accent);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.room-page .online-person.is-speaking {
+  background: rgba(52, 211, 153, 0.07);
+}
+
+.room-page .message-list {
+  padding-inline: 22px;
+}
+
+.room-page .chat-message {
+  max-width: 900px;
+}
+
+@media (max-width: 1180px) {
+  .room-page .participants-panel {
+    border-width: 1px 0 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .room-page {
+    padding: 12px;
+  }
+
+  .room-page .app-sidebar,
+  .room-page .participants-panel,
+  .room-page .call-stage,
+  .room-page .chat-stage {
+    border-radius: 12px;
+  }
+
+  .room-page .app-sidebar,
+  .room-page .participants-panel {
+    border: 1px solid var(--border);
+  }
+}
