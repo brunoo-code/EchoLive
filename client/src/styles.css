@@ -181,6 +181,11 @@ input {
   font-weight: 900;
 }
 
+.brand-symbol-svg { display: block; color: currentColor; }
+.home-capabilities { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px; }
+.home-capabilities span { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); font-size: 0.7rem; }
+.home-capabilities i { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 5px; color: var(--accent-strong); background: var(--accent-soft, rgba(34, 211, 238, 0.1)); font-size: 0.62rem; font-style: normal; font-weight: 800; }
+
 .eyebrow,
 .section-label {
   margin: 0 0 8px;
@@ -266,7 +271,7 @@ h2 {
 
 .recent-room {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -279,7 +284,8 @@ h2 {
 }
 
 .recent-room strong,
-.recent-room span {
+.recent-room span,
+.recent-room small {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -288,6 +294,9 @@ h2 {
 
 .recent-room strong { font-size: 0.8rem; }
 .recent-room span { color: var(--text-muted); font-size: 0.68rem; }
+.recent-room small { color: var(--text-muted); font-size: 0.64rem; }
+.recent-room-avatar { display: grid; width: 34px; height: 34px; place-items: center; grid-row: span 1; border-radius: 10px; color: #fff; font-size: 0.68rem; font-weight: 900; }
+.switcher-recent .recent-room { grid-template-columns: minmax(0, 1fr) auto auto; }
 .recent-room button { min-height: 30px; padding: 0 9px; font-size: 0.7rem; }
 .text-button { min-height: 24px !important; padding: 0 5px !important; border: 0 !important; color: var(--accent-strong); background: transparent !important; font-size: 0.68rem !important; }
 .home-footnote { margin: 22px 0 0; color: var(--text-muted); font-size: 0.7rem; text-align: center; }
@@ -536,6 +545,13 @@ h2 {
 }
 
 .room-section { position: relative; }
+.room-section-heading { display: flex; align-items: center; justify-content: space-between; }
+.room-section-heading .section-label { margin-bottom: 0; }
+.room-menu-trigger { min-height: 26px; padding: 0 5px; border-color: transparent; color: var(--text-muted); background: transparent; font-size: 0.9rem; letter-spacing: 0.08em; }
+.room-context-menu { position: absolute; z-index: 12; top: 34px; right: 8px; display: grid; width: 172px; gap: 2px; padding: 5px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg-panel); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24); }
+.room-context-menu button { min-height: 32px; padding: 0 8px; border-color: transparent; border-radius: 6px; color: var(--text-muted); background: transparent; text-align: left; font-size: 0.72rem; }
+.room-context-menu button:hover { transform: none; color: var(--text-main); background: var(--accent-soft, rgba(34, 211, 238, 0.1)); }
+.room-context-menu .danger-menu-item { color: #fca5a5; }
 
 .connected-voice.is-away {
   border-color: var(--border);
@@ -1460,6 +1476,8 @@ h2 {
 }
 
 .settings-nav button {
+  display: flex;
+  align-items: center;
   min-height: 34px;
   padding: 7px 10px;
   border-color: transparent;
@@ -1470,6 +1488,9 @@ h2 {
   font-size: 0.75rem;
   font-weight: 750;
 }
+.settings-nav-copy { display: grid; min-width: 0; gap: 2px; }
+.settings-nav-copy strong { font-size: 0.75rem; font-weight: 750; }
+.settings-nav-copy small { color: var(--text-muted); font-size: 0.62rem; }
 
 .settings-nav-icon {
   display: inline-block;
@@ -1734,6 +1755,11 @@ video.screen-video {
   text-align: center;
 }
 
+.empty-call-avatar { display: grid; width: 72px; height: 72px; place-items: center; overflow: hidden; border: 2px solid var(--accent); border-radius: 50%; color: #06202a; background: var(--accent); font-size: 1.8rem; font-weight: 900; box-shadow: 0 0 0 8px var(--accent-soft, rgba(34, 211, 238, 0.1)); }
+.empty-call-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.empty-call-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+.empty-call-actions button { min-height: 34px; padding: 0 12px; font-size: 0.74rem; }
+
 .empty-call-state strong {
   color: var(--text-main);
   font-size: 1rem;
@@ -1774,6 +1800,8 @@ video.screen-video {
   background: rgba(15, 23, 42, 0.7);
   font-size: 0.72rem;
 }
+
+.voice-roster-inline span { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; color: var(--text-main); background: var(--bg-card-hover); font-weight: 800; }
 
 .upcoming-section {
   margin-top: auto;

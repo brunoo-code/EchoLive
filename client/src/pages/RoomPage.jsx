@@ -1521,12 +1521,13 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
           )
         ) : (
           <section className="empty-call-state">
-            <div className="empty-call-icon" aria-hidden="true">VOL</div>
-            <strong>Voce esta em chamada com {voiceParticipants.length} participante{voiceParticipants.length === 1 ? "" : "s"}.</strong>
-            <span>Nenhuma camera ou tela ativa no momento.</span>
-            <small>Compartilhe sua tela abaixo ou use os controles da sidebar para camera e microfone.</small>
+            <div className="empty-call-avatar">{avatarUrl ? <img src={avatarUrl} alt="" /> : (profile.displayName || nickname || "?").slice(0, 1).toUpperCase()}</div>
+            <strong>{profile.displayName || nickname}</strong>
+            <span>Voce esta na voz com {voiceParticipants.length} participante{voiceParticipants.length === 1 ? "" : "s"}.</span>
+            <small>Nenhuma camera ou tela ativa no momento.</small>
+            <div className="empty-call-actions"><button type="button" onClick={toggleCamera}>Ligar camera</button><button type="button" onClick={toggleScreenShare}>Compartilhar tela</button></div>
             <div className="voice-roster-inline">
-              {voiceParticipants.map((participant) => <span key={participant.socketId}>{participant.nickname}</span>)}
+              {voiceParticipants.map((participant) => <span key={participant.socketId} title={participant.nickname}>{participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>)}
             </div>
           </section>
         )}

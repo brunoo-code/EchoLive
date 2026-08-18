@@ -1,4 +1,6 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
+import BrandMark from "./BrandMark.jsx";
+import { useState } from "react";
 
 export default function Sidebar({
   roomCode,
@@ -31,10 +33,17 @@ export default function Sidebar({
   onJoinVoice,
   onLeaveRoom
 }) {
+  const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
+
+  function copyRoomCode() {
+    navigator.clipboard?.writeText(roomCode).catch(() => {});
+    setIsRoomMenuOpen(false);
+  }
+
   return (
     <aside className="app-sidebar" aria-label="Informacoes da sala">
       <div className="brand-block">
-        <div className="brand-mark" aria-hidden="true">EL</div>
+        <div className="brand-mark" aria-hidden="true"><BrandMark size={28} /></div>
         <div>
           <strong>EchoLive</strong>
           <span>Sua call privada</span>
@@ -42,7 +51,7 @@ export default function Sidebar({
       </div>
 
       <section className="sidebar-section room-section">
-        <p className="section-label">Sala atual</p>
+        <div className="room-section-heading"><p className="section-label">Sala atual</p><button type="button" className="room-menu-trigger" onClick={() => setIsRoomMenuOpen((value) => !value)} title="Acoes da sala" aria-label="Acoes da sala">...</button></div>
         <div className="room-name-line" title={roomName || `Sala ${roomCode}`}>{roomName || `Sala ${roomCode}`}</div>
         <div className="room-code-line"><span>Codigo</span><strong title={roomCode}>{roomCode}</strong></div>
         <p className="sidebar-count">
@@ -58,6 +67,7 @@ export default function Sidebar({
           </label>
         )}
         <button type="button" className="room-add-button" onClick={onOpenRoomSwitcher} title="Entrar ou criar outra sala" aria-label="Entrar ou criar outra sala">+</button>
+        {isRoomMenuOpen && <div className="room-context-menu" role="menu"><button type="button" onClick={onCopyInvite}>Copiar convite</button><button type="button" onClick={copyRoomCode}>Copiar codigo</button><button type="button" onClick={onOpenRoomSwitcher}>Entrar em outra sala</button><button type="button" onClick={onLeaveRoom} className="danger-menu-item">Sair da sala</button></div>}
       </section>
 
       <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">

@@ -3,6 +3,7 @@ import { io } from "socket.io-client";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
 import { SERVER_URL } from "../utils/webrtc.js";
+import BrandMark from "../components/BrandMark.jsx";
 
 const NICKNAME_KEY = "echolive.nickname";
 const LAST_NICKNAME_KEY = "echolive.lastNickname";
@@ -125,11 +126,12 @@ export default function HomePage({ onRoomCreated }) {
       <ToastStack toasts={toasts} />
       <section className="home-panel home-panel-wide">
         <div className="home-brand">
-          <div className="brand-mark" aria-hidden="true">EL</div>
+          <div className="brand-mark" aria-hidden="true"><BrandMark size={30} /></div>
           <div><p className="eyebrow">EchoLive</p><h1>EchoLive</h1></div>
         </div>
-        <p className="home-subtitle">Crie uma sala privada e comece a conversar em segundos.</p>
+        <p className="home-subtitle">Converse. Compartilhe. Continue conectado.</p>
         <p className="home-copy">Voz, video, tela e chat direto no navegador.</p>
+        <div className="home-capabilities" aria-label="Recursos do EchoLive"><span><i>V</i>Voz</span><span><i>C</i>Video</span><span><i>T</i>Tela</span><span><i>#</i>Chat</span></div>
 
         <label className="field">
           <span>Nickname</span>
@@ -150,7 +152,7 @@ export default function HomePage({ onRoomCreated }) {
           <span>Codigo da sala</span>
           <div className="code-input-row">
             <input maxLength={9} placeholder="SALA01" value={createCode} onChange={(event) => setCreateCode(normalizeCode(event.target.value))} />
-            <button type="button" className="small-button" onClick={() => setCreateCode(generateCode())}>Gerar codigo</button>
+            <button type="button" className="small-button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo">↻ <span>Gerar codigo</span></button>
           </div>
         </label>
         <button className="primary-button" type="button" onClick={createRoom} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
@@ -163,7 +165,7 @@ export default function HomePage({ onRoomCreated }) {
           </label>
           <button className="secondary-button" type="button" onClick={() => joinRoom({ preventDefault() {} })}>Entrar na sala</button>
         </div>}
-        {recentRooms.length > 0 && <section className="recent-rooms"><div className="home-section-heading"><span className="section-label">Salas recentes</span><button type="button" className="text-button" onClick={() => { localStorage.removeItem(RECENT_ROOMS_KEY); setRecentRooms([]); }}>Limpar recentes</button></div>{recentRooms.map((room) => <div className="recent-room" key={room.code}><div><strong title={room.name}>{room.name}</strong><span>{room.code}</span></div><button type="button" onClick={() => enterRecent(room)}>Entrar</button><button type="button" className="text-button" onClick={() => removeRecent(room.code)} aria-label={`Remover ${room.name}`}>x</button></div>)}</section>}
+        {recentRooms.length > 0 && <section className="recent-rooms"><div className="home-section-heading"><span className="section-label">Salas recentes</span><button type="button" className="text-button" onClick={() => { localStorage.removeItem(RECENT_ROOMS_KEY); setRecentRooms([]); }}>Limpar recentes</button></div>{recentRooms.map((room) => <div className="recent-room" key={room.code}><div className="recent-room-avatar" style={{ background: roomColor(room.code) }}>{roomInitials(room.name, room.code)}</div><div><strong title={room.name}>{room.name}</strong><span>{room.code}</span><small>{room.lastVisitedAt ? `Visitada ${new Date(room.lastVisitedAt).toLocaleDateString("pt-BR")}` : "Sala recente"}</small></div><button type="button" onClick={() => enterRecent(room)}>Entrar</button><button type="button" className="text-button" onClick={() => removeRecent(room.code)} aria-label={`Remover ${room.name}`}>x</button></div>)}</section>}
         <p className="home-footnote">Sem cadastro - Salas temporarias - Direto no navegador</p>
       </section>
     </main>
@@ -180,3 +182,6 @@ function saveRecentRoom(code, name, setState) {
   localStorage.setItem(RECENT_ROOMS_KEY, JSON.stringify(next));
   setState(next);
 }
+
+function roomInitials(name, code) { return String(name || code).split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase().slice(0, 2); }
+function roomColor(code) { let hash = 0; for (const char of code) hash = (hash * 31 + char.charCodeAt(0)) % 360; return `hsl(${hash} 62% 42%)`; }
