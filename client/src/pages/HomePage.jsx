@@ -32,6 +32,7 @@ export default function HomePage({ onRoomCreated }) {
   const [joinCode, setJoinCode] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [authModalMode, setAuthModalMode] = useState(null);
+  const [isEditingNickname, setIsEditingNickname] = useState(() => !nickname.trim());
   const [homeIntent, setHomeIntent] = useState("quick");
   const { toasts, notify } = useToasts();
   const { availability, logout, status, user } = useAuth();
@@ -42,6 +43,7 @@ export default function HomePage({ onRoomCreated }) {
     localStorage.removeItem("nickname");
     localStorage.removeItem("echolive.roomCode");
     setNickname(savedNickname);
+    setIsEditingNickname(!savedNickname);
   }, []);
 
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function HomePage({ onRoomCreated }) {
     localStorage.setItem(NICKNAME_KEY, accountNickname);
     localStorage.setItem(LAST_NICKNAME_KEY, accountNickname);
     setNickname(accountNickname);
+    setIsEditingNickname(false);
   }, [nickname, status, user]);
 
   function saveNickname() {
@@ -63,6 +66,7 @@ export default function HomePage({ onRoomCreated }) {
     localStorage.setItem(NICKNAME_KEY, cleanNickname);
     localStorage.setItem(LAST_NICKNAME_KEY, cleanNickname);
     setNickname(cleanNickname);
+    setIsEditingNickname(false);
     return cleanNickname;
   }
 
@@ -156,12 +160,11 @@ export default function HomePage({ onRoomCreated }) {
         <header className="home-topbar">
           <div className="home-brand">
             <div className="brand-mark" aria-hidden="true"><BrandMark size={28} /></div>
-            <div><p className="eyebrow">Espaco de conversa</p><strong className="home-wordmark">EchoLive</strong></div>
+            <strong className="home-wordmark">EchoLive</strong>
           </div>
           <div className="home-account-bar" aria-label="Conta EchoLive">
             {status === "loading" && <span className="home-account-loading">Verificando conta...</span>}
             {status === "guest" && <>
-              <span className="home-account-hint">Entre para continuar de onde parou.</span>
               <div className="home-account-actions"><button type="button" className="home-account-button" onClick={() => setAuthModalMode("login")}>Entrar</button><button type="button" className="home-account-button is-primary" onClick={() => setAuthModalMode("register")}>Criar conta</button></div>
               {availability === "unavailable" && <small>Contas indisponiveis no momento</small>}
             </>}
@@ -175,30 +178,32 @@ export default function HomePage({ onRoomCreated }) {
         <div className="home-workspace">
           <section className="home-main-column">
             <div className="home-hero">
-              <p className="eyebrow">Um lugar para se encontrar</p>
               <h1>Converse do seu jeito.</h1>
               <p className="home-subtitle">Entre em uma sala e fale com quem importa.</p>
               <div className="home-capabilities" aria-label="Recursos do EchoLive"><span><i><Icon name="voice" size={14} /></i>Voz</span><span><i><Icon name="video" size={14} /></i>Video</span><span><i><Icon name="screen" size={14} /></i>Tela</span><span><i><Icon name="chat" size={14} /></i>Chat</span></div>
             </div>
 
             <section className="home-entry-surface" aria-labelledby="home-entry-title">
-              <div className="home-entry-heading"><div><span className="section-label">Entrada rapida</span><h2 id="home-entry-title">Comece uma conversa</h2></div><span className="home-visitor-badge"><i />Visitante</span></div>
-              <p className="home-entry-copy">Sem cadastro. Voce pode criar sua identidade agora.</p>
-              <div className="home-identity-row">
+              <div className="home-entry-heading"><h2 id="home-entry-title">Comece uma conversa</h2></div>
+              <p className="home-entry-copy">Entre como visitante. Sem cadastro.</p>
+              {nickname.trim() && !isEditingNickname ? <div className="home-identity-preview">
+                <span className="home-identity-icon"><Icon name="account" size={18} /></span>
+                <span className="home-identity-copy"><strong>Voce entra como</strong><b>{nickname}</b></span>
+                <button type="button" className="home-identity-edit" onClick={() => setIsEditingNickname(true)}>Editar</button>
+              </div> : <div className="home-identity-row">
                 <span className="home-identity-icon"><Icon name="account" size={18} /></span>
                 <span className="home-identity-copy"><strong>Voce vai entrar como</strong><small>Seu nome fica visivel na sala</small></span>
                 <label className="home-identity-input">
                   <span className="visually-hidden">Nickname</span>
-                  <input maxLength={24} aria-label="Nickname" placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} />
+                  <input maxLength={24} autoFocus={isEditingNickname} aria-label="Nickname" placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} />
                 </label>
-              </div>
+              </div>}
 
               <div className="home-tabs" role="tablist" aria-label="Entrada na sala">
                 <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => { setMode("create"); setHomeIntent("quick"); }}>Criar sala</button>
                 <button type="button" className={mode === "join" ? "is-selected" : ""} onClick={() => { setMode("join"); setHomeIntent("quick"); }}>Entrar com codigo</button>
               </div>
               {mode === "create" && <>
-                <div className="home-section-heading"><span className="section-label">Nova sala</span></div>
                 <label className="field">
                   <span>Nome da sala</span>
                   <input maxLength={24} placeholder="Minha sala" value={roomName} onChange={(event) => setRoomName(event.target.value.slice(0, 24))} />
@@ -213,7 +218,6 @@ export default function HomePage({ onRoomCreated }) {
                 <button className="primary-button home-entry-cta" type="button" onClick={createRoom} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
               </>}
               {mode === "join" && <div className="join-form">
-                <div className="home-section-heading"><span className="section-label">Sala existente</span></div>
                 <label className="field">
                   <span>Codigo da sala</span>
                   <input maxLength={9} placeholder="SALA01" value={joinCode} onChange={(event) => setJoinCode(normalizeCode(event.target.value))} />
@@ -221,7 +225,6 @@ export default function HomePage({ onRoomCreated }) {
                 <button className="secondary-button home-entry-cta" type="button" onClick={() => joinRoom({ preventDefault() {} })}>Entrar na sala</button>
               </div>}
             </section>
-            <div className="home-account-prompt"><span>Quer manter seu perfil e amigos?</span><button type="button" onClick={openAccountEntry}>Criar conta <span aria-hidden="true">&rarr;</span></button></div>
 
             {recentRooms.length > 0 && <section className="home-recent-surface"><div className="home-section-heading"><span className="section-label">Salas recentes</span><button type="button" className="text-button" onClick={() => { localStorage.removeItem(RECENT_ROOMS_KEY); setRecentRooms([]); }}>Limpar recentes</button></div>{recentRooms.map((room) => <div className="recent-room" key={room.code}><div className="recent-room-avatar" style={{ background: roomColor(room.code) }}>{roomInitials(room.name, room.code)}</div><div><strong title={room.name}>{room.name}</strong><span>{room.code}</span><small>{room.lastVisitedAt ? `Visitada ${new Date(room.lastVisitedAt).toLocaleDateString("pt-BR")}` : "Sala recente"}</small></div><button type="button" className="recent-room-enter" onClick={() => enterRecent(room)}><Icon name="link" size={14} />Entrar</button><button type="button" className="text-button recent-room-remove" onClick={() => removeRecent(room.code)} aria-label={`Remover ${room.name}`}><Icon name="close" size={14} /></button></div>)}</section>}
           </section>

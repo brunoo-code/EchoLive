@@ -24,7 +24,7 @@ export default function EkoGuide({ state = "normal", intent = "quick", onIntentC
         <path className="eko-smile" d="M97 97c7 9 19 9 26 0" />
         <path className="eko-wave" d="M98 148v12M106 143v21M114 148v12M122 141v23" />
       </svg>
-      {isSpeaking && <span className="eko-speaking-wave" aria-hidden="true"><b /><b /><b /></span>}
+      {(isSpeaking || intent === "quick") && <span className="eko-speaking-wave eko-context-wave" aria-hidden="true"><b /><b /><b /></span>}
     </div>
     <div className="eko-intent-list" aria-label="Escolha como quer começar">
       <button
