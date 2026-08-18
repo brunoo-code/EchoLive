@@ -4811,3 +4811,47 @@ video.screen-video {
 .room-page .empty-call-state small { display: none; }
 .home-page, .home-page *, .room-page, .room-page * { scrollbar-color: #3d4652 transparent; scrollbar-width: thin; }
 .eko-visual[data-mode="quickCelebrate"] .eko-context-wave { right: auto; left: 12%; }
+
+/* Final Home/Auth micro-pass: preserve the composition while removing the last heavy states. */
+.eko-intent {
+  min-height: 52px;
+  padding-right: 0;
+  border-radius: 0;
+  background: transparent;
+  transform: none;
+}
+.eko-intent:hover,
+.eko-intent:focus-visible,
+.eko-intent.is-active {
+  background: transparent;
+  transform: translateX(1px);
+}
+.eko-intent::after,
+.eko-intent:hover::after,
+.eko-intent:focus-visible::after,
+.eko-intent.is-active::after { width: 16px; }
+.eko-intent:not(.is-active) { opacity: 0.72; }
+.eko-intent-list:hover .eko-intent:not(:hover),
+.eko-intent-list:focus-within .eko-intent:not(:focus-visible) { opacity: 0.58; }
+.eko-intent small { color: var(--echo-muted); }
+.eko-intent:hover small,
+.eko-intent:focus-visible small,
+.eko-intent.is-active small { color: var(--echo-text-soft); }
+
+.home-hero h1 { line-height: 1.08; }
+.home-hero .home-subtitle { line-height: 1.5; }
+.home-capabilities { gap: 14px; }
+.home-entry-surface .home-entry-heading { gap: 10px; }
+.home-entry-surface input:focus-visible,
+.home-entry-surface button:focus-visible { outline: 0; }
+.home-entry-surface input:focus { box-shadow: 0 0 0 2px rgba(103, 212, 229, 0.18); }
+.home-topbar .home-account-button.is-primary { min-height: 29px; background: rgba(103, 212, 229, 0.68); box-shadow: none; }
+.home-topbar .home-account-button.is-primary:hover,
+.home-topbar .home-account-button.is-primary:focus-visible { background: rgba(103, 212, 229, 0.82); }
+
+.auth-modal .field:focus-within > span { color: var(--echo-text); font-weight: 600; }
+.auth-modal input:hover { background: rgba(25, 29, 36, 0.62); }
+.auth-modal input:focus { border-color: rgba(103, 212, 229, 0.52); box-shadow: 0 0 0 2px rgba(103, 212, 229, 0.14); }
+.auth-section-heading small { color: var(--echo-muted); }
+.auth-modal-copy { line-height: 1.48; }
+.auth-submit { min-height: 44px; }
