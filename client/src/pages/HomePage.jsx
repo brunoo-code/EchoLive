@@ -5,6 +5,8 @@ import useToasts from "../hooks/useToasts.js";
 import { SERVER_URL } from "../utils/webrtc.js";
 import BrandMark from "../components/BrandMark.jsx";
 import Icon from "../components/Icon.jsx";
+import AuthModal from "../components/AuthModal.jsx";
+import { useAuth } from "../auth/AuthContext.jsx";
 
 const NICKNAME_KEY = "echolive.nickname";
 const LAST_NICKNAME_KEY = "echolive.lastNickname";
@@ -28,7 +30,9 @@ export default function HomePage({ onRoomCreated }) {
   const [createCode, setCreateCode] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState(null);
   const { toasts, notify } = useToasts();
+  const { availability, logout, status, user } = useAuth();
 
   useEffect(() => {
     const savedNickname = localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "";
@@ -37,6 +41,14 @@ export default function HomePage({ onRoomCreated }) {
     localStorage.removeItem("echolive.roomCode");
     setNickname(savedNickname);
   }, []);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !user || nickname.trim()) return;
+    const accountNickname = user.displayName || user.username;
+    localStorage.setItem(NICKNAME_KEY, accountNickname);
+    localStorage.setItem(LAST_NICKNAME_KEY, accountNickname);
+    setNickname(accountNickname);
+  }, [nickname, status, user]);
 
   function saveNickname() {
     const cleanNickname = nickname.trim().slice(0, 24);
@@ -130,6 +142,18 @@ export default function HomePage({ onRoomCreated }) {
           <div className="brand-mark" aria-hidden="true"><BrandMark size={30} /></div>
           <div><p className="eyebrow">Espaco de conversa</p><h1>EchoLive</h1></div>
         </div>
+        <div className="home-account-bar">
+          {status === "loading" && <span className="home-account-loading">Verificando conta...</span>}
+          {status === "guest" && <>
+            <span className="home-account-hint">Use como visitante ou entre com uma conta.</span>
+            <div className="home-account-actions"><button type="button" className="home-account-button" onClick={() => setAuthModalMode("login")}>Entrar</button><button type="button" className="home-account-button is-primary" onClick={() => setAuthModalMode("register")}>Criar conta</button></div>
+            {availability === "unavailable" && <small>Contas indisponiveis no momento</small>}
+          </>}
+          {status === "authenticated" && user && <>
+            <div className="home-account-identity"><div className="home-account-avatar">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</div><span><strong>{user.displayName}</strong><small>@{user.username}</small></span></div>
+            <button type="button" className="home-account-button" onClick={() => logout()}>Sair</button>
+          </>}
+        </div>
         <p className="home-subtitle">Converse. Compartilhe. Continue conectado.</p>
         <p className="home-copy">Voz, video, tela e chat direto no navegador.</p>
         <div className="home-capabilities" aria-label="Recursos do EchoLive"><span><i><Icon name="voice" size={14} /></i>Voz</span><span><i><Icon name="video" size={14} /></i>Video</span><span><i><Icon name="screen" size={14} /></i>Tela</span><span><i><Icon name="chat" size={14} /></i>Chat</span></div>
@@ -169,6 +193,7 @@ export default function HomePage({ onRoomCreated }) {
         {recentRooms.length > 0 && <section className="recent-rooms"><div className="home-section-heading"><span className="section-label">Salas recentes</span><button type="button" className="text-button" onClick={() => { localStorage.removeItem(RECENT_ROOMS_KEY); setRecentRooms([]); }}>Limpar recentes</button></div>{recentRooms.map((room) => <div className="recent-room" key={room.code}><div className="recent-room-avatar" style={{ background: roomColor(room.code) }}>{roomInitials(room.name, room.code)}</div><div><strong title={room.name}>{room.name}</strong><span>{room.code}</span><small>{room.lastVisitedAt ? `Visitada ${new Date(room.lastVisitedAt).toLocaleDateString("pt-BR")}` : "Sala recente"}</small></div><button type="button" className="recent-room-enter" onClick={() => enterRecent(room)}><Icon name="link" size={14} />Entrar</button><button type="button" className="text-button recent-room-remove" onClick={() => removeRecent(room.code)} aria-label={`Remover ${room.name}`}><Icon name="close" size={14} /></button></div>)}</section>}
         <p className="home-footnote">Sem cadastro - Salas temporarias - Direto no navegador</p>
       </section>
+      <AuthModal open={Boolean(authModalMode)} initialMode={authModalMode || "login"} onClose={() => setAuthModalMode(null)} />
     </main>
   );
 }

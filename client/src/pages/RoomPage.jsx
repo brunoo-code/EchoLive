@@ -18,6 +18,7 @@ import useToasts from "../hooks/useToasts.js";
 import { requestInitialMedia, requestSingleKind, stopStream } from "../utils/media.js";
 import { getPeerConnectionConfig, SERVER_URL } from "../utils/webrtc.js";
 import { playUiSound } from "../utils/uiSounds.js";
+import { useAuth } from "../auth/AuthContext.jsx";
 
 const NICKNAME_KEY = "echolive.nickname";
 const AUDIO_DEVICE_KEY = "echolive.audioDeviceId";
@@ -58,6 +59,7 @@ function getActualScreenLabel(settings, fallbackPreset) {
 }
 
 export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
+  const { logout, updateProfile: updateAccountProfile, user: accountUser } = useAuth();
   const debugRtc = new URLSearchParams(window.location.search).get("debugRtc") === "1";
   const [nickname, setNickname] = useState(() => localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "");
   const [nicknameDraft, setNicknameDraft] = useState(() => localStorage.getItem(NICKNAME_KEY) || localStorage.getItem("nickname") || "");
@@ -1247,7 +1249,16 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
     if (next.avatarUrl) { localStorage.setItem(AVATAR_KEY, next.avatarUrl); setAvatarUrl(next.avatarUrl); } else { localStorage.removeItem(AVATAR_KEY); setAvatarUrl(""); }
     if (next.nickname && next.nickname !== nickname) saveNickname(next.nickname);
+    if (accountUser && next.displayName && next.displayName !== accountUser.displayName) {
+      updateAccountProfile({ displayName: next.displayName }).catch((error) => notify(error.message));
+    }
     notify("Perfil salvo.");
+  }
+
+  async function logoutAccount() {
+    await logout();
+    setIsProfilePopoverOpen(false);
+    notify("Sessao encerrada. A sala continua conectada.");
   }
 
   function recentRooms() {
@@ -1623,7 +1634,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
 
       <ParticipantsPanel participants={onlineParticipants} onProfileClick={openProfilePopover} />
 
-      {isProfilePopoverOpen && <ProfilePopover profile={profile} nickname={nickname} avatarUrl={avatarUrl} onStatusChange={(status) => saveProfile({ status })} onEditProfile={openProfileSettings} onOpenSettings={openSettings} onClose={() => setIsProfilePopoverOpen(false)} />}
+      {isProfilePopoverOpen && <ProfilePopover accountUser={accountUser} profile={profile} nickname={nickname} avatarUrl={avatarUrl} onStatusChange={(status) => saveProfile({ status })} onEditProfile={openProfileSettings} onOpenSettings={openSettings} onLogout={logoutAccount} onClose={() => setIsProfilePopoverOpen(false)} />}
 
       {isNicknameModalOpen && (
         <NicknameModal

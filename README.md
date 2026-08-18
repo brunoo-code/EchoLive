@@ -15,7 +15,27 @@ Na raiz do projeto:
 npm install
 ```
 
-Opcionalmente, crie `server/.env` a partir de `server/.env.example` para ajustar porta, origem do cliente, limite da sala ou servidores ICE.
+Opcionalmente, crie `server/.env` a partir de `server/.env.example` para ajustar porta, origem do cliente, banco de dados, limite da sala ou servidores ICE.
+
+## Contas e PostgreSQL
+
+O EchoLive pode ser usado sem cadastro como visitante. Para habilitar contas persistentes, configure uma instancia PostgreSQL e a variavel `DATABASE_URL` no servidor. As contas usam UUID, nome de usuario exclusivo sem diferenciar maiusculas de minusculas, nome de exibicao e senha armazenada com hash bcrypt. A sessao usa um cookie HttpOnly de 14 dias; a senha nunca vai para o navegador.
+
+O `username` e a identidade publica unica da conta. Ele aceita de 3 a 24 caracteres ASCII entre letras, numeros e `_`, sem espacos. O valor normalizado em lowercase e protegido por `UNIQUE` no PostgreSQL; `displayName` nao possui `UNIQUE` e pode se repetir entre contas.
+
+Com o servidor parado, aplique as migrações a partir da raiz:
+
+```bash
+cd server
+npm install
+npm run db:migrate
+```
+
+Sem `DATABASE_URL`, o servidor inicia normalmente, as salas temporarias continuam funcionando e as rotas de conta respondem que a autenticacao esta indisponivel. O projeto nao usa SQLite como fallback.
+
+No Render, crie um PostgreSQL, copie a `DATABASE_URL` para as variaveis do Web Service e execute `npm run db:migrate` uma vez usando o mesmo ambiente. Depois mantenha `npm run build` como Build Command e `npm start` como Start Command.
+
+As rotas de conta sao `GET /api/auth/me`, `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout` e `PATCH /api/users/me`. Esta etapa nao inclui recuperacao de senha, email, amigos, mensagens diretas, servidores persistentes ou canais persistentes.
 
 ## Desenvolvimento
 
@@ -144,14 +164,14 @@ Essa reducao usa recursos nativos do navegador e pode reduzir ruido de teclado, 
 
 - `# geral` e o canal de texto padrao da sala.
 - Mensagens sao transmitidas por Socket.IO e ficam somente em memoria.
-- Cada sala mantem no maximo 100 mensagens; ao ficar vazia, o historico e apagado.
-- O chat aceita texto de ate 500 caracteres.
+- Cada sala mantem no maximo 200 mensagens; ao ficar vazia, o historico e apagado.
+- O chat aceita texto de ate 4.000 caracteres.
 - Imagens aceitas: PNG, JPEG, WebP e GIF.
 - Videos aceitos: MP4, WebM e MOV/QuickTime.
-- Um unico anexo de ate 25 MB pode acompanhar cada mensagem.
+- Um unico anexo de ate 100 MB pode acompanhar cada mensagem.
 - Uploads ficam localmente em `server/uploads` e sao servidos por `/uploads/...`.
 - O backend gera nomes aleatorios; o nome original e usado apenas para exibicao.
-- Nao ha banco de dados, persistencia, upload multiplo ou armazenamento externo.
+- Salas, mensagens e uploads continuam temporarios; o PostgreSQL e usado apenas para contas e sessoes quando `DATABASE_URL` esta configurada.
 
 ## Scripts
 
@@ -191,9 +211,9 @@ No Render, crie `New > Web Service`, conecte o repositorio, escolha o plano Free
 
 ## Limitacoes atuais
 
-- Salas ficam apenas em memoria.
+- Salas e mensagens ficam apenas em memoria; contas e sessoes podem ser persistentes no PostgreSQL.
 - Mensagens sao temporarias; os uploads ficam no disco local e devem ser limpos manualmente em uma rotina futura.
-- Sem contas, senhas, banco de dados ou gravacao.
+- Sem `DATABASE_URL`, o modo visitante funciona sem contas, senhas ou banco configurado.
 - Nicknames podem ser repetidos; o identificador real e `socket.id`.
 - Compartilhamento de tela substitui temporariamente a camera enviada aos outros participantes.
 - Audio do compartilhamento de tela nao e obrigatorio nesta versao.
@@ -201,6 +221,4 @@ No Render, crie `New > Web Service`, conecte o repositorio, escolha o plano Free
 
 ## Proximos passos sugeridos
 
-- Adicionar canais de texto sem persistencia primeiro.
-- Depois adicionar canais de voz como agrupamento visual de salas.
-- Avaliar persistencia e autenticacao apenas quando o produto precisar disso.
+- Avaliar canais persistentes, amigos e mensagens diretas em uma etapa futura.

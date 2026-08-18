@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import HomePage from "./pages/HomePage.jsx";
 import RoomPage from "./pages/RoomPage.jsx";
+import { AuthProvider } from "./auth/AuthContext.jsx";
 
 function getRoute() {
   const match = window.location.pathname.match(/^\/room\/([A-Za-z0-9]{3,9})$/);
@@ -8,6 +9,10 @@ function getRoute() {
 }
 
 export default function App() {
+  return <AuthProvider><AppContent /></AuthProvider>;
+}
+
+function AppContent() {
   const [route, setRoute] = useState(getRoute);
 
   useEffect(() => {

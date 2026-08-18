@@ -9,6 +9,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import multer from "multer";
 import { Server } from "socket.io";
+import { registerAuthRoutes, startSessionCleanup } from "./auth.js";
+import { checkDatabase, getDatabaseError, isDatabaseConfigured } from "./db/pool.js";
 import {
   areSocketsInSameRoom,
   addRoomMessage,
@@ -61,7 +63,7 @@ const ALLOWED_UPLOADS = new Map([
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: CLIENT_ORIGIN }));
+app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
 app.use("/uploads", express.static(UPLOAD_DIR, { index: false }));
 
 const upload = multer({
@@ -143,6 +145,8 @@ app.get("/ice-config", (_request, response) => {
 
   response.json({ iceServers });
 });
+
+registerAuthRoutes(app);
 
 if (existsSync(CLIENT_DIST_DIR)) {
   app.use("/assets", express.static(path.join(CLIENT_DIST_DIR, "assets")));
@@ -505,6 +509,19 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(PORT, "0.0.0.0", () => {
+httpServer.listen(PORT, "0.0.0.0", async () => {
   console.log(`[SERVER] listening on port ${PORT}`);
+  if (!isDatabaseConfigured) {
+    console.log("[DB] DATABASE_URL nao configurada; autenticacao de contas desativada.");
+    return;
+  }
+
+  if (await checkDatabase()) {
+    console.log("[DB] PostgreSQL conectado.");
+    startSessionCleanup();
+    return;
+  }
+
+  const error = getDatabaseError();
+  console.log(`[DB] autenticacao de contas indisponivel${error ? `: ${error.message}` : "."}`);
 });
