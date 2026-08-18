@@ -4908,6 +4908,55 @@ video.screen-video {
 }
 .eko-visual[data-mode="quickCelebrate"] .eko-context-wave { right: auto; left: 12%; }
 
+/* Final room details: keep media volume local, compact, and readable. */
+.room-page .screen-share-control {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.room-page .volume-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--room-muted);
+  white-space: nowrap;
+}
+.room-page .volume-control span {
+  overflow: hidden;
+  max-width: 126px;
+  text-overflow: ellipsis;
+}
+.room-page .volume-control input {
+  flex: 0 0 104px;
+  cursor: pointer;
+}
+.room-page .screen-share-guidance {
+  flex: 0 0 100%;
+  max-width: 330px;
+  margin: 4px auto 0;
+  color: var(--room-muted);
+  font-size: 0.64rem;
+  line-height: 1.3;
+  text-align: center;
+}
+.room-page .participant-card.is-speaking .participant-topline strong,
+.room-page .call-member.is-speaking .member-name,
+.room-page .online-person.is-speaking strong {
+  font-weight: 650;
+}
+.room-page .online-person {
+  min-height: 44px;
+}
+.room-page .media-status-row .status-icon {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-page .screen-share-guidance { transition: none; }
+}
+
 /* Final Home/Auth micro-pass: preserve the composition while removing the last heavy states. */
 .eko-intent {
   min-height: 52px;

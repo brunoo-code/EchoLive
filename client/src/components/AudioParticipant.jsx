@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
 
+function clampVolume(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? Math.min(100, Math.max(0, numericValue)) : 100;
+}
+
 export default function AudioParticipant({ peerSocketId, stream, volume = 100, isDeafened = false, outputDeviceId = "" }) {
   const audioRef = useRef(null);
 
@@ -13,8 +18,10 @@ export default function AudioParticipant({ peerSocketId, stream, volume = 100, i
   }, [stream]);
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isDeafened ? 0 : volume / 100;
+    const audio = audioRef.current;
+    if (audio) {
+      const normalizedVolume = clampVolume(volume);
+      audio.volume = isDeafened ? 0 : normalizedVolume / 100;
     }
   }, [isDeafened, volume]);
 

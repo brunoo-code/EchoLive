@@ -1,6 +1,11 @@
 import { useEffect, useRef } from "react";
 import Icon from "./Icon.jsx";
 
+function clampVolume(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? Math.min(100, Math.max(0, numericValue)) : 100;
+}
+
 export default function ParticipantCard({
   socketId,
   nickname,
@@ -30,8 +35,13 @@ export default function ParticipantCard({
   }, [stream]);
 
   useEffect(() => {
-    if (videoRef.current && !isLocal) {
-      videoRef.current.volume = isDeafened ? 0 : volume / 100;
+    const video = videoRef.current;
+    if (video && !isLocal) {
+      const normalizedVolume = clampVolume(volume);
+      video.volume = isDeafened ? 0 : normalizedVolume / 100;
+      if (!isDeafened && video.muted) {
+        video.muted = false;
+      }
     }
   }, [isDeafened, isLocal, volume]);
 
@@ -58,6 +68,17 @@ export default function ParticipantCard({
     }
   }
 
+  function handleNativeVolumeChange(event) {
+    if (isLocal || isDeafened || !onVolumeChange) {
+      return;
+    }
+
+    const nextVolume = clampVolume(Math.round(event.currentTarget.volume * 100));
+    if (nextVolume !== clampVolume(volume)) {
+      onVolumeChange(nextVolume);
+    }
+  }
+
   return (
     <article
       ref={cardRef}
@@ -80,7 +101,7 @@ export default function ParticipantCard({
 
       <div className="video-frame">
         {stream ? (
-          <video className={isScreenSharing ? "screen-video" : "camera-video"} data-video-peer={socketId} ref={videoRef} autoPlay playsInline muted={isLocal} />
+          <video className={isScreenSharing ? "screen-video" : "camera-video"} data-video-peer={socketId} ref={videoRef} autoPlay playsInline muted={isLocal} onVolumeChange={handleNativeVolumeChange} />
         ) : (
           <div className="video-placeholder">
             <div className="placeholder-avatar" aria-hidden="true">{avatarUrl ? <img src={avatarUrl} alt="" /> : nickname?.slice(0, 1).toUpperCase() || "?"}</div>
@@ -97,13 +118,14 @@ export default function ParticipantCard({
         </div>
         {!isLocal && (
           <label className="volume-control">
-            <span>Volume</span>
+            <span>{isScreenSharing ? "Volume da transmissao" : "Volume"}</span>
             <input
               type="range"
               min="0"
               max="100"
-              value={volume}
-              onChange={(event) => onVolumeChange?.(Number(event.target.value))}
+              value={clampVolume(volume)}
+              aria-label={isScreenSharing ? "Volume da transmissao" : `Volume de ${nickname}`}
+              onChange={(event) => onVolumeChange?.(clampVolume(event.target.value))}
             />
           </label>
         )}
