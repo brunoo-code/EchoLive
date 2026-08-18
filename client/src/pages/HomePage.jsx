@@ -177,39 +177,43 @@ export default function HomePage({ onRoomCreated }) {
             <div className="home-hero">
               <p className="eyebrow">Um lugar para se encontrar</p>
               <h1>Converse do seu jeito.</h1>
-              <p className="home-subtitle">Crie uma sala, chame quem importa e converse pelo navegador.</p>
+              <p className="home-subtitle">Entre em uma sala e fale com quem importa.</p>
               <div className="home-capabilities" aria-label="Recursos do EchoLive"><span><i><Icon name="voice" size={14} /></i>Voz</span><span><i><Icon name="video" size={14} /></i>Video</span><span><i><Icon name="screen" size={14} /></i>Tela</span><span><i><Icon name="chat" size={14} /></i>Chat</span></div>
             </div>
 
             <section className="home-entry-surface" aria-labelledby="home-entry-title">
               <div className="home-entry-heading"><div><span className="section-label">Entrada rapida</span><h2 id="home-entry-title">Comece uma conversa</h2></div><span className="home-visitor-badge"><i />Visitante</span></div>
-              <p className="home-entry-copy">Entre como visitante e comece agora. Sem conta, sem espera.</p>
-              <label className="field">
-                <span>Nickname</span>
-                <input maxLength={24} placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} />
-              </label>
+              <p className="home-entry-copy">Sem cadastro. Voce pode criar sua identidade agora.</p>
+              <div className="home-identity-row">
+                <span className="home-identity-icon"><Icon name="account" size={18} /></span>
+                <span className="home-identity-copy"><strong>Voce vai entrar como</strong><small>Seu nome fica visivel na sala</small></span>
+                <label className="home-identity-input">
+                  <span className="visually-hidden">Nickname</span>
+                  <input maxLength={24} aria-label="Nickname" placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} />
+                </label>
+              </div>
 
               <div className="home-tabs" role="tablist" aria-label="Entrada na sala">
-                <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => setMode("create")}>Criar sala</button>
-                <button type="button" className={mode === "join" ? "is-selected" : ""} onClick={() => setMode("join")}>Entrar em sala</button>
+                <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => { setMode("create"); setHomeIntent("quick"); }}>Criar sala</button>
+                <button type="button" className={mode === "join" ? "is-selected" : ""} onClick={() => { setMode("join"); setHomeIntent("quick"); }}>Entrar com codigo</button>
               </div>
               {mode === "create" && <>
-                <div className="home-section-heading"><span className="section-label">Nova sala</span><small>Escolha um nome e um codigo simples.</small></div>
+                <div className="home-section-heading"><span className="section-label">Nova sala</span></div>
                 <label className="field">
                   <span>Nome da sala</span>
                   <input maxLength={24} placeholder="Minha sala" value={roomName} onChange={(event) => setRoomName(event.target.value.slice(0, 24))} />
                 </label>
                 <label className="field">
                   <span>Codigo da sala</span>
-                  <div className="code-input-row">
+                  <div className="home-code-field">
                     <input maxLength={9} placeholder="SALA01" value={createCode} onChange={(event) => setCreateCode(normalizeCode(event.target.value))} />
-                    <button type="button" className="small-button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo"><Icon name="pulse" size={15} /> <span>Gerar codigo</span></button>
+                    <button type="button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo"><Icon name="pulse" size={16} /></button>
                   </div>
                 </label>
                 <button className="primary-button home-entry-cta" type="button" onClick={createRoom} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
               </>}
               {mode === "join" && <div className="join-form">
-                <div className="home-section-heading"><span className="section-label">Sala existente</span><small>Use o codigo compartilhado com voce.</small></div>
+                <div className="home-section-heading"><span className="section-label">Sala existente</span></div>
                 <label className="field">
                   <span>Codigo da sala</span>
                   <input maxLength={9} placeholder="SALA01" value={joinCode} onChange={(event) => setJoinCode(normalizeCode(event.target.value))} />
@@ -217,13 +221,14 @@ export default function HomePage({ onRoomCreated }) {
                 <button className="secondary-button home-entry-cta" type="button" onClick={() => joinRoom({ preventDefault() {} })}>Entrar na sala</button>
               </div>}
             </section>
+            <div className="home-account-prompt"><span>Quer manter seu perfil e amigos?</span><button type="button" onClick={openAccountEntry}>Criar conta <span aria-hidden="true">&rarr;</span></button></div>
 
             {recentRooms.length > 0 && <section className="home-recent-surface"><div className="home-section-heading"><span className="section-label">Salas recentes</span><button type="button" className="text-button" onClick={() => { localStorage.removeItem(RECENT_ROOMS_KEY); setRecentRooms([]); }}>Limpar recentes</button></div>{recentRooms.map((room) => <div className="recent-room" key={room.code}><div className="recent-room-avatar" style={{ background: roomColor(room.code) }}>{roomInitials(room.name, room.code)}</div><div><strong title={room.name}>{room.name}</strong><span>{room.code}</span><small>{room.lastVisitedAt ? `Visitada ${new Date(room.lastVisitedAt).toLocaleDateString("pt-BR")}` : "Sala recente"}</small></div><button type="button" className="recent-room-enter" onClick={() => enterRecent(room)}><Icon name="link" size={14} />Entrar</button><button type="button" className="text-button recent-room-remove" onClick={() => removeRecent(room.code)} aria-label={`Remover ${room.name}`}><Icon name="close" size={14} /></button></div>)}</section>}
           </section>
 
           <aside className="home-aside">
             <EkoGuide
-              state={mode === "create" ? "speaking" : "normal"}
+              state="normal"
               intent={homeIntent}
               onIntentChange={setHomeIntent}
               onQuickEntry={focusQuickEntry}

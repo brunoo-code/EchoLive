@@ -4210,3 +4210,81 @@ video.screen-video {
   .eko-visual { min-height: 210px; }
   .eko-intent { min-height: 58px; padding-right: 5px; }
 }
+
+/* Advanced Home polish: the page reads as one EchoLive flow, not a collection of cards. */
+.home-page {
+  background-image: radial-gradient(circle at 78% 38%, rgba(64, 115, 154, 0.11), transparent 26%), linear-gradient(126deg, #070b1c 0%, #0a1025 54%, #0d142b 100%);
+}
+.home-page::before { background: radial-gradient(ellipse at 72% 82%, rgba(97, 220, 235, 0.045), transparent 33%); }
+.home-shell { width: min(100%, 1080px); }
+.home-topbar { padding-bottom: 12px; border-bottom-color: transparent; }
+.home-workspace { grid-template-columns: minmax(0, 1fr) minmax(280px, 0.67fr); gap: clamp(28px, 5vw, 58px); padding-top: clamp(34px, 7vh, 64px); }
+.home-hero { max-width: 600px; padding-bottom: 20px; }
+.home-hero h1 { max-width: 10ch; font-size: clamp(2.55rem, 4.6vw, 3.9rem); letter-spacing: -0.025em; }
+.home-hero .home-subtitle { max-width: none; margin-top: 15px; color: #b9c7d9; font-size: 0.92rem; }
+.home-capabilities { align-items: center; gap: 15px; margin-top: 21px; }
+.home-capabilities span { position: relative; gap: 6px; padding: 0; border: 0; border-radius: 0; color: #aab9cd; background: transparent; font-size: 0.73rem; }
+.home-capabilities span + span::before { position: absolute; left: -10px; color: #4d617c; content: "·"; }
+.home-capabilities i { width: auto; height: auto; border-radius: 0; color: #7da9d9; background: transparent; }
+
+.home-entry-surface {
+  border: 0;
+  border-radius: 16px;
+  padding: clamp(23px, 3vw, 31px);
+  background: rgba(15, 24, 48, 0.78);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.2);
+}
+.home-entry-heading h2 { font-size: 1.32rem; }
+.home-entry-copy { margin: 10px 0 20px; color: #99aac0; font-size: 0.77rem; }
+.home-identity-row { display: grid; grid-template-columns: auto auto minmax(150px, 1fr); align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(178, 207, 239, 0.11); }
+.home-identity-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 12px; color: var(--home-cyan); background: rgba(97, 220, 235, 0.1); }
+.home-identity-copy { display: grid; min-width: 0; gap: 2px; }
+.home-identity-copy strong { color: #dce8f6; font-size: 0.77rem; }
+.home-identity-copy small { color: #8395ad; font-size: 0.67rem; white-space: nowrap; }
+.home-identity-input { min-width: 0; }
+.home-identity-input input { min-height: 38px; border: 0; border-radius: 9px; padding: 0 10px; color: #edf5ff; background: rgba(4, 11, 28, 0.45); text-align: right; }
+.home-identity-input input:focus { box-shadow: 0 0 0 2px rgba(97, 220, 235, 0.2); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%); }
+
+.home-entry-surface .home-tabs { display: flex; grid-template-columns: none; gap: 20px; margin: 0 0 22px; padding: 0; border: 0; border-bottom: 1px solid rgba(178, 207, 239, 0.12); border-radius: 0; background: transparent; }
+.home-entry-surface .home-tabs button { position: relative; min-height: 37px; padding: 0 0 10px; border: 0; border-radius: 0; color: #8799b1; background: transparent; font-size: 0.78rem; font-weight: 700; }
+.home-entry-surface .home-tabs button::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; border-radius: 2px; background: transparent; content: ""; }
+.home-entry-surface .home-tabs button:hover { color: #dce8f6; background: transparent; }
+.home-entry-surface .home-tabs button.is-selected { color: #eaf8ff; background: transparent; box-shadow: none; }
+.home-entry-surface .home-tabs button.is-selected::after { background: var(--home-cyan); }
+.home-entry-surface .home-section-heading { margin-bottom: 10px; }
+.home-entry-surface .home-section-heading .section-label { font-size: 0.64rem; }
+.home-entry-surface .field { margin-bottom: 14px; }
+.home-entry-surface .field > span { margin-bottom: 6px; color: #bdcce0; font-size: 0.73rem; font-weight: 700; }
+.home-entry-surface input { min-height: 44px; border: 0; border-radius: 9px; background: rgba(4, 11, 28, 0.48); }
+.home-entry-surface input:focus { box-shadow: 0 0 0 2px rgba(97, 220, 235, 0.2); }
+.home-code-field { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.home-code-field input { padding-right: 42px; }
+.home-code-field button { display: grid; width: 34px; min-height: 32px; margin-left: -40px; place-items: center; border: 0; border-radius: 8px; color: #769ac2; background: transparent; }
+.home-code-field button:hover, .home-code-field button:focus-visible { color: var(--home-cyan); background: rgba(97, 220, 235, 0.1); }
+.home-entry-surface .home-entry-cta { min-height: 45px; margin-top: 5px; }
+.home-entry-surface .primary-button { background: linear-gradient(135deg, #65dce8, #71c8ee); box-shadow: 0 8px 20px rgba(65, 196, 220, 0.13), inset 0 1px rgba(255, 255, 255, 0.28); }
+.home-entry-surface .primary-button:hover { background: linear-gradient(135deg, #88e8ed, #8bcff4); }
+.home-entry-surface .secondary-button { border: 0; color: #d6e5fa; background: rgba(109, 151, 215, 0.16); }
+.home-entry-surface .secondary-button:hover { border: 0; background: rgba(109, 151, 215, 0.25); }
+.home-account-prompt { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 15px 4px 0; color: #8799b0; font-size: 0.72rem; }
+.home-account-prompt button { min-height: auto; padding: 0; border: 0; color: var(--home-cyan); background: transparent; font-size: inherit; font-weight: 800; }
+.home-account-prompt button:hover, .home-account-prompt button:focus-visible { color: #9aebf0; background: transparent; text-decoration: underline; }
+
+.home-aside { padding-top: 10px; }
+.eko-visual { min-height: 235px; }
+.eko-svg { animation-name: eko-quick-float; }
+.eko-visual[data-intent="quick"] .eko-antenna { transform: rotate(-3deg); transform-origin: 116px 22px; }
+.eko-visual[data-intent="quick"] .eko-eye { filter: brightness(1.03); }
+.eko-visual[data-intent="account"] .eko-svg { animation-name: eko-account-float; }
+.eko-visual[data-intent="account"] .eko-antenna { transform: rotate(4deg); transform-origin: 116px 22px; }
+@keyframes eko-quick-float { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-3px) rotate(-2deg); } }
+
+@media (max-width: 720px) {
+  .home-workspace { gap: 20px; padding-top: 28px; }
+  .home-aside { padding-top: 0; }
+  .home-identity-row { grid-template-columns: auto minmax(0, 1fr); }
+  .home-identity-input { grid-column: 1 / -1; }
+  .home-identity-input input { text-align: left; }
+  .home-account-prompt { align-items: flex-start; flex-direction: column; gap: 3px; margin-left: 0; }
+}
