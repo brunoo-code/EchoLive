@@ -13,6 +13,28 @@ const roomVoiceUsers = new Map();
 const socketRooms = new Map();
 const roomMessages = new Map();
 const roomDetails = new Map();
+const roomExpiryTimers = new Map();
+const TEMPORARY_ROOM_TTL_MS = 24 * 60 * 60 * 1000;
+
+function cancelRoomExpiry(code) {
+  const timer = roomExpiryTimers.get(code);
+  if (timer) clearTimeout(timer);
+  roomExpiryTimers.delete(code);
+}
+
+function scheduleRoomExpiry(code) {
+  cancelRoomExpiry(code);
+  roomExpiryTimers.set(code, setTimeout(() => {
+    if ((rooms.get(code)?.size || 0) === 0) {
+      rooms.delete(code);
+      roomVoiceUsers.delete(code);
+      roomMessages.delete(code);
+      roomDetails.delete(code);
+      console.log(`[ROOM] expired ${code}`);
+    }
+    roomExpiryTimers.delete(code);
+  }, TEMPORARY_ROOM_TTL_MS));
+}
 
 export function normalizeRoomCode(code) {
   return String(code || "").trim().toUpperCase();
@@ -109,6 +131,8 @@ export function joinRoom(roomCode, socketId, nickname) {
     return { ok: false, error: "Sala nao encontrada." };
   }
 
+  cancelRoomExpiry(code);
+
   if (room.size >= MAX_PARTICIPANTS_PER_ROOM && !room.has(socketId)) {
     return { ok: false, error: "Sala cheia." };
   }
@@ -161,10 +185,7 @@ export function leaveRoom(socketId) {
     }
 
     if (room.size === 0) {
-      rooms.delete(roomCode);
-      roomVoiceUsers.delete(roomCode);
-      roomMessages.delete(roomCode);
-      roomDetails.delete(roomCode);
+      scheduleRoomExpiry(roomCode);
     }
   }
 
