@@ -118,7 +118,7 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
           {fieldErrors.confirmation && <small id="auth-confirmation-error" className="field-error">{fieldErrors.confirmation}</small>}
         </label>}
         {error && <p className="auth-error" role="alert">{error}</p>}
-        <button className="primary-button auth-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? (isRegister ? "Criando..." : "Entrando...") : isRegister ? "Criar conta" : "Entrar"}</button>
+        <button className="primary-button auth-submit" type="submit" disabled={isSubmitting}>{isSubmitting && <i className="auth-loader" aria-hidden="true" />}{isSubmitting ? (isRegister ? "Criando..." : "Entrando...") : isRegister ? "Criar conta" : "Entrar"}</button>
       </form>
       <button type="button" className="text-button auth-switch" onClick={() => { setMode(mode === "register" ? "login" : "register"); setError(""); setFieldErrors({}); }}>
         {isRegister ? "Ja tenho uma conta" : "Ainda nao tenho conta"}

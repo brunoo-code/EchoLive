@@ -31,6 +31,7 @@ export default function HomePage({ onRoomCreated }) {
   const [createCode, setCreateCode] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [authModalMode, setAuthModalMode] = useState(null);
   const [isEditingNickname, setIsEditingNickname] = useState(() => !nickname.trim());
   const [nicknameBeforeEdit, setNicknameBeforeEdit] = useState(nickname);
@@ -114,6 +115,7 @@ export default function HomePage({ onRoomCreated }) {
     }
 
     celebrateEko("quickCelebrate");
+    setIsTransitioning(true);
     setIsCreating(true);
     const socket = io(SERVER_URL);
 
@@ -124,6 +126,7 @@ export default function HomePage({ onRoomCreated }) {
     socket.on("room-created", ({ roomCode: createdRoomCode }) => {
       socket.disconnect();
       setIsCreating(false);
+      setIsTransitioning(false);
       saveRecentRoom(createdRoomCode, cleanName, setRecentRooms);
       onRoomCreated(createdRoomCode);
     });
@@ -132,12 +135,14 @@ export default function HomePage({ onRoomCreated }) {
       notify(message);
       socket.disconnect();
       setIsCreating(false);
+      setIsTransitioning(false);
     });
 
     socket.on("connect_error", () => {
       notify("Erro de conexao. Verifique se o servidor esta rodando.");
       socket.disconnect();
       setIsCreating(false);
+      setIsTransitioning(false);
     });
   }
 
@@ -153,6 +158,7 @@ export default function HomePage({ onRoomCreated }) {
     }
 
     celebrateEko("quickCelebrate");
+    setIsTransitioning(true);
     saveRecentRoom(cleanRoomCode, `Sala ${cleanRoomCode}`, setRecentRooms);
     onRoomCreated(cleanRoomCode);
   }
@@ -215,11 +221,11 @@ export default function HomePage({ onRoomCreated }) {
     reactionTimerRef.current = window.setTimeout(() => {
       reactionTimerRef.current = null;
       setEkoMode(ekoHoverRef.current || "idle");
-    }, reaction === "accountCelebrate" ? 480 : 620);
+    }, reaction === "accountCelebrate" ? 480 : 700);
   }
 
   return (
-    <main className="page home-page">
+    <main className={`page home-page ${isTransitioning ? "is-transitioning" : ""}`}>
       <ToastStack toasts={toasts} />
       <div className="home-shell">
         <header className="home-topbar">
@@ -280,7 +286,7 @@ export default function HomePage({ onRoomCreated }) {
                     <button type="button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo"><Icon name="pulse" size={16} /></button>
                   </div>
                 </label>
-                <button id="home-create-room" className="primary-button home-entry-cta" type="button" onClick={createRoom} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko} disabled={isCreating}><span>{isCreating ? "Criando..." : "Criar sala"}</span><Icon name="voice" size={15} /></button>
+                <button id="home-create-room" className={`primary-button home-entry-cta ${nickname.trim() && roomName.trim() && ROOM_CODE_PATTERN.test(normalizeCode(createCode.trim())) ? "is-ready" : ""}`} type="button" onClick={createRoom} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko} disabled={isCreating}><span>{isCreating ? "Criando..." : "Criar sala"}</span><Icon name="voice" size={15} /></button>
               </>}
               {mode === "join" && <div className="join-form">
                 <label className="field">

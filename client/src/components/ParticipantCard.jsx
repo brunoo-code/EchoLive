@@ -74,7 +74,7 @@ export default function ParticipantCard({
           {isScreenSharing && <span className="sharing-text">Compartilhando tela{isLocal && screenShareLabel ? ` · ${screenShareLabel}` : ""}</span>}
           </div>
         </div>
-        <span className="status-badge">{isLocal ? "Voce" : "Remoto"}</span>
+        {isLocal && <span className="status-badge">Voce</span>}
       </div>
 
       <div className="video-frame">
