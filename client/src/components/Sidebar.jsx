@@ -87,7 +87,7 @@ export default function Sidebar({
           className={`channel-button ${selectedChannel === "voice-general" ? "is-selected" : ""}`}
           onClick={() => onSelectChannel("voice-general")}
         >
-          <span className="channel-icon" aria-hidden="true">VOL</span>
+          <span className="channel-icon sound-wave-icon" aria-hidden="true" />
           <strong>Geral</strong>
           <span className="channel-count">{participants.length}</span>
         </button>
@@ -106,13 +106,14 @@ export default function Sidebar({
         </div>
       </section>
 
-      <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">
-        <div className="connected-voice-heading"><span className="voice-live-dot" aria-hidden="true" /> <strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong>{isInVoice && <span className="connection-quality">{connectionQuality}</span>}</div>
-        <span className="connected-voice-channel">Geral</span>
-        {isInVoice && <button type="button" className="connected-leave" onClick={onLeaveVoice} title="Sair da voz" aria-label="Sair da voz">Sair da voz</button>}
-      </section>
+      <div className="sidebar-lower-region">
+        <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">
+          <div className="connected-voice-heading"><span className="voice-live-dot" aria-hidden="true" /> <strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong>{isInVoice && <span className="connection-quality">{connectionQuality}</span>}</div>
+          <span className="connected-voice-channel">Geral</span>
+          {isInVoice && <button type="button" className="connected-leave" onClick={onLeaveVoice} title="Sair da voz" aria-label="Sair da voz">Sair da voz</button>}
+        </section>
 
-      <footer className="sidebar-user-footer">
+        <footer className="sidebar-user-footer">
         <button type="button" className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
           <span className="sidebar-user-avatar">
             {avatarUrl ? <img src={avatarUrl} alt="" /> : nickname?.slice(0, 1).toUpperCase() || "?"}
@@ -129,7 +130,8 @@ export default function Sidebar({
           {isInVoice ? <button type="button" className={`control-glyph ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} title={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"}>cam</button> : <span />}
           <button type="button" className="control-glyph" onClick={onOpenDevices} title="Abrir dispositivos" aria-label="Abrir dispositivos">disp</button>
         </div>
-      </footer>
+        </footer>
+      </div>
     </aside>
   );
 }

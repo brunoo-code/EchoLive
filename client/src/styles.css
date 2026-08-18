@@ -516,15 +516,23 @@ h2 {
 .sidebar-user-footer {
   display: grid;
   gap: 8px;
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sidebar-lower-region {
+  display: grid;
+  flex: 0 0 auto;
   margin-top: auto;
-  padding-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
 }
 
 .connected-voice {
   display: grid;
   gap: 4px;
-  margin-top: 12px;
+  margin-top: 0;
   flex: 0 0 auto;
   padding: 9px 10px;
   border: 1px solid rgba(52, 211, 153, 0.28);
@@ -798,6 +806,19 @@ h2 {
   margin-top: 22px;
 }
 
+.app-sidebar .channel-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-content: start;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.app-sidebar .section-label {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
 .room-code-card,
 .soon-box {
   border: 1px solid var(--border);
@@ -889,6 +910,11 @@ h2 {
   font-weight: 900;
 }
 
+.sound-wave-icon { position: relative; width: 15px; height: 12px; border-left: 2px solid currentColor; border-radius: 50%; }
+.sound-wave-icon::before, .sound-wave-icon::after { content: ""; position: absolute; top: 2px; height: 6px; border: 1px solid currentColor; border-left: 0; border-radius: 0 8px 8px 0; }
+.sound-wave-icon::before { left: 3px; width: 5px; }
+.sound-wave-icon::after { left: 7px; width: 5px; }
+
 .channel-count {
   margin-left: auto;
 }
@@ -903,11 +929,14 @@ h2 {
   display: flex;
   align-items: center;
   min-width: 0;
-  gap: 7px;
-  padding: 3px 0;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 8px;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.86rem;
 }
+
+.call-member:hover { background: var(--accent-soft, rgba(34, 211, 238, 0.08)); }
 
 .call-member > span:nth-child(2) {
   min-width: 0;
@@ -936,7 +965,7 @@ h2 {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-muted);
-  font-size: 0.48rem;
+  font-size: 0.54rem;
   font-style: normal;
   font-weight: 800;
   text-transform: uppercase;
@@ -954,8 +983,8 @@ h2 {
   display: grid;
   position: relative;
   flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   place-items: center;
   border-radius: 50%;
   color: #06202a;
