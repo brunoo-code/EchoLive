@@ -4797,3 +4797,17 @@ video.screen-video {
   45% { transform: translate(9px, -16px) rotate(-16deg); }
   65% { transform: translate(6px, -13px) rotate(-30deg); }
 }
+
+/* Last density pass: fewer dividers, tighter rhythm, same familiar structure. */
+.home-identity-row, .home-identity-preview { margin-bottom: 12px; padding-bottom: 4px; border-bottom: 0; }
+.auth-backdrop { background: rgba(8, 10, 14, 0.72); backdrop-filter: blur(6px); }
+.auth-modal { width: min(100%, 460px); padding: 26px; box-shadow: 0 22px 64px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(103, 212, 229, 0.035); }
+.auth-modal-brand { margin-bottom: 18px; }
+.auth-modal-mark { width: 30px; height: 30px; border-radius: 9px; box-shadow: 0 6px 14px rgba(103, 212, 229, 0.1); }
+.auth-modal-copy { margin-bottom: 18px; }
+.auth-modal .field { margin-bottom: 11px; }
+.auth-security-heading { margin-top: 16px; }
+.room-page .panel-heading .panel-count { margin-left: 3px; font-weight: 550; }
+.room-page .empty-call-state small { display: none; }
+.home-page, .home-page *, .room-page, .room-page * { scrollbar-color: #3d4652 transparent; scrollbar-width: thin; }
+.eko-visual[data-mode="quickCelebrate"] .eko-context-wave { right: auto; left: 12%; }

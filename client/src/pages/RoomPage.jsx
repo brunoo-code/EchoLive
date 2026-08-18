@@ -1601,7 +1601,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom }) {
             <div className="empty-call-avatar">{avatarUrl ? <img src={avatarUrl} alt="" /> : (profile.displayName || nickname || "?").slice(0, 1).toUpperCase()}</div>
             <strong>A chamada esta pronta.</strong>
             <span>Compartilhe sua tela ou espere alguem entrar.</span>
-            <small>{profile.displayName || nickname} esta na voz com {voiceParticipants.length} participante{voiceParticipants.length === 1 ? "" : "s"}.</small>
             <div className="empty-call-actions"><button type="button" onClick={toggleCamera}>Ligar camera</button></div>
             <div className="voice-roster-inline">
               {voiceParticipants.map((participant) => <span key={participant.socketId} title={participant.nickname}>{participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>)}

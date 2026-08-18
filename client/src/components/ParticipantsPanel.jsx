@@ -5,8 +5,7 @@ export default function ParticipantsPanel({ participants, onProfileClick }) {
   return (
     <aside className="participants-panel" aria-label="Participantes online">
       <div className="panel-heading">
-          <span><i className="online-indicator" aria-hidden="true" />Online</span>
-          <strong className="panel-count">{participants.length}</strong>
+          <span><i className="online-indicator" aria-hidden="true" />Online <b className="panel-count">— {participants.length}</b></span>
       </div>
 
       <div className="online-list">
