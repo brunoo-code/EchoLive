@@ -4415,3 +4415,56 @@ video.screen-video {
   .home-hero { padding-bottom: 16px; }
   .home-hero h1 { font-size: clamp(2.35rem, 11vw, 3.1rem); }
 }
+
+/* Contextual Eko states: idle is calm; quick/account react only while the user engages. */
+.home-workspace { gap: clamp(18px, 2.4vw, 32px); padding-top: clamp(26px, 5vh, 46px); }
+.home-shell { width: min(100%, 1040px); }
+.home-entry-surface { padding-top: 24px; padding-bottom: 24px; box-shadow: 0 20px 48px rgba(0, 0, 0, 0.16); }
+.home-identity-row, .home-identity-preview { margin-bottom: 16px; padding-bottom: 13px; }
+.home-entry-surface .home-tabs { margin-bottom: 18px; gap: 24px; }
+.home-entry-surface .field { margin-bottom: 11px; }
+.home-entry-surface .field > span { margin-bottom: 5px; font-weight: 600; }
+.home-entry-surface input { min-height: 41px; border-radius: 8px; }
+.home-entry-surface .home-entry-cta { width: min(100%, 360px); min-height: 41px; }
+.home-identity-icon .brand-symbol-svg { color: #7d8793; }
+.home-identity-icon .brand-symbol-svg [fill] { transition: filter 180ms ease; }
+.home-identity-preview:hover .home-identity-icon .brand-symbol-svg { filter: brightness(1.12); }
+.home-aside { margin-left: -18px; padding-top: 24px; }
+.eko-visual { min-height: 228px; }
+.eko-svg { animation-name: eko-idle-float; transition: transform 220ms ease; }
+.eko-visual[data-mode="quick"] .eko-svg { animation-name: eko-quick-float; }
+.eko-visual[data-mode="account"] .eko-svg { animation-name: eko-account-float; }
+.eko-visual[data-mode="quick"] .eko-eye { transform: translate(-2px, 1px); }
+.eko-visual[data-mode="account"] .eko-eye { transform: scale(1.04); transform-origin: center; }
+.eko-visual[data-mode="quick"] .eko-smile { transform: scaleX(1.04); transform-origin: center; }
+.eko-visual[data-mode="account"] .eko-smile { transform: scale(1.05, 1.1); transform-origin: center; }
+.eko-visual[data-mode="account"] .eko-cheek { opacity: 0.9; transform: scale(1.1); transform-origin: center; }
+.eko-visual[data-mode="quick"] .eko-antenna { transform: rotate(-3deg); transform-origin: 116px 22px; }
+.eko-visual[data-mode="account"] .eko-antenna { transform: rotate(4deg); transform-origin: 116px 22px; }
+.eko-eye, .eko-smile, .eko-cheek { transition: transform 220ms ease, opacity 220ms ease; }
+.eko-intent::after { width: 0; height: 2px; transition: width 200ms ease, opacity 180ms ease; }
+.eko-intent.is-active::after, .eko-intent:hover::after, .eko-intent:focus-visible::after { width: 22px; }
+.eko-intent:hover, .eko-intent:focus-visible, .eko-intent.is-active { background: rgba(255, 255, 255, 0.025); }
+.eko-speaking-wave { opacity: 0.28; }
+.eko-context-wave b { animation: eko-voice-pulse 760ms ease-out 1 both; }
+.eko-context-wave b:nth-child(1) { animation-delay: 0ms; }
+.eko-context-wave b:nth-child(2) { animation-delay: 90ms; }
+.eko-context-wave b:nth-child(3) { animation-delay: 180ms; }
+@keyframes eko-idle-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes eko-voice-pulse { 0% { transform: scaleY(0.55); opacity: 0.22; } 45% { transform: scaleY(1.08); opacity: 0.78; } 100% { transform: scaleY(0.62); opacity: 0.28; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .eko-svg { animation: none; }
+  .eko-eye, .eko-smile, .eko-cheek { transition: none; }
+  .eko-context-wave b { animation: none; opacity: 0.28; }
+}
+
+@media (max-width: 900px) {
+  .home-aside { margin-left: -8px; padding-top: 12px; }
+}
+
+@media (max-width: 720px) {
+  .home-workspace { padding-top: 22px; }
+  .home-aside { margin-left: 0; padding-top: 0; }
+  .home-entry-surface .home-entry-cta { width: 100%; }
+}

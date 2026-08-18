@@ -35,6 +35,7 @@ export default function HomePage({ onRoomCreated }) {
   const [isEditingNickname, setIsEditingNickname] = useState(() => !nickname.trim());
   const [nicknameBeforeEdit, setNicknameBeforeEdit] = useState(nickname);
   const [homeIntent, setHomeIntent] = useState("quick");
+  const [ekoMode, setEkoMode] = useState("idle");
   const { toasts, notify } = useToasts();
   const { availability, logout, status, user } = useAuth();
 
@@ -162,13 +163,25 @@ export default function HomePage({ onRoomCreated }) {
 
   function focusQuickEntry() {
     setHomeIntent("quick");
+    setEkoMode("quick");
     setMode("create");
     document.getElementById("home-entry-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function openAccountEntry() {
     setHomeIntent("account");
+    setEkoMode("account");
     setAuthModalMode("register");
+  }
+
+  function changeHomeIntent(nextIntent) {
+    setHomeIntent(nextIntent);
+    setEkoMode(nextIntent);
+  }
+
+  function resetEko() {
+    setEkoMode("idle");
+    setHomeIntent("quick");
   }
 
   return (
@@ -205,11 +218,11 @@ export default function HomePage({ onRoomCreated }) {
               <div className="home-entry-heading"><h2 id="home-entry-title">Comece uma conversa</h2></div>
               <p className="home-entry-copy">Entre como visitante. Sem cadastro.</p>
               {nickname.trim() && !isEditingNickname ? <div className="home-identity-preview">
-                <span className="home-identity-icon"><Icon name="account" size={18} /></span>
+                <span className="home-identity-icon"><BrandMark size={20} /></span>
                 <span className="home-identity-copy"><strong>Voce entra como</strong><b>{nickname}</b></span>
                 <button type="button" className="home-identity-edit" onClick={startNicknameEdit}>Editar</button>
               </div> : <div className="home-identity-row">
-                <span className="home-identity-icon"><Icon name="account" size={18} /></span>
+                <span className="home-identity-icon"><BrandMark size={20} /></span>
                 <span className="home-identity-copy"><strong>Voce vai entrar como</strong><small>Seu nome fica visivel na sala</small></span>
                 <label className="home-identity-input">
                   <span className="visually-hidden">Nickname</span>
@@ -218,8 +231,8 @@ export default function HomePage({ onRoomCreated }) {
               </div>}
 
               <div className="home-tabs" role="tablist" aria-label="Entrada na sala">
-                <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => { setMode("create"); setHomeIntent("quick"); }}>Criar sala</button>
-                <button type="button" className={mode === "join" ? "is-selected" : ""} onClick={() => { setMode("join"); setHomeIntent("quick"); }}>Entrar com codigo</button>
+                <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => { setMode("create"); changeHomeIntent("quick"); }} onMouseEnter={() => setEkoMode("quick")} onFocus={() => setEkoMode("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Criar sala</button>
+                <button type="button" className={mode === "join" ? "is-selected" : ""} onClick={() => { setMode("join"); changeHomeIntent("quick"); }} onMouseEnter={() => setEkoMode("quick")} onFocus={() => setEkoMode("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Entrar com codigo</button>
               </div>
               {mode === "create" && <>
                 <label className="field">
@@ -233,14 +246,14 @@ export default function HomePage({ onRoomCreated }) {
                     <button type="button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo"><Icon name="pulse" size={16} /></button>
                   </div>
                 </label>
-                <button className="primary-button home-entry-cta" type="button" onClick={createRoom} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
+                <button className="primary-button home-entry-cta" type="button" onClick={createRoom} onMouseEnter={() => setEkoMode("quick")} onFocus={() => setEkoMode("quick")} onMouseLeave={resetEko} onBlur={resetEko} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
               </>}
               {mode === "join" && <div className="join-form">
                 <label className="field">
                   <span>Codigo da sala</span>
                   <input maxLength={9} placeholder="SALA01" value={joinCode} onChange={(event) => setJoinCode(normalizeCode(event.target.value))} />
                 </label>
-                <button className="secondary-button home-entry-cta" type="button" onClick={() => joinRoom({ preventDefault() {} })}>Entrar na sala</button>
+                <button className="secondary-button home-entry-cta" type="button" onClick={() => joinRoom({ preventDefault() {} })} onMouseEnter={() => setEkoMode("quick")} onFocus={() => setEkoMode("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Entrar na sala</button>
               </div>}
             </section>
 
@@ -249,9 +262,10 @@ export default function HomePage({ onRoomCreated }) {
 
           <aside className="home-aside">
             <EkoGuide
-              state="normal"
-              intent={homeIntent}
-              onIntentChange={setHomeIntent}
+              mode={ekoMode}
+              activeIntent={homeIntent}
+              onIntentChange={changeHomeIntent}
+              onIntentEnd={resetEko}
               onQuickEntry={focusQuickEntry}
               onCreateAccount={openAccountEntry}
             />
