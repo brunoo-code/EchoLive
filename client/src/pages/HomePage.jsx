@@ -6,6 +6,7 @@ import { SERVER_URL } from "../utils/webrtc.js";
 import BrandMark from "../components/BrandMark.jsx";
 import Icon from "../components/Icon.jsx";
 import AuthModal from "../components/AuthModal.jsx";
+import EkoGuide from "../components/EkoGuide.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 
 const NICKNAME_KEY = "echolive.nickname";
@@ -139,62 +140,90 @@ export default function HomePage({ onRoomCreated }) {
   return (
     <main className="page home-page">
       <ToastStack toasts={toasts} />
-      <section className="home-panel home-panel-wide">
-        <div className="home-brand">
-          <div className="brand-mark" aria-hidden="true"><BrandMark size={30} /></div>
-          <div><p className="eyebrow">Espaco de conversa</p><h1>EchoLive</h1></div>
-        </div>
-        <div className="home-account-bar">
-          {status === "loading" && <span className="home-account-loading">Verificando conta...</span>}
-          {status === "guest" && <>
-            <span className="home-account-hint">Use como visitante ou entre com uma conta.</span>
-            <div className="home-account-actions"><button type="button" className="home-account-button" onClick={() => setAuthModalMode("login")}>Entrar</button><button type="button" className="home-account-button is-primary" onClick={() => setAuthModalMode("register")}>Criar conta</button></div>
-            {availability === "unavailable" && <small>Contas indisponiveis no momento</small>}
-          </>}
-          {status === "authenticated" && user && <>
-            <div className="home-account-identity"><div className="home-account-avatar">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</div><span><strong>{user.displayName}</strong><small>@{user.username}</small></span></div>
-            <button type="button" className="home-account-button" onClick={() => logout()}>Sair</button>
-          </>}
-        </div>
-        <p className="home-subtitle">Converse. Compartilhe. Continue conectado.</p>
-        <p className="home-copy">Voz, video, tela e chat direto no navegador.</p>
-        <div className="home-capabilities" aria-label="Recursos do EchoLive"><span><i><Icon name="voice" size={14} /></i>Voz</span><span><i><Icon name="video" size={14} /></i>Video</span><span><i><Icon name="screen" size={14} /></i>Tela</span><span><i><Icon name="chat" size={14} /></i>Chat</span></div>
-
-        <label className="field">
-          <span>Nickname</span>
-          <input maxLength={24} placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} />
-        </label>
-
-        <div className="home-tabs" role="tablist" aria-label="Entrada na sala">
-          <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => setMode("create")}>Criar sala</button>
-          <button type="button" className={mode === "join" ? "is-selected" : ""} onClick={() => setMode("join")}>Entrar em sala</button>
-        </div>
-        {mode === "create" && <>
-        <div className="home-section-heading"><span className="section-label">Criar nova sala</span><small>Defina um nome e um codigo simples.</small></div>
-        <label className="field">
-          <span>Nome da sala</span>
-          <input maxLength={24} placeholder="Minha sala" value={roomName} onChange={(event) => setRoomName(event.target.value.slice(0, 24))} />
-        </label>
-        <label className="field">
-          <span>Codigo da sala</span>
-          <div className="code-input-row">
-            <input maxLength={9} placeholder="SALA01" value={createCode} onChange={(event) => setCreateCode(normalizeCode(event.target.value))} />
-            <button type="button" className="small-button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo"><Icon name="pulse" size={15} /> <span>Gerar codigo</span></button>
+      <div className="home-shell">
+        <header className="home-topbar">
+          <div className="home-brand">
+            <div className="brand-mark" aria-hidden="true"><BrandMark size={28} /></div>
+            <div><p className="eyebrow">Espaco de conversa</p><strong className="home-wordmark">EchoLive</strong></div>
           </div>
-        </label>
-        <button className="primary-button" type="button" onClick={createRoom} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
-        </>}
-        {mode === "join" && <div className="join-form">
-        <div className="home-section-heading"><span className="section-label">Entrar em uma sala</span><small>Use o codigo compartilhado com voce.</small></div>
-          <label className="field">
-            <span>Codigo da sala</span>
-            <input maxLength={9} placeholder="SALA01" value={joinCode} onChange={(event) => setJoinCode(normalizeCode(event.target.value))} />
-          </label>
-          <button className="secondary-button" type="button" onClick={() => joinRoom({ preventDefault() {} })}>Entrar na sala</button>
-        </div>}
-        {recentRooms.length > 0 && <section className="recent-rooms"><div className="home-section-heading"><span className="section-label">Salas recentes</span><button type="button" className="text-button" onClick={() => { localStorage.removeItem(RECENT_ROOMS_KEY); setRecentRooms([]); }}>Limpar recentes</button></div>{recentRooms.map((room) => <div className="recent-room" key={room.code}><div className="recent-room-avatar" style={{ background: roomColor(room.code) }}>{roomInitials(room.name, room.code)}</div><div><strong title={room.name}>{room.name}</strong><span>{room.code}</span><small>{room.lastVisitedAt ? `Visitada ${new Date(room.lastVisitedAt).toLocaleDateString("pt-BR")}` : "Sala recente"}</small></div><button type="button" className="recent-room-enter" onClick={() => enterRecent(room)}><Icon name="link" size={14} />Entrar</button><button type="button" className="text-button recent-room-remove" onClick={() => removeRecent(room.code)} aria-label={`Remover ${room.name}`}><Icon name="close" size={14} /></button></div>)}</section>}
-        <p className="home-footnote">Sem cadastro - Salas temporarias - Direto no navegador</p>
-      </section>
+          <div className="home-account-bar" aria-label="Conta EchoLive">
+            {status === "loading" && <span className="home-account-loading">Verificando conta...</span>}
+            {status === "guest" && <>
+              <span className="home-account-hint">Entre para continuar de onde parou.</span>
+              <div className="home-account-actions"><button type="button" className="home-account-button" onClick={() => setAuthModalMode("login")}>Entrar</button><button type="button" className="home-account-button is-primary" onClick={() => setAuthModalMode("register")}>Criar conta</button></div>
+              {availability === "unavailable" && <small>Contas indisponiveis no momento</small>}
+            </>}
+            {status === "authenticated" && user && <>
+              <div className="home-account-identity"><div className="home-account-avatar">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</div><span><strong>{user.displayName}</strong><small>@{user.username}</small></span></div>
+              <button type="button" className="home-account-button" onClick={() => logout()}>Sair</button>
+            </>}
+          </div>
+        </header>
+
+        <div className="home-workspace">
+          <section className="home-main-column">
+            <div className="home-hero">
+              <p className="eyebrow">Um lugar para se encontrar</p>
+              <h1>Converse do seu jeito.</h1>
+              <p className="home-subtitle">Crie uma sala, chame quem importa e converse pelo navegador.</p>
+              <div className="home-capabilities" aria-label="Recursos do EchoLive"><span><i><Icon name="voice" size={14} /></i>Voz</span><span><i><Icon name="video" size={14} /></i>Video</span><span><i><Icon name="screen" size={14} /></i>Tela</span><span><i><Icon name="chat" size={14} /></i>Chat</span></div>
+            </div>
+
+            <section className="home-entry-surface" aria-labelledby="home-entry-title">
+              <div className="home-entry-heading"><div><span className="section-label">Entrada rapida</span><h2 id="home-entry-title">Comece uma conversa</h2></div><span className="home-visitor-badge"><i />Visitante</span></div>
+              <p className="home-entry-copy">Entre como visitante e comece agora. Sem conta, sem espera.</p>
+              <label className="field">
+                <span>Nickname</span>
+                <input maxLength={24} placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} />
+              </label>
+
+              <div className="home-tabs" role="tablist" aria-label="Entrada na sala">
+                <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => setMode("create")}>Criar sala</button>
+                <button type="button" className={mode === "join" ? "is-selected" : ""} onClick={() => setMode("join")}>Entrar em sala</button>
+              </div>
+              {mode === "create" && <>
+                <div className="home-section-heading"><span className="section-label">Nova sala</span><small>Escolha um nome e um codigo simples.</small></div>
+                <label className="field">
+                  <span>Nome da sala</span>
+                  <input maxLength={24} placeholder="Minha sala" value={roomName} onChange={(event) => setRoomName(event.target.value.slice(0, 24))} />
+                </label>
+                <label className="field">
+                  <span>Codigo da sala</span>
+                  <div className="code-input-row">
+                    <input maxLength={9} placeholder="SALA01" value={createCode} onChange={(event) => setCreateCode(normalizeCode(event.target.value))} />
+                    <button type="button" className="small-button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo"><Icon name="pulse" size={15} /> <span>Gerar codigo</span></button>
+                  </div>
+                </label>
+                <button className="primary-button home-entry-cta" type="button" onClick={createRoom} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
+              </>}
+              {mode === "join" && <div className="join-form">
+                <div className="home-section-heading"><span className="section-label">Sala existente</span><small>Use o codigo compartilhado com voce.</small></div>
+                <label className="field">
+                  <span>Codigo da sala</span>
+                  <input maxLength={9} placeholder="SALA01" value={joinCode} onChange={(event) => setJoinCode(normalizeCode(event.target.value))} />
+                </label>
+                <button className="secondary-button home-entry-cta" type="button" onClick={() => joinRoom({ preventDefault() {} })}>Entrar na sala</button>
+              </div>}
+            </section>
+
+            {recentRooms.length > 0 && <section className="home-recent-surface"><div className="home-section-heading"><span className="section-label">Salas recentes</span><button type="button" className="text-button" onClick={() => { localStorage.removeItem(RECENT_ROOMS_KEY); setRecentRooms([]); }}>Limpar recentes</button></div>{recentRooms.map((room) => <div className="recent-room" key={room.code}><div className="recent-room-avatar" style={{ background: roomColor(room.code) }}>{roomInitials(room.name, room.code)}</div><div><strong title={room.name}>{room.name}</strong><span>{room.code}</span><small>{room.lastVisitedAt ? `Visitada ${new Date(room.lastVisitedAt).toLocaleDateString("pt-BR")}` : "Sala recente"}</small></div><button type="button" className="recent-room-enter" onClick={() => enterRecent(room)}><Icon name="link" size={14} />Entrar</button><button type="button" className="text-button recent-room-remove" onClick={() => removeRecent(room.code)} aria-label={`Remover ${room.name}`}><Icon name="close" size={14} /></button></div>)}</section>}
+          </section>
+
+          <aside className="home-aside">
+            <EkoGuide state={mode === "create" ? "speaking" : "normal"} />
+            <section className="home-ways-note" aria-label="O que voce pode fazer no EchoLive">
+              <div className="home-note-heading"><span className="home-note-icon"><Icon name="voice" size={16} /></span><span><strong>Fale, veja, compartilhe</strong><small>Uma sala para cada momento</small></span></div>
+              <div className="home-way-list"><span><Icon name="voice" size={14} />Converse por voz</span><span><Icon name="video" size={14} />Ligue a camera</span><span><Icon name="screen" size={14} />Mostre sua tela</span></div>
+            </section>
+            <section className="home-account-note" aria-label="Identidade do EchoLive">
+              <div className="home-note-heading"><span className="home-note-icon"><Icon name="account" size={16} /></span><span><strong>Uma identidade para continuar</strong><small>{status === "authenticated" && user ? `Tudo pronto, ${user.displayName}.` : "Entre quando quiser manter seu perfil."}</small></span></div>
+              <p>Com uma conta, sua identidade continua com voce.</p>
+              <div className="home-future-points"><span><Icon name="user" size={14} />Amigos</span><span><Icon name="chat" size={14} />Mensagens</span><span><Icon name="voice" size={14} />Presenca</span></div>
+            </section>
+          </aside>
+        </div>
+        <footer className="home-footer"><span>EchoLive</span><span>Salas temporarias para conversar agora.</span></footer>
+      </div>
       <AuthModal open={Boolean(authModalMode)} initialMode={authModalMode || "login"} onClose={() => setAuthModalMode(null)} />
     </main>
   );
