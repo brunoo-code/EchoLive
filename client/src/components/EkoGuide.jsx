@@ -1,7 +1,7 @@
 import Icon from "./Icon.jsx";
 
 export default function EkoGuide({ mode = "idle", activeIntent = "quick", onIntentChange, onIntentEnd, onQuickEntry, onCreateAccount }) {
-  const isQuick = mode === "quick";
+  const isQuick = mode === "quick" || mode === "quickCelebrate";
 
   return <section className="eko-guide" aria-label="Eko e atalhos do EchoLive">
     <div className={`eko-visual eko-visual-${mode}`} data-mode={mode} data-intent={activeIntent}>
@@ -14,7 +14,10 @@ export default function EkoGuide({ mode = "idle", activeIntent = "quick", onInte
         <path className="eko-ear" d="M178 74c16-5 24 4 21 18-3 11-12 17-25 12Z" />
         <path className="eko-body" d="M72 132c5 23 17 36 38 36s33-13 38-36Z" />
         <path className="eko-arm eko-arm-left" d="M76 140c-14 6-18 17-10 23 8 5 16-2 20-12" />
-        <path className="eko-arm eko-arm-right" d="M144 140c14 6 18 17 10 23-8 5-16-2-20-12" />
+        <g className="eko-arm eko-arm-wave">
+          <path d="M144 140c14 6 18 17 10 23-8 5-16-2-20-12" />
+          <path className="eko-hand" d="M152 157c5-1 7 2 5 5-2 3-6 2-8 0" />
+        </g>
         <rect className="eko-head" x="45" y="38" width="130" height="94" rx="43" />
         <rect className="eko-face" x="58" y="52" width="104" height="66" rx="30" />
         <ellipse className="eko-eye" cx="88" cy="82" rx="9" ry="14" />
@@ -37,7 +40,7 @@ export default function EkoGuide({ mode = "idle", activeIntent = "quick", onInte
         onClick={() => { onIntentChange?.("quick"); onQuickEntry?.(); }}
       >
         <span className="eko-intent-icon"><Icon name="voice" size={15} /></span>
-        <span><strong>Entrar rapido</strong><small>Uma sala rapida resolve.</small></span>
+        <span><strong>Entrar rapido <em className="eko-intent-arrow" aria-hidden="true">&rarr;</em></strong><small>Uma sala rapida resolve.</small></span>
       </button>
       <button
         type="button"

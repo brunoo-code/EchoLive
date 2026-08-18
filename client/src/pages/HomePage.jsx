@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
@@ -36,6 +36,8 @@ export default function HomePage({ onRoomCreated }) {
   const [nicknameBeforeEdit, setNicknameBeforeEdit] = useState(nickname);
   const [homeIntent, setHomeIntent] = useState("quick");
   const [ekoMode, setEkoMode] = useState("idle");
+  const reactionTimerRef = useRef(null);
+  const ekoHoverRef = useRef(null);
   const { toasts, notify } = useToasts();
   const { availability, logout, status, user } = useAuth();
 
@@ -58,6 +60,10 @@ export default function HomePage({ onRoomCreated }) {
     setNicknameBeforeEdit(accountNickname);
     setIsEditingNickname(false);
   }, [nickname, status, user]);
+
+  useEffect(() => () => {
+    if (reactionTimerRef.current) window.clearTimeout(reactionTimerRef.current);
+  }, []);
 
   function saveNickname() {
     const cleanNickname = nickname.trim().slice(0, 24);
@@ -162,26 +168,52 @@ export default function HomePage({ onRoomCreated }) {
   }
 
   function focusQuickEntry() {
-    setHomeIntent("quick");
-    setEkoMode("quick");
+    changeHomeIntent("quick");
+    celebrateEko("quickCelebrate");
     setMode("create");
-    document.getElementById("home-entry-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.requestAnimationFrame(() => {
+      const targetId = !nickname.trim()
+        ? "home-nickname"
+        : !roomName.trim()
+          ? "home-room-name"
+          : !createCode.trim()
+            ? "home-create-code"
+            : "home-create-room";
+      const target = document.getElementById(targetId);
+      if (!target) return;
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+      target.focus({ preventScroll: true });
+    });
   }
 
   function openAccountEntry() {
-    setHomeIntent("account");
-    setEkoMode("account");
+    changeHomeIntent("account");
+    celebrateEko("accountCelebrate");
     setAuthModalMode("register");
   }
 
   function changeHomeIntent(nextIntent) {
+    ekoHoverRef.current = nextIntent;
     setHomeIntent(nextIntent);
-    setEkoMode(nextIntent);
+    if (!reactionTimerRef.current) setEkoMode(nextIntent);
   }
 
   function resetEko() {
-    setEkoMode("idle");
-    setHomeIntent("quick");
+    ekoHoverRef.current = null;
+    if (!reactionTimerRef.current) {
+      setEkoMode("idle");
+      setHomeIntent("quick");
+    }
+  }
+
+  function celebrateEko(reaction) {
+    if (reactionTimerRef.current) window.clearTimeout(reactionTimerRef.current);
+    setEkoMode(reaction);
+    reactionTimerRef.current = window.setTimeout(() => {
+      reactionTimerRef.current = null;
+      setEkoMode(ekoHoverRef.current || "idle");
+    }, reaction === "accountCelebrate" ? 480 : 620);
   }
 
   return (
@@ -226,34 +258,34 @@ export default function HomePage({ onRoomCreated }) {
                 <span className="home-identity-copy"><strong>Voce vai entrar como</strong><small>Seu nome fica visivel na sala</small></span>
                 <label className="home-identity-input">
                   <span className="visually-hidden">Nickname</span>
-                  <input maxLength={24} autoFocus={isEditingNickname} aria-label="Nickname" placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); confirmNicknameEdit(); } if (event.key === "Escape") { event.preventDefault(); cancelNicknameEdit(); } }} />
+                  <input id="home-nickname" maxLength={24} autoFocus={isEditingNickname} aria-label="Nickname" placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); confirmNicknameEdit(); } if (event.key === "Escape") { event.preventDefault(); cancelNicknameEdit(); } }} />
                 </label>
               </div>}
 
               <div className="home-tabs" role="tablist" aria-label="Entrada na sala">
-                <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => { setMode("create"); changeHomeIntent("quick"); }} onMouseEnter={() => setEkoMode("quick")} onFocus={() => setEkoMode("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Criar sala</button>
-                <button type="button" className={mode === "join" ? "is-selected" : ""} onClick={() => { setMode("join"); changeHomeIntent("quick"); }} onMouseEnter={() => setEkoMode("quick")} onFocus={() => setEkoMode("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Entrar com codigo</button>
+                <button type="button" className={mode === "create" ? "is-selected" : ""} onClick={() => { setMode("create"); changeHomeIntent("quick"); }} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Criar sala</button>
+                <button type="button" className={mode === "join" ? "is-selected" : ""} onClick={() => { setMode("join"); changeHomeIntent("quick"); }} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Entrar com codigo</button>
               </div>
               {mode === "create" && <>
                 <label className="field">
                   <span>Nome da sala</span>
-                  <input maxLength={24} placeholder="Minha sala" value={roomName} onChange={(event) => setRoomName(event.target.value.slice(0, 24))} />
+                  <input id="home-room-name" maxLength={24} placeholder="Minha sala" value={roomName} onChange={(event) => setRoomName(event.target.value.slice(0, 24))} />
                 </label>
                 <label className="field">
                   <span>Codigo da sala</span>
                   <div className="home-code-field">
-                    <input maxLength={9} placeholder="SALA01" value={createCode} onChange={(event) => setCreateCode(normalizeCode(event.target.value))} />
+                    <input id="home-create-code" maxLength={9} placeholder="SALA01" value={createCode} onChange={(event) => setCreateCode(normalizeCode(event.target.value))} />
                     <button type="button" onClick={() => setCreateCode(generateCode())} title="Gerar novo codigo" aria-label="Gerar novo codigo"><Icon name="pulse" size={16} /></button>
                   </div>
                 </label>
-                <button className="primary-button home-entry-cta" type="button" onClick={createRoom} onMouseEnter={() => setEkoMode("quick")} onFocus={() => setEkoMode("quick")} onMouseLeave={resetEko} onBlur={resetEko} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
+                <button id="home-create-room" className="primary-button home-entry-cta" type="button" onClick={createRoom} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko} disabled={isCreating}>{isCreating ? "Criando..." : "Criar sala"}</button>
               </>}
               {mode === "join" && <div className="join-form">
                 <label className="field">
                   <span>Codigo da sala</span>
                   <input maxLength={9} placeholder="SALA01" value={joinCode} onChange={(event) => setJoinCode(normalizeCode(event.target.value))} />
                 </label>
-                <button className="secondary-button home-entry-cta" type="button" onClick={() => joinRoom({ preventDefault() {} })} onMouseEnter={() => setEkoMode("quick")} onFocus={() => setEkoMode("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Entrar na sala</button>
+                <button className="secondary-button home-entry-cta" type="button" onClick={() => joinRoom({ preventDefault() {} })} onMouseEnter={() => changeHomeIntent("quick")} onFocus={() => changeHomeIntent("quick")} onMouseLeave={resetEko} onBlur={resetEko}>Entrar na sala</button>
               </div>}
             </section>
 

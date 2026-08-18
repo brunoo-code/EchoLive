@@ -4468,3 +4468,59 @@ video.screen-video {
   .home-aside { margin-left: 0; padding-top: 0; }
   .home-entry-surface .home-entry-cta { width: 100%; }
 }
+
+/* Short Eko reactions stay local to the Home and never affect call media. */
+.eko-arm-wave {
+  fill: none;
+  stroke: #b7d2ed;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transform-box: view-box;
+  transform-origin: 145px 140px;
+}
+.eko-arm-wave .eko-hand {
+  fill: none;
+  stroke: inherit;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.eko-visual[data-mode="quickCelebrate"] .eko-svg { animation: eko-quick-celebrate 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.eko-visual[data-mode="quickCelebrate"] .eko-arm-wave { animation: eko-hand-wave 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.eko-visual[data-mode="quickCelebrate"] .eko-eye { transform: translate(-2px, 0) scale(1.06); transform-origin: center; }
+.eko-visual[data-mode="quickCelebrate"] .eko-smile { transform: scale(1.12, 1.15); transform-origin: center; }
+.eko-visual[data-mode="quickCelebrate"] .eko-cheek { opacity: 0.95; transform: scale(1.12); transform-origin: center; }
+.eko-visual[data-mode="quickCelebrate"] .eko-antenna { transform: rotate(-7deg); transform-origin: 116px 22px; }
+.eko-visual[data-mode="quickCelebrate"] .eko-context-wave b { animation-name: eko-celebrate-pulse; animation-duration: 620ms; }
+.eko-visual[data-mode="accountCelebrate"] .eko-svg { animation: eko-account-celebrate 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.eko-visual[data-mode="accountCelebrate"] .eko-eye { transform: scale(1.08); transform-origin: center; }
+.eko-visual[data-mode="accountCelebrate"] .eko-smile { transform: scale(1.1, 1.16); transform-origin: center; }
+.eko-visual[data-mode="accountCelebrate"] .eko-cheek { opacity: 1; transform: scale(1.16); transform-origin: center; }
+.eko-visual[data-mode="accountCelebrate"] .eko-antenna { transform: rotate(8deg); transform-origin: 116px 22px; }
+@keyframes eko-hand-wave {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  32% { transform: translate(-2px, -9px) rotate(-16deg); }
+  54% { transform: translate(-4px, -13px) rotate(-23deg); }
+  76% { transform: translate(-2px, -6px) rotate(-10deg); }
+}
+@keyframes eko-quick-celebrate {
+  0% { transform: translateY(0) rotate(-1deg) scale(1); }
+  45% { transform: translateY(-7px) rotate(-2deg) scale(1.035); }
+  100% { transform: translateY(0) rotate(-1deg) scale(1); }
+}
+@keyframes eko-account-celebrate {
+  0% { transform: translateY(0) rotate(1deg) scale(1); }
+  45% { transform: translateY(-5px) rotate(-1deg) scale(1.025); }
+  100% { transform: translateY(0) rotate(1deg) scale(1); }
+}
+@keyframes eko-celebrate-pulse {
+  0% { transform: scaleY(0.45); opacity: 0.22; }
+  42% { transform: scaleY(1.22); opacity: 0.88; }
+  100% { transform: scaleY(0.62); opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eko-arm-wave,
+  .eko-visual[data-mode="quickCelebrate"] .eko-svg,
+  .eko-visual[data-mode="accountCelebrate"] .eko-svg { animation: none; }
+  .eko-visual[data-mode="quickCelebrate"] .eko-context-wave b { animation: none; opacity: 0.42; }
+}
