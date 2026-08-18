@@ -1,3 +1,9 @@
 export default function BrandMark({ size = 40, className = "" }) {
-  return <svg className={`brand-symbol-svg ${className}`} width={size} height={size} viewBox="0 0 48 48" role="img" aria-label="EchoLive"><path d="M10 8h22a6 6 0 0 1 6 6v9a6 6 0 0 1-6 6H22l-8 8v-8h-4a6 6 0 0 1-6-6v-9a6 6 0 0 1 6-6Z" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinejoin="round"/><path d="M13 18h5l3-5 4 10 3-5h6" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/><path d="M38 11.5c2.7 1.5 4.2 3.6 4.2 6.2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.65"/></svg>;
+  return <svg className={`brand-symbol-svg ${className}`} width={size} height={size} viewBox="0 0 48 48" role="img" aria-label="EchoLive">
+    <rect x="5" y="7" width="38" height="31" rx="14" fill="currentColor" />
+    <path d="M13 37.5 17.5 34H31" fill="currentColor" />
+    <ellipse cx="17.5" cy="21" rx="3.3" ry="4.7" fill="var(--echo-accent, #61dceb)" />
+    <ellipse cx="30.5" cy="21" rx="3.3" ry="4.7" fill="var(--echo-accent, #61dceb)" />
+    <path d="M21 27c2.1 2.5 3.9 2.5 6 0" fill="none" stroke="var(--echo-accent, #61dceb)" strokeWidth="2.2" strokeLinecap="round" />
+  </svg>;
 }

@@ -33,6 +33,7 @@ export default function HomePage({ onRoomCreated }) {
   const [isCreating, setIsCreating] = useState(false);
   const [authModalMode, setAuthModalMode] = useState(null);
   const [isEditingNickname, setIsEditingNickname] = useState(() => !nickname.trim());
+  const [nicknameBeforeEdit, setNicknameBeforeEdit] = useState(nickname);
   const [homeIntent, setHomeIntent] = useState("quick");
   const { toasts, notify } = useToasts();
   const { availability, logout, status, user } = useAuth();
@@ -43,6 +44,7 @@ export default function HomePage({ onRoomCreated }) {
     localStorage.removeItem("nickname");
     localStorage.removeItem("echolive.roomCode");
     setNickname(savedNickname);
+    setNicknameBeforeEdit(savedNickname);
     setIsEditingNickname(!savedNickname);
   }, []);
 
@@ -52,6 +54,7 @@ export default function HomePage({ onRoomCreated }) {
     localStorage.setItem(NICKNAME_KEY, accountNickname);
     localStorage.setItem(LAST_NICKNAME_KEY, accountNickname);
     setNickname(accountNickname);
+    setNicknameBeforeEdit(accountNickname);
     setIsEditingNickname(false);
   }, [nickname, status, user]);
 
@@ -66,8 +69,23 @@ export default function HomePage({ onRoomCreated }) {
     localStorage.setItem(NICKNAME_KEY, cleanNickname);
     localStorage.setItem(LAST_NICKNAME_KEY, cleanNickname);
     setNickname(cleanNickname);
+    setNicknameBeforeEdit(cleanNickname);
     setIsEditingNickname(false);
     return cleanNickname;
+  }
+
+  function startNicknameEdit() {
+    setNicknameBeforeEdit(nickname);
+    setIsEditingNickname(true);
+  }
+
+  function cancelNicknameEdit() {
+    setNickname(nicknameBeforeEdit);
+    setIsEditingNickname(Boolean(nicknameBeforeEdit.trim()) === false);
+  }
+
+  function confirmNicknameEdit() {
+    if (nickname.trim()) saveNickname();
   }
 
   function createRoom() {
@@ -189,13 +207,13 @@ export default function HomePage({ onRoomCreated }) {
               {nickname.trim() && !isEditingNickname ? <div className="home-identity-preview">
                 <span className="home-identity-icon"><Icon name="account" size={18} /></span>
                 <span className="home-identity-copy"><strong>Voce entra como</strong><b>{nickname}</b></span>
-                <button type="button" className="home-identity-edit" onClick={() => setIsEditingNickname(true)}>Editar</button>
+                <button type="button" className="home-identity-edit" onClick={startNicknameEdit}>Editar</button>
               </div> : <div className="home-identity-row">
                 <span className="home-identity-icon"><Icon name="account" size={18} /></span>
                 <span className="home-identity-copy"><strong>Voce vai entrar como</strong><small>Seu nome fica visivel na sala</small></span>
                 <label className="home-identity-input">
                   <span className="visually-hidden">Nickname</span>
-                  <input maxLength={24} autoFocus={isEditingNickname} aria-label="Nickname" placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} />
+                  <input maxLength={24} autoFocus={isEditingNickname} aria-label="Nickname" placeholder="Como voce quer aparecer?" value={nickname} onChange={(event) => setNickname(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); confirmNicknameEdit(); } if (event.key === "Escape") { event.preventDefault(); cancelNicknameEdit(); } }} />
                 </label>
               </div>}
 
@@ -239,7 +257,6 @@ export default function HomePage({ onRoomCreated }) {
             />
           </aside>
         </div>
-        <footer className="home-footer"><span>EchoLive</span><span>Salas temporarias para conversar agora.</span></footer>
       </div>
       <AuthModal open={Boolean(authModalMode)} initialMode={authModalMode || "login"} onClose={() => setAuthModalMode(null)} />
     </main>

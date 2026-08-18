@@ -45,7 +45,7 @@ export default function EkoGuide({ state = "normal", intent = "quick", onIntentC
         onClick={onCreateAccount}
       >
         <span className="eko-intent-icon"><Icon name="account" size={15} /></span>
-        <span><strong>Criar uma conta</strong><small>Seu perfil continua com voce.</small></span>
+        <span><strong>Criar uma conta <em className="eko-intent-arrow" aria-hidden="true">&rarr;</em></strong><small>Seu perfil continua com voce.</small></span>
       </button>
     </div>
   </section>;

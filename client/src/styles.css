@@ -4383,3 +4383,35 @@ video.screen-video {
   .home-entry-surface { padding: 22px 18px; }
   .home-identity-preview { grid-template-columns: auto minmax(0, 1fr) auto; }
 }
+
+/* Brand tokens and final identity details. */
+:root {
+  --echo-bg: #111318;
+  --echo-surface: #191c23;
+  --echo-surface-soft: #1e2129;
+  --echo-text: #f2f3f5;
+  --echo-muted: #a6acb8;
+  --echo-accent: #61dceb;
+  --echo-accent-hover: #84e4e9;
+}
+.home-topbar .home-account-bar { gap: 8px; }
+.home-topbar .home-account-button { min-height: 30px; padding-inline: 9px; font-size: 0.72rem; }
+.home-topbar .home-account-button.is-primary { background: rgba(97, 220, 235, 0.82); }
+.home-topbar .home-account-button.is-primary:hover { transform: translateY(-1px); background: var(--echo-accent-hover); box-shadow: 0 6px 16px rgba(97, 220, 235, 0.1); }
+.home-entry-surface { border-radius: 15px; background: linear-gradient(135deg, rgba(25, 28, 35, 0.8), rgba(20, 22, 28, 0.62)); }
+.home-entry-surface .home-tabs button::after { right: auto; left: 50%; width: 0; transform: translateX(-50%); transition: width 200ms ease, background-color 180ms ease; }
+.home-entry-surface .home-tabs button.is-selected::after { width: 26px; }
+.home-entry-surface .home-entry-cta { min-height: 43px; border-radius: 10px; }
+.home-identity-edit { transition: color 160ms ease, text-decoration-color 160ms ease; }
+.eko-intent-arrow { display: inline-block; margin-left: 2px; color: var(--echo-accent); font-size: 0.9em; font-style: normal; opacity: 0; transform: translateX(-3px); transition: opacity 160ms ease, transform 180ms ease; }
+.eko-intent:hover .eko-intent-arrow, .eko-intent:focus-visible .eko-intent-arrow, .eko-intent.is-active .eko-intent-arrow { opacity: 1; transform: translateX(0); }
+.eko-speaking-wave { gap: 2px; }
+.eko-speaking-wave b { opacity: 0.72; }
+.eko-context-wave b { animation-duration: 1.8s; }
+.home-recent-surface { margin-top: 18px; }
+
+@media (max-width: 720px) {
+  .home-workspace { padding-top: 22px; }
+  .home-hero { padding-bottom: 16px; }
+  .home-hero h1 { font-size: clamp(2.35rem, 11vw, 3.1rem); }
+}
