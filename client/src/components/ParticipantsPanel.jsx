@@ -1,7 +1,6 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import Icon from "./Icon.jsx";
 import BrandMark from "./BrandMark.jsx";
-import UserBadges from "./UserBadges.jsx";
 
 export default function ParticipantsPanel({ participants, onProfileClick, onParticipantClick }) {
   return (
@@ -21,7 +20,6 @@ export default function ParticipantsPanel({ participants, onProfileClick, onPart
               <strong title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</strong>
               {participant.isLocal && <span className="you-badge">Voce</span>}
               {participant.isGuest && <span className="visitor-badge">Visitante</span>}
-              <UserBadges badges={participant.badges} compact />
             </div>
             <div className="mini-status" aria-label="Status de midia">
               <span className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}><Icon name={participant.micEnabled === false ? "micOff" : "mic"} size={14} /></span>

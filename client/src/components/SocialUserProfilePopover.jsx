@@ -17,13 +17,19 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
     const node = popoverRef.current;
     if (!node || !anchorRect) return;
     const bounds = node.getBoundingClientRect();
+    const viewportPadding = 8;
     const gap = 10;
-    const maxTop = Math.max(8, window.innerHeight - bounds.height - 8);
+    const maxTop = Math.max(viewportPadding, window.innerHeight - bounds.height - viewportPadding);
     const preferredLeft = anchorRect.left - bounds.width - gap;
-    const left = preferredLeft >= 8 ? preferredLeft : Math.min(window.innerWidth - bounds.width - 8, anchorRect.right + gap);
+    const rightFallback = anchorRect.right + gap;
+    const left = preferredLeft >= viewportPadding
+      ? preferredLeft
+      : rightFallback + bounds.width <= window.innerWidth - viewportPadding
+        ? rightFallback
+        : Math.min(window.innerWidth - bounds.width - viewportPadding, Math.max(viewportPadding, preferredLeft));
     setPosition({
-      top: Math.min(maxTop, Math.max(8, anchorRect.top)),
-      left: Math.max(8, left),
+      top: Math.min(maxTop, Math.max(viewportPadding, anchorRect.top)),
+      left: Math.max(viewportPadding, left),
       ready: true
     });
   }, [anchorRect]);
@@ -35,11 +41,18 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose?.();
     }
+    function handleViewportChange() {
+      onClose?.();
+    }
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
     };
   }, [onClose]);
 
@@ -54,9 +67,9 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
         </div>
         <div className="social-user-popover-identity">
           <strong>{displayName}</strong>
-          <span>@{username}</span>
-          <div className="social-user-popover-meta"><span className="visitor-badge">{isGuest ? "Visitante" : "Online"}</span><UserBadges badges={participant.badges} compact /></div>
+          <div className="social-user-popover-username"><span>@{username}</span><UserBadges badges={participant.badges} compact /></div>
         </div>
+        <div className="social-user-popover-meta"><span className="visitor-badge">{isGuest ? "Visitante" : "Online"}</span></div>
         <p className="social-user-popover-presence"><i className="online-indicator" aria-hidden="true" />{participant.isSpeaking ? "Falando agora" : participant.isLocal ? "Voce" : "Online na sala"}</p>
         <div className="social-user-popover-actions">
           {!isGuest && <button type="button" className="primary-button" onClick={() => onMessage?.(participant)}><Icon name="message" size={15} />Mensagem</button>}
