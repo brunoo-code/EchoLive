@@ -11,7 +11,6 @@ import Sidebar from "../components/Sidebar.jsx";
 import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
 import RoomRail from "../components/RoomRail.jsx";
 import ProfilePopover from "../components/ProfilePopover.jsx";
-import BrandMark from "../components/BrandMark.jsx";
 import Icon from "../components/Icon.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
@@ -1611,8 +1610,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         <section className={`call-stage channel-view ${isVoiceChannel ? "" : "is-hidden"}`}>
         <header className="room-header">
           <div>
-            <p className="eyebrow">EchoLive / Chamada</p>
-            <p className="call-context-line">Estado da chamada</p>
+            <p className="eyebrow">Voz</p>
+            <p className="call-context-line">Geral</p>
           </div>
           <div className="room-meta">
             <span>Participantes: {currentParticipantCount}/{maxParticipants}</span>
@@ -1629,11 +1628,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         )}
 
         {!isInVoice ? (
-          <section className="empty-call-state">
-            <div className="empty-call-icon" aria-hidden="true"><Icon name="voice" size={22} /></div>
-            <strong>Voce saiu da voz.</strong>
-            <span>O chat continua disponivel enquanto voce estiver online na sala.</span>
-          </section>
+          <section className="voice-empty-surface" aria-label="Canal de voz vazio" />
         ) : callParticipants.length > 0 ? (
           viewMode === "focus" && focusedParticipant ? (
             <section className="focus-layout">
@@ -1648,14 +1643,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
             </section>
           )
         ) : (
-          <section className="empty-call-state">
-            <div className="empty-call-avatar">{localAvatarUrl ? <img src={localAvatarUrl} alt="" /> : isGuest ? <BrandMark size={38} variant={localAvatarVariant} /> : localDisplayName.slice(0, 1).toUpperCase()}</div>
-            <strong>A chamada esta pronta.</strong>
-            <span>Aguarde alguem entrar na chamada.</span>
-            <div className="voice-roster-inline">
-              {voiceParticipants.map((participant) => <span key={participant.socketId} title={participant.nickname}>{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.isGuest ? <BrandMark size={18} variant={participant.avatarVariant} /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>)}
-            </div>
-          </section>
+          <section className="voice-empty-surface" aria-label="Canal de voz vazio" />
         )}
 
         </section>

@@ -5314,7 +5314,7 @@ video.screen-video {
 /* Etapa 6: quiet desktop shell, compact channels and fixed work surfaces. */
 .room-page {
   --rail-width: 54px;
-  --sidebar-width: 230px;
+  --sidebar-width: 256px;
   --members-width: 208px;
   --room-header-height: 48px;
   --user-panel-height: 58px;
@@ -5909,8 +5909,194 @@ video.screen-video {
 }
 
 @media (max-width: 1180px) {
-  .room-page { grid-template-columns: var(--rail-width, 54px) var(--sidebar-width, 230px) minmax(0,1fr); }
+  .room-page { grid-template-columns: var(--rail-width, 54px) var(--sidebar-width, 256px) minmax(0,1fr); }
   .room-page .participants-panel { display: none; }
+}
+
+/* Room/chat 6.8: let the text channel use its width and keep the composer
+   controls grouped as one predictable toolbar. */
+.room-page .voice-empty-surface {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+}
+
+.room-page .message-list {
+  padding: 14px clamp(18px, 3vw, 38px);
+}
+
+.room-page .chat-message {
+  max-width: none;
+  margin-inline: 0;
+  padding: 8px 6px;
+}
+
+.room-page .chat-message.is-grouped {
+  padding-top: 2px;
+}
+
+.room-page .message-body > p {
+  max-width: none;
+}
+
+.room-page .empty-chat {
+  align-content: start;
+  min-height: auto;
+  gap: 4px;
+  padding: 18px 6px;
+}
+
+.room-page .empty-chat-icon {
+  width: 28px;
+  height: 28px;
+  font-size: .9rem;
+}
+
+.room-page .empty-chat strong {
+  font-size: .82rem;
+}
+
+.room-page .empty-chat span {
+  font-size: .7rem;
+}
+
+.room-page .chat-composer {
+  position: relative;
+  padding: 7px clamp(14px, 3vw, 38px) 12px;
+}
+
+.room-page .composer-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  gap: 5px;
+}
+
+.room-page .composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.room-page .composer-icon-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--room-muted);
+  background: transparent;
+  font-size: .92rem;
+  line-height: 1;
+}
+
+.room-page .composer-icon-button:hover:not(:disabled),
+.room-page .composer-icon-button:focus-visible {
+  color: var(--room-text);
+  border-color: rgba(103, 212, 229, .18);
+  background: rgba(103, 212, 229, .08);
+}
+
+.room-page .composer-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--room-line);
+  border-radius: 9px;
+  color: var(--room-text);
+  background: #171b22;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .34);
+}
+
+.room-page .composer-popover > strong {
+  color: var(--room-text);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.room-page .attach-menu {
+  left: 0;
+  width: 214px;
+}
+
+.room-page .attach-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--room-text);
+  background: transparent;
+  font-size: .72rem;
+  text-align: left;
+}
+
+.room-page .attach-menu button:hover,
+.room-page .attach-menu button:focus-visible {
+  background: rgba(103, 212, 229, .1);
+}
+
+.room-page .emoji-picker {
+  right: 64px;
+  width: 224px;
+}
+
+.room-page .emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.room-page .emoji-grid button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 1.02rem;
+}
+
+.room-page .emoji-grid button:hover,
+.room-page .emoji-grid button:focus-visible {
+  background: rgba(103, 212, 229, .12);
+}
+
+.room-page .sticker-picker {
+  right: 0;
+  width: 232px;
+}
+
+.room-page .sticker-picker span {
+  color: var(--room-muted);
+  font-size: .7rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .room-page .composer-popover {
+    max-width: calc(100vw - 24px);
+  }
+
+  .room-page .attach-menu {
+    left: 0;
+  }
+
+  .room-page .emoji-picker,
+  .room-page .sticker-picker {
+    right: 0;
+  }
 }
 
 @media (max-width: 900px) {

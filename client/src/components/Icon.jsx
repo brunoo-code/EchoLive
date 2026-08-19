@@ -34,7 +34,10 @@ const iconPaths = {
   link: <><path d="M6.5 9.5 5 11a2.8 2.8 0 0 1-4-4l2-2a2.8 2.8 0 0 1 4 0" /><path d="m9.5 6.5 1.5-1.5a2.8 2.8 0 0 1 4 4l-2 2a2.8 2.8 0 0 1-4 0" /><path d="m5.5 8.5 5-5" /></>,
   pulse: <path d="M2 8h3l1.5-4L9 12l1.5-4H14" />,
   search: <><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3 3" /></>,
-  send: <path d="m2 2 12 6-12 6 2.4-5.2L10 8 4.4 7.2 2 2Z" />
+  send: <path d="m2 2 12 6-12 6 2.4-5.2L10 8 4.4 7.2 2 2Z" />,
+  image: <><rect x="2" y="3" width="12" height="10" rx="1.5" /><circle cx="5.5" cy="6" r="1" /><path d="m3 11 3-3 2.2 2 1.5-1.5L13 12" /></>,
+  file: <><path d="M4 2.5h5l3 3V13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1Z" /><path d="M9 2.5v3h3M5.5 9h5M5.5 11h4" /></>,
+  sticker: <><path d="M3 3h8a2 2 0 0 1 2 2v5a3 3 0 0 1-3 3H5a2 2 0 0 1-2-2V3Z" /><path d="M9 13v-2a2 2 0 0 1 2-2h2M6 6.5h.1M9.5 6.5h.1M6.5 9c.8.6 1.7.6 2.5 0" /></>
 };
 
 export default function Icon({ name, size = 16, strokeWidth = 1.8, className = "", title }) {

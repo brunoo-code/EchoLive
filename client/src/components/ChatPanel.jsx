@@ -17,6 +17,10 @@ const ACCEPTED_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 ]);
+const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
+const FILE_ACCEPT = "application/pdf,application/zip,audio/mpeg,audio/wav,audio/ogg,text/plain,.docx,.xlsx,.pptx";
+const ALL_ACCEPT = `${MEDIA_ACCEPT},${FILE_ACCEPT}`;
+const COMMON_EMOJIS = ["😀", "😊", "😂", "😍", "😎", "🤔", "😮", "😢", "😡", "👏", "🙌", "🔥", "✨", "🎉", "❤️", "👍", "👀", "💬"];
 
 function formatTime(value) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -38,7 +42,12 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
   const [selectedFile, setSelectedFile] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
+  const [fileAccept, setFileAccept] = useState(ALL_ACCEPT);
   const fileInputRef = useRef(null);
+  const messageInputRef = useRef(null);
   const pendingLocalMessagesRef = useRef(0);
   const typingTimeoutRef = useRef(null);
   const isTypingRef = useRef(false);
@@ -143,6 +152,29 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
     const file = event.target.files?.[0] || null;
     setSelectedFile(validateFile(file) ? file : null);
     event.target.value = "";
+  }
+
+  function openFilePicker(accept) {
+    setFileAccept(accept);
+    setIsAttachMenuOpen(false);
+    setIsEmojiPickerOpen(false);
+    setIsStickerPickerOpen(false);
+    window.requestAnimationFrame(() => fileInputRef.current?.click());
+  }
+
+  function insertEmoji(emoji) {
+    const input = messageInputRef.current;
+    const start = input?.selectionStart ?? draft.length;
+    const end = input?.selectionEnd ?? draft.length;
+    const nextDraft = `${draft.slice(0, start)}${emoji}${draft.slice(end)}`.slice(0, 4000);
+    setDraft(nextDraft);
+    setIsEmojiPickerOpen(false);
+    setIsStickerPickerOpen(false);
+    window.requestAnimationFrame(() => {
+      input?.focus();
+      const nextCursor = Math.min(start + emoji.length, 4000);
+      input?.setSelectionRange(nextCursor, nextCursor);
+    });
   }
 
   async function uploadFile(file) {
@@ -272,17 +304,22 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           </div>
         )}
         <div className="composer-row">
-          <button type="button" className="attach-button" onClick={() => fileInputRef.current?.click()} disabled={isSending} title="Anexar arquivo" aria-label="Anexar arquivo">
+          <button type="button" className="attach-button" onClick={() => { setIsAttachMenuOpen((current) => !current); setIsEmojiPickerOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Adicionar anexo" aria-label="Adicionar anexo" aria-haspopup="menu" aria-expanded={isAttachMenuOpen}>
             <Icon name="plus" size={17} />
           </button>
+          {isAttachMenuOpen && <div className="composer-popover attach-menu" role="menu" aria-label="Adicionar anexo">
+            <button type="button" role="menuitem" onClick={() => openFilePicker(MEDIA_ACCEPT)}><Icon name="image" size={15} /><span>Enviar imagem ou video</span></button>
+            <button type="button" role="menuitem" onClick={() => openFilePicker(FILE_ACCEPT)}><Icon name="file" size={15} /><span>Enviar arquivo</span></button>
+          </div>}
           <input
             ref={fileInputRef}
             className="visually-hidden"
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,application/pdf,application/zip,audio/mpeg,audio/wav,audio/ogg,text/plain,.docx,.xlsx,.pptx"
+            accept={fileAccept}
             onChange={handleFileChange}
           />
           <input
+            ref={messageInputRef}
             className="message-input"
             maxLength={4000}
             placeholder="Conversar em #geral"
@@ -296,9 +333,21 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
             aria-label="Mensagem para o canal geral"
           />
           {draft.length >= 3400 && <span className="message-counter">{draft.length} / 4000</span>}
-          <button className="send-button" type="submit" disabled={isSending}>
-            {isSending ? "Enviando" : "Enviar"}
-          </button>
+          <div className="composer-actions">
+            <button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}>😊</button>
+            <button type="button" className="composer-icon-button" onClick={() => { setIsStickerPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsEmojiPickerOpen(false); }} disabled={isSending} title="Abrir figurinhas do Eko" aria-label="Abrir figurinhas do Eko" aria-expanded={isStickerPickerOpen}><Icon name="sticker" size={16} /></button>
+            <button className="send-button" type="submit" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}>
+              {isSending ? "Enviando" : "Enviar"}
+            </button>
+          </div>
+          {isEmojiPickerOpen && <div className="composer-popover emoji-picker" role="dialog" aria-label="Escolher emoji">
+            <strong>Emojis</strong>
+            <div className="emoji-grid">{COMMON_EMOJIS.map((emoji) => <button type="button" key={emoji} onClick={() => insertEmoji(emoji)} aria-label={`Inserir ${emoji}`}>{emoji}</button>)}</div>
+          </div>}
+          {isStickerPickerOpen && <div className="composer-popover sticker-picker" role="dialog" aria-label="Figurinhas do Eko">
+            <strong>Figurinhas do Eko</strong>
+            <span>As figurinhas oficiais serão adicionadas aqui.</span>
+          </div>}
         </div>
       </form>
     </section>
