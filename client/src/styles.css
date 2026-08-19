@@ -5934,3 +5934,221 @@ video.screen-video {
   .dm-content .dm-error { margin-inline: 14px; }
   .room-page .empty-call-actions .screen-share-control .control-button { min-width: 0; padding-inline: 10px; }
 }
+
+/* Final visual pass for the fixed voice footer. Keep the three layers as one
+   compact composition while preserving the existing control behavior. */
+.room-page .sidebar-lower-region {
+  padding: 6px 2px 0;
+  border-top-color: rgba(255, 255, 255, .08);
+}
+
+.room-page .connected-voice {
+  padding: 4px 4px 6px;
+  border-bottom-color: rgba(255, 255, 255, .08);
+}
+
+.room-page .connected-voice-heading {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto 28px;
+  align-items: center;
+  gap: 7px;
+  min-height: 35px;
+}
+
+.room-page .voice-state-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.room-page .connected-voice-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  align-content: center;
+}
+
+.room-page .connected-voice-heading strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--room-text);
+  font-size: .78rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-page .connected-voice-channel {
+  min-width: 0;
+  overflow: hidden;
+  font-size: .63rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-page .connection-quality {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  white-space: nowrap;
+  font-size: .6rem;
+  line-height: 1;
+}
+
+.room-page .connected-voice-action {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-radius: 7px;
+}
+
+.room-page .sidebar-call-toolbar {
+  gap: 5px;
+  padding: 6px 4px;
+  border-bottom-color: rgba(255, 255, 255, .08);
+}
+
+.room-page .sidebar-call-button,
+.room-page .sidebar-call-toolbar .call-toolbar-button {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 6px;
+  border-color: rgba(255, 255, 255, .1);
+  border-radius: 7px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.room-page .sidebar-call-button {
+  font-size: .62rem;
+}
+
+.room-page .sidebar-call-toolbar .call-toolbar-button {
+  font-size: .6rem;
+}
+
+.room-page .sidebar-call-button > span,
+.room-page .sidebar-call-toolbar .call-toolbar-button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-page .sidebar-call-button .camera-control-icon,
+.room-page .sidebar-call-toolbar .call-toolbar-button .control-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+.room-page .sidebar-call-button:hover,
+.room-page .sidebar-call-button:focus-visible,
+.room-page .sidebar-call-toolbar .call-toolbar-button:hover,
+.room-page .sidebar-call-toolbar .call-toolbar-button:focus-visible {
+  border-color: rgba(103, 212, 229, .36);
+}
+
+.room-page .sidebar-call-toolbar .screen-options-control {
+  display: flex;
+  min-width: 0;
+}
+
+.room-page .sidebar-call-toolbar .screen-options-control .call-toolbar-button {
+  flex: 1 1 auto;
+}
+
+.room-page .sidebar-user-footer {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 6px 3px 8px;
+}
+
+.room-page .sidebar-user-summary {
+  min-width: 0;
+  min-height: 42px;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: 7px;
+}
+
+.room-page .sidebar-user-avatar {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
+
+.room-page .sidebar-user-summary > div:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  align-content: center;
+}
+
+.room-page .sidebar-user-summary strong,
+.room-page .sidebar-user-summary > div:last-child > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-page .sidebar-user-summary strong {
+  font-size: .77rem;
+  line-height: 1.1;
+}
+
+.room-page .sidebar-user-summary > div:last-child > span {
+  margin-top: 0;
+  font-size: .61rem;
+  line-height: 1.1;
+}
+
+.room-page .sidebar-user-controls {
+  display: grid;
+  grid-template-columns: repeat(2, 30px);
+  gap: 3px;
+}
+
+.room-page .sidebar-user-controls button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+}
+
+.room-page .sidebar-user-controls button:hover,
+.room-page .sidebar-user-controls button:focus-visible {
+  border-color: rgba(255, 255, 255, .1);
+  background: var(--room-surface-hover);
+}
+
+.room-page .sidebar-user-controls .control-glyph.is-muted {
+  color: var(--echo-danger);
+  border-color: transparent;
+  background: transparent;
+}
+
+@media (max-width: 900px) {
+  .room-page .connected-voice-heading {
+    grid-template-columns: 28px minmax(0, 1fr) auto 28px;
+  }
+
+  .room-page .sidebar-call-button,
+  .room-page .sidebar-call-toolbar .call-toolbar-button {
+    padding-inline: 0;
+  }
+}
