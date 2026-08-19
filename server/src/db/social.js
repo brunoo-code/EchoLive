@@ -291,9 +291,16 @@ export async function ensureAccountSocialBootstrap(userId) {
     "UPDATE dm_participants SET hidden_at = NULL WHERE conversation_id = $1 AND user_id = $2",
     [conversation.id, userId]
   );
-  await grantBetaBadge(userId);
+  await grantBetaBadge(userId).catch((error) => {
+    console.error("[OFFICIAL:badge] bootstrap skipped:", error.message);
+  });
   const userResult = await query("SELECT display_name FROM users WHERE id = $1 LIMIT 1", [userId]);
-  await seedOfficialMessages(conversation.id, userResult.rows[0]?.display_name);
+  await seedOfficialMessages(conversation.id, userResult.rows[0]?.display_name).catch((error) => {
+    console.error("[OFFICIAL:seed] bootstrap skipped:", error.message);
+  });
+  if (process.env.NODE_ENV !== "production") {
+    console.debug("[OFFICIAL:ensure]", { userId, conversationId: conversation.id, status: "ready" });
+  }
   return conversation;
 }
 
@@ -370,7 +377,7 @@ export async function listConversations(userId) {
     [userId]
   );
 
-  return result.rows.map((row) => ({
+  const conversations = result.rows.map((row) => ({
     id: row.id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -392,6 +399,14 @@ export async function listConversations(userId) {
       attachment: row.last_message_attachment || null
     } : null
   }));
+  if (process.env.NODE_ENV !== "production") {
+    console.debug("[OFFICIAL:list]", {
+      userId,
+      conversationCount: conversations.length,
+      officialFound: conversations.some((conversation) => conversation.user?.isOfficial === true)
+    });
+  }
+  return conversations;
 }
 
 export async function listMessages(conversationId, userId, { before = "", limit = 50 } = {}) {

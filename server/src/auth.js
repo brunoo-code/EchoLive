@@ -149,7 +149,11 @@ export function registerAuthRoutes(app) {
       const bcrypt = await getBcrypt();
       const passwordHash = await bcrypt.hash(validation.value.password, 12);
       const user = await createUser({ ...validation.value, passwordHash });
-      await ensureAccountSocialBootstrap(user.id).catch((error) => {
+      await ensureAccountSocialBootstrap(user.id).then((conversation) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.debug("[OFFICIAL:ensure]", { userId: user.id, conversationId: conversation.id, source: "signup" });
+        }
+      }).catch((error) => {
         console.error("[SOCIAL] account bootstrap failed:", error.message);
       });
       const responseUser = await findUserById(user.id).catch(() => user);

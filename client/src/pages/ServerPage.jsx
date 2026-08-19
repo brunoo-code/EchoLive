@@ -12,13 +12,18 @@ import { SERVER_URL } from "../utils/webrtc.js";
 async function request(path, options = {}) {
   const response = await fetch(`${SERVER_URL}${path}`, { ...options, credentials: "include", headers: { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) } });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Nao foi possivel acessar o servidor.");
+  if (!response.ok) {
+    const error = new Error(data.error || "Nao foi possivel acessar o servidor.");
+    error.code = data.code || "SERVER_ERROR";
+    error.status = response.status;
+    throw error;
+  }
   return data;
 }
 
 export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial, onNavigateServer }) {
   const { user, isAuthenticated } = useAuth();
-  const { servers, createServer, refreshServers } = useServers();
+  const { servers, createServer, refreshServers, status: serversStatus } = useServers();
   const [server, setServer] = useState(null);
   const [activeChannelId, setActiveChannelId] = useState("");
   const [messages, setMessages] = useState([]);
@@ -28,6 +33,11 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [profileUser, setProfileUser] = useState(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [serverLoading, setServerLoading] = useState(Boolean(serverId));
+  const [serverNotFound, setServerNotFound] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createError, setCreateError] = useState("");
   const socketRef = useRef(null);
 
   const activeChannel = useMemo(() => server?.channels?.find((channel) => channel.id === activeChannelId) || server?.channels?.find((channel) => channel.type === "text") || null, [activeChannelId, server]);
@@ -35,16 +45,17 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const voiceChannels = server?.channels?.filter((channel) => channel.type === "voice") || [];
 
   useEffect(() => {
-    if (isAuthenticated) refreshServers().catch(() => {});
-  }, [isAuthenticated, refreshServers]);
-
-  useEffect(() => {
     if (!isAuthenticated || !serverId) {
       setServer(null);
+      setServerLoading(false);
+      setServerNotFound(false);
       return;
     }
     let active = true;
-    Promise.all([request(`/api/servers/${serverId}`), request(`/api/servers/${serverId}/members`)]).then(([serverData, memberData]) => { if (active) { setServer(serverData.server); setMembers(memberData.members || []); } }).catch((requestError) => { if (active) setError(requestError.message); });
+    setServerLoading(true);
+    setServerNotFound(false);
+    setError("");
+    Promise.all([request(`/api/servers/${serverId}`), request(`/api/servers/${serverId}/members`)]).then(([serverData, memberData]) => { if (active) { setServer(serverData.server); setMembers(memberData.members || []); } }).catch((requestError) => { if (active) { setServer(null); setServerNotFound(requestError.status === 404); setError(requestError.message); } }).finally(() => { if (active) setServerLoading(false); });
     return () => { active = false; };
   }, [isAuthenticated, serverId]);
 
@@ -80,15 +91,41 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     if (!serverId && servers[0]) onNavigateServer?.(servers[0].id);
   }, [onNavigateServer, serverId, servers]);
 
-  async function handleCreateServer() {
-    const name = window.prompt("Nome do servidor");
-    if (!name) return;
+  function handleCreateServer() {
+    setCreateName("");
+    setCreateError("");
+    setCreateOpen(true);
+  }
+
+  async function submitCreateServer(event) {
+    event.preventDefault();
+    const name = createName.trim();
+    if (name.length < 2 || name.length > 60) {
+      setCreateError("Use um nome entre 2 e 60 caracteres.");
+      return;
+    }
     setCreating(true);
+    setCreateError("");
     try {
       const created = await createServer({ name });
+      setCreateOpen(false);
+      setCreateName("");
       onNavigateServer?.(created.id);
-    } catch (requestError) { setError(requestError.message); } finally { setCreating(false); }
+    } catch (requestError) {
+      setCreateError(requestError.message);
+    } finally {
+      setCreating(false);
+    }
   }
+
+  useEffect(() => {
+    if (!createOpen) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !creating) setCreateOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [createOpen, creating]);
 
   function sendMessage(event) {
     event.preventDefault();
@@ -118,22 +155,28 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
 
   if (!isAuthenticated) return <main className="page server-page server-page-gate"><section className="social-guest-gate"><Icon name="lock" size={24} /><h1>Servidores ficam com a sua conta.</h1><p>Entre ou crie uma conta para manter seus servidores, canais e mensagens por aqui.</p><button type="button" className="primary-button" onClick={onNavigateHome}>Voltar para a Home</button></section></main>;
 
-  return <main className="page room-page server-page">
+  const showServerLoading = Boolean(serverId && serverLoading);
+  const showServerListLoading = !serverId && (serversStatus === "idle" || serversStatus === "loading");
+  const showServerListError = !serverId && serversStatus === "error";
+  const showServerEmpty = !serverId && serversStatus === "ready" && !servers.length;
+
+  return <main className="page app-shell room-page server-page">
     <RoomRail roomCode="" roomName="" recentRooms={[]} onHome={onNavigateHome} onSocial={onNavigateSocial} onOpenSwitcher={handleCreateServer} servers={servers} activeServerId={serverId} onOpenServer={onNavigateServer} onCreateServer={handleCreateServer} />
     <aside className="app-sidebar server-sidebar">
       <header className="server-sidebar-header"><div><span className="section-label">SERVIDOR</span><strong>{server?.name || "Seus servidores"}</strong></div><button type="button" className="icon-button" onClick={handleCreateServer} title="Criar servidor" aria-label="Criar servidor" disabled={creating}><Icon name="plus" size={16} /></button></header>
-      {server ? <div className="server-channel-list"><ChannelGroup title="Canais de texto" channels={textChannels} activeChannelId={activeChannel?.id} onSelect={setActiveChannelId} /><ChannelGroup title="Canais de voz" channels={voiceChannels} activeChannelId={activeChannel?.id} onSelect={(id) => setActiveChannelId(id)} /></div> : <div className="server-empty"><Icon name="server" size={24} /><strong>Crie seu primeiro servidor</strong><span>Um espaço persistente para suas conversas.</span><button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button></div>}
+      {server ? <div className="server-channel-list"><ChannelGroup title="Canais de texto" channels={textChannels} activeChannelId={activeChannel?.id} onSelect={setActiveChannelId} /><ChannelGroup title="Canais de voz" channels={voiceChannels} activeChannelId={activeChannel?.id} disabled onUnavailable={() => setError("A voz de servidores será conectada em uma próxima etapa.")} /></div> : showServerLoading || showServerListLoading ? <div className="server-empty server-loading-state"><span className="loading-sheen" /><strong>Carregando servidor...</strong><span>Buscando canais e participantes.</span></div> : <div className="server-empty"><Icon name={serverNotFound || showServerListError ? "alert" : "server"} size={24} /><strong>{serverNotFound ? "Servidor não encontrado" : showServerListError ? "Não foi possível carregar" : "Crie seu primeiro servidor"}</strong><span>{serverNotFound ? "Esse servidor não está disponível para sua conta." : showServerListError ? "Tente novamente para carregar seus servidores." : "Um espaço persistente para suas conversas."}</span>{showServerListError ? <button type="button" className="secondary-button" onClick={() => refreshServers().catch(() => {})}>Tentar novamente</button> : <button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button>}</div>}
       <div className="server-sidebar-footer"><UserAvatar user={user} size={30} /><span><strong>{user.displayName || user.username}</strong><small>@{user.username}</small></span></div>
     </aside>
     <section className="central-stage server-main">
-      <header className="server-main-header"><div><span className="channel-kind"><Icon name="hash" size={17} /></span><strong>{activeChannel?.name || "Selecione um canal"}</strong></div><span>{server ? `${server.memberCount} membro${server.memberCount === 1 ? "" : "s"}` : ""}</span></header>
+      <header className="server-main-header"><div><span className="channel-kind"><Icon name={activeChannel?.type === "voice" ? "voice" : "hash"} size={17} /></span><strong>{activeChannel?.name || (showServerEmpty ? "Seus servidores" : "Selecione um canal")}</strong></div><span>{server ? `${server.memberCount} membro${server.memberCount === 1 ? "" : "s"}` : ""}</span></header>
       {error && <div className="server-error" role="alert">{error}<button type="button" className="icon-button" onClick={() => setError("")} aria-label="Fechar aviso"><Icon name="close" size={14} /></button></div>}
-      <div className="server-message-list">{messages.length ? messages.map((message) => <article className="server-message" key={message.id}><button type="button" className="server-message-avatar" onClick={() => setProfileUser(message.sender)} aria-label={`Ver perfil de ${message.sender.displayName || message.sender.username}`}><UserAvatar user={message.sender} size={34} /></button><div><div className="server-message-meta"><strong>{message.sender.displayName || message.sender.username}</strong><small>{new Date(message.createdAt).toLocaleString("pt-BR")}</small><button type="button" className="server-reply-button" onClick={() => setReplyingTo(message)} title="Responder" aria-label="Responder"><Icon name="reply" size={13} /></button></div>{message.replyToMessageId && <small className="server-reply-ref">Respondendo a uma mensagem</small>}{message.deletedAt ? <p className="server-message-deleted">Mensagem removida.</p> : <p>{message.content}</p>}{!message.deletedAt && <div className="server-message-reactions">{(message.reactions || []).map((reaction) => <button type="button" key={reaction.emoji} className={reaction.reacted ? "is-active" : ""} onClick={() => toggleReaction(message.id, reaction.emoji)}>{reaction.emoji} <small>{reaction.count}</small></button>)}<button type="button" onClick={() => toggleReaction(message.id, "👍")} title="Adicionar reação" aria-label="Adicionar reação">+</button></div>}</div></article>) : <div className="server-welcome"><Icon name="hash" size={30} /><h2>Comece em #{activeChannel?.name || "geral"}</h2><p>Este é o início do histórico persistente deste canal.</p></div>}</div>
+      <div className="server-message-list">{showServerLoading || showServerListLoading ? <ServerLoadingState /> : serverNotFound ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Servidor indisponível</h2><p>Verifique o endereço ou volte para a lista de servidores.</p><button type="button" className="secondary-button" onClick={() => onNavigateServer?.("")}>Voltar aos servidores</button></div> : showServerListError ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Não foi possível carregar</h2><p>O shell está pronto, mas a lista de servidores não respondeu.</p><button type="button" className="secondary-button" onClick={() => refreshServers().catch(() => {})}>Tentar novamente</button></div> : showServerEmpty ? <div className="server-welcome server-state-message"><Icon name="server" size={30} /><h2>Crie seu primeiro servidor</h2><p>Um espaço persistente para conversar com as pessoas que importam.</p><button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button></div> : messages.length ? messages.map((message) => <article className="server-message" key={message.id}><button type="button" className="server-message-avatar" onClick={() => setProfileUser(message.sender)} aria-label={`Ver perfil de ${message.sender.displayName || message.sender.username}`}><UserAvatar user={message.sender} size={34} /></button><div><div className="server-message-meta"><strong>{message.sender.displayName || message.sender.username}</strong><small>{new Date(message.createdAt).toLocaleString("pt-BR")}</small><button type="button" className="server-reply-button" onClick={() => setReplyingTo(message)} title="Responder" aria-label="Responder"><Icon name="reply" size={13} /></button></div>{message.replyToMessageId && <small className="server-reply-ref">Respondendo a uma mensagem</small>}{message.deletedAt ? <p className="server-message-deleted">Mensagem removida.</p> : <p>{message.content}</p>}{!message.deletedAt && <div className="server-message-reactions">{(message.reactions || []).map((reaction) => <button type="button" key={reaction.emoji} className={reaction.reacted ? "is-active" : ""} onClick={() => toggleReaction(message.id, reaction.emoji)}>{reaction.emoji} <small>{reaction.count}</small></button>)}<button type="button" onClick={() => toggleReaction(message.id, "👍")} title="Adicionar reação" aria-label="Adicionar reação">+</button></div>}</div></article>) : <div className="server-welcome"><Icon name="hash" size={30} /><h2>Comece em #{activeChannel?.name || "geral"}</h2><p>Este é o início do histórico persistente deste canal.</p></div>}</div>
       {activeChannel?.type === "text" && <form className="server-composer" onSubmit={sendMessage}>{replyingTo && <div className="server-replying"><span>Respondendo a {replyingTo.sender.displayName || replyingTo.sender.username}</span><button type="button" className="icon-button" onClick={() => setReplyingTo(null)} aria-label="Cancelar resposta"><Icon name="close" size={13} /></button></div>}<button type="button" className="icon-button" title="Anexos indisponíveis nesta primeira camada" aria-label="Anexos indisponíveis"><Icon name="plus" size={18} /></button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Conversar em #${activeChannel.name}`} maxLength={4000} /><button type="submit" className="icon-button is-send" title="Enviar mensagem" aria-label="Enviar mensagem"><Icon name="send" size={16} /></button></form>}
     </section>
-    <aside className="participants-panel server-members-panel"><div className="server-members-heading"><span>MEMBROS</span><strong>{server?.memberCount || 0}</strong></div><div className="server-members-list">{members.map((member) => <button type="button" className="server-member-row" key={member.id} onClick={() => setProfileUser(member)}><UserAvatar user={member} size={28} /><span><strong>{member.displayName || member.username}</strong><small>{member.role === "owner" ? "Proprietário" : member.role === "admin" ? "Administrador" : "Membro"}</small><UserBadges user={member} badges={member.badges} compact /></span></button>)}{!members.length && <div className="server-members-note"><Icon name="account" size={18} /><p>Nenhum membro disponível.</p></div>}</div></aside>
+    <aside className="participants-panel server-members-panel"><div className="server-members-heading"><span>MEMBROS</span><strong>{server?.memberCount || 0}</strong></div><div className="server-members-list">{showServerLoading ? <ServerMembersLoadingState /> : members.map((member) => <button type="button" className="server-member-row" key={member.id} onClick={() => setProfileUser(member)}><UserAvatar user={member} size={28} /><span><strong>{member.displayName || member.username}</strong><small>{member.role === "owner" ? "Proprietário" : member.role === "admin" ? "Administrador" : "Membro"}</small><UserBadges user={member} badges={member.badges} compact /></span></button>)}{!showServerLoading && !members.length && <div className="server-members-note"><Icon name="account" size={18} /><p>Nenhum membro disponível.</p></div>}</div></aside>
     {profileUser && <SocialUserProfileModal userId={profileUser.id} initialUser={{ ...profileUser, status: "online" }} onClose={() => setProfileUser(null)} />}
     {error && null}
+    {createOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-create-title"><header><div><span className="section-label">NOVO ESPAÇO</span><h2 id="server-create-title">Criar servidor</h2></div><button type="button" className="icon-button" onClick={() => setCreateOpen(false)} disabled={creating} aria-label="Fechar"><Icon name="close" size={16} /></button></header><p>Crie um espaço persistente para reunir suas conversas.</p><form id="server-create-form" onSubmit={submitCreateServer}><label className="field-label" htmlFor="server-create-name">Nome do servidor</label><input id="server-create-name" className="text-input" value={createName} onChange={(event) => { setCreateName(event.target.value); if (createError) setCreateError(""); }} placeholder="Ex.: Estudos" minLength={2} maxLength={60} autoFocus aria-invalid={Boolean(createError)} />{createError && <small className="field-error">{createError}</small>}<div className="server-create-note"><Icon name="info" size={15} /><span>A imagem do servidor poderá ser adicionada quando estiver persistida na conta.</span></div></form><footer><button type="button" className="secondary-button" onClick={() => setCreateOpen(false)} disabled={creating}>Cancelar</button><button type="submit" form="server-create-form" className="primary-button" disabled={creating || createName.trim().length < 2}>{creating ? "Criando..." : "Criar servidor"}</button></footer></section></div>}
   </main>;
 }
 
@@ -144,6 +187,14 @@ function updateReactionList(reactions = [], emoji, active) {
   return reactions.map((reaction) => reaction.emoji === emoji ? { ...reaction, count: reaction.count - 1, reacted: false } : reaction);
 }
 
-function ChannelGroup({ title, channels, activeChannelId, onSelect }) {
-  return <section className="server-channel-group"><div className="server-channel-label"><span>{title}</span><Icon name="chevron" size={13} /></div>{channels.map((channel) => <button type="button" className={`server-channel-row ${channel.id === activeChannelId ? "is-active" : ""}`} key={channel.id} onClick={() => onSelect(channel.id)}><Icon name={channel.type === "voice" ? "voice" : "hash"} size={15} /><span>{channel.name}</span></button>)}</section>;
+function ChannelGroup({ title, channels, activeChannelId, onSelect, disabled = false, onUnavailable }) {
+  return <section className="server-channel-group"><div className="server-channel-label"><span>{title}</span><Icon name="chevron" size={13} /></div>{channels.map((channel) => <button type="button" className={`server-channel-row ${channel.id === activeChannelId ? "is-active" : ""} ${disabled ? "is-disabled" : ""}`} key={channel.id} onClick={() => disabled ? onUnavailable?.() : onSelect(channel.id)} disabled={false} title={disabled ? "Voz de servidores estará disponível em uma próxima etapa" : undefined}><Icon name={channel.type === "voice" ? "voice" : "hash"} size={15} /><span>{channel.name}</span>{disabled && <small>em breve</small>}</button>)}</section>;
+}
+
+function ServerLoadingState() {
+  return <div className="server-state-message server-loading-state"><span className="loading-sheen" /><h2>Carregando servidor...</h2><p>Buscando canais, mensagens e participantes.</p></div>;
+}
+
+function ServerMembersLoadingState() {
+  return <div className="server-members-loading"><span /><span /><span /></div>;
 }

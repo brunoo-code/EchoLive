@@ -24,17 +24,24 @@ export function ServerProvider({ children }) {
   const { isAuthenticated } = useAuth();
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState("idle");
 
   const refreshServers = useCallback(async () => {
     if (!isAuthenticated) {
       setServers([]);
+      setStatus("guest");
       return [];
     }
     setLoading(true);
+    setStatus("loading");
     try {
       const data = await request("/api/servers");
       setServers(Array.isArray(data.servers) ? data.servers : []);
+      setStatus("ready");
       return data.servers || [];
+    } catch (error) {
+      setStatus("error");
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -48,7 +55,7 @@ export function ServerProvider({ children }) {
     return data.server;
   }, []);
 
-  const value = useMemo(() => ({ createServer, loading, refreshServers, servers }), [createServer, loading, refreshServers, servers]);
+  const value = useMemo(() => ({ createServer, loading, refreshServers, servers, status }), [createServer, loading, refreshServers, servers, status]);
   return <ServerContext.Provider value={value}>{children}</ServerContext.Provider>;
 }
 

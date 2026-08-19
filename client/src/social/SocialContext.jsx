@@ -85,8 +85,15 @@ export function SocialProvider({ children }) {
   const refreshConversations = useCallback(async () => {
     if (status !== "authenticated") return [];
     const data = await socialRequest("/api/social/dms");
-    setConversations(data.conversations || []);
-    return data.conversations || [];
+    const nextConversations = data.conversations || [];
+    if (import.meta.env.DEV) {
+      console.debug("[OFFICIAL:client]", {
+        conversationCount: nextConversations.length,
+        officialFound: nextConversations.some((conversation) => conversation.user?.isOfficial === true)
+      });
+    }
+    setConversations(nextConversations);
+    return nextConversations;
   }, [status]);
 
   const refreshSocial = useCallback(async () => {
