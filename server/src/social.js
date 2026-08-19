@@ -232,7 +232,8 @@ export async function authenticateSocket(socket) {
   if (!token) return null;
   try {
     return await findSessionUser(token);
-  } catch {
+  } catch (error) {
+    console.warn("[AUTH] socket session lookup failed:", error.message);
     return null;
   }
 }
@@ -282,11 +283,17 @@ export function attachSocialSocket(io, socket) {
 
   socket.on("dm:join", async ({ conversationId } = {}, ack) => {
     const acknowledge = typeof ack === "function" ? ack : null;
+    const joinVersion = (socket.data.dmJoinVersion || 0) + 1;
+    socket.data.dmJoinVersion = joinVersion;
     if (!socket.data.accountUser || !socket.data.socialSubscribed || !isUuid(conversationId)) {
       rejectSocial(acknowledge, "Conversa indisponivel.");
       return;
     }
     const conversation = await getConversationForUser(conversationId, socket.data.accountUser.id).catch(() => null);
+    if (socket.data.dmJoinVersion !== joinVersion) {
+      acknowledge?.({ ok: false, error: "A conversa foi atualizada.", code: "DM_JOIN_STALE" });
+      return;
+    }
     if (!conversation) {
       acknowledge?.({ ok: false, error: "Conversa nao encontrada.", code: "DM_NOT_FOUND" });
       return;
@@ -298,6 +305,7 @@ export function attachSocialSocket(io, socket) {
   });
 
   socket.on("dm:leave", ({ conversationId } = {}) => {
+    socket.data.dmJoinVersion = (socket.data.dmJoinVersion || 0) + 1;
     if (!isUuid(conversationId)) return;
     socket.data.dmConversations?.delete(conversationId);
     socket.leave(`dm:${conversationId}`);
@@ -368,6 +376,7 @@ export function attachSocialSocket(io, socket) {
   });
 
   socket.on("disconnect", () => {
+    socket.data.dmJoinVersion = (socket.data.dmJoinVersion || 0) + 1;
     socialSubscribers.delete(socket.id);
     for (const conversationId of socket.data.dmConversations || []) {
       typingRateLog.delete(`${socket.id}:${conversationId}`);

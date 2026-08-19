@@ -5720,6 +5720,31 @@ video.screen-video {
   margin-inline: max(18px, 4vw);
 }
 
+.dm-content .dm-load-error {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  max-width: 360px;
+  margin: auto;
+  padding: 20px;
+  color: var(--text-muted, #aeb7c4);
+  text-align: center;
+}
+
+.dm-content .dm-load-error strong {
+  color: var(--text-primary, #f4f7fb);
+  font-size: 14px;
+}
+
+.dm-content .dm-load-error span {
+  font-size: 12px;
+}
+
+.dm-content .dm-load-error .secondary-button {
+  min-height: 32px;
+  margin-top: 4px;
+}
+
 .room-page .empty-call-actions {
   align-items: center;
   gap: 7px;
@@ -5747,6 +5772,36 @@ video.screen-video {
   min-height: 32px;
 }
 
+.room-page .empty-call-actions .screen-share-control .control-button {
+  min-width: 156px;
+  gap: 7px;
+  padding-inline: 13px;
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.room-page .empty-call-actions .screen-share-control .control-icon {
+  display: inline-flex;
+  width: 17px;
+  height: 17px;
+  align-items: center;
+  justify-content: center;
+}
+
+.room-page .empty-call-actions .screen-preset-trigger {
+  width: 38px;
+  color: var(--room-text);
+}
+
+.room-page .empty-call-actions .screen-share-control .control-button:hover,
+.room-page .empty-call-actions .screen-share-control .control-button:focus-visible,
+.room-page .empty-call-actions .screen-preset-trigger:hover,
+.room-page .empty-call-actions .screen-preset-trigger:focus-visible {
+  color: var(--echo-cyan);
+  border-color: rgba(103, 212, 229, .42);
+  background: rgba(103, 212, 229, .1);
+}
+
 @media (max-width: 1180px) {
   .room-page { grid-template-columns: var(--rail-width, 54px) var(--sidebar-width, 230px) minmax(0,1fr); }
   .room-page .participants-panel { display: none; }
@@ -5768,4 +5823,5 @@ video.screen-video {
   .room-page .call-stage { min-height: 70vh; }
   .dm-content .dm-composer { margin: 0 14px 14px; }
   .dm-content .dm-error { margin-inline: 14px; }
+  .room-page .empty-call-actions .screen-share-control .control-button { min-width: 0; padding-inline: 10px; }
 }

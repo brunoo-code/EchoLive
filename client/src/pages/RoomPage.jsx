@@ -203,7 +203,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     localStorage.removeItem("nickname");
     localStorage.removeItem("echolive.roomCode");
 
-    if (authStatus !== "loading") {
+    if (authStatus === "guest" || (authStatus === "authenticated" && accountUser)) {
       const identity = accountUser
         ? {
             nickname: accountUser.displayName || accountUser.username,
@@ -258,6 +258,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
 
   async function enterRoom(rawNickname, lifecycleToken = lifecycleTokenRef.current, identity = guestIdentity) {
     const cleanNickname = rawNickname.trim().slice(0, 24);
+    const requestedAuthenticated = !identity.isGuest;
 
     if (!cleanNickname) {
       notify("Informe um nickname.");
@@ -290,6 +291,13 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
 
     socket.on("connect", () => {
       setSelfId(socket.id);
+      console.info("[room-join-client]", {
+        roomCode,
+        normalizedRoom: roomCode,
+        socketId: socket.id,
+        authenticated: requestedAuthenticated,
+        participantId: requestedAuthenticated ? accountUser?.id || null : null
+      });
       socket.emit("join-room", {
         roomCode,
         nickname: cleanNickname,
@@ -304,6 +312,12 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     });
 
     socket.on("room-users", async ({ self, participants, voiceParticipants, count, maxParticipants, roomName: joinedRoomName }) => {
+      if (requestedAuthenticated && self?.isGuest) {
+        setRoomError("A sessao da conta nao foi reconhecida nesta conexao.");
+        setJoinState("error");
+        cleanupRoom();
+        return;
+      }
       hasJoinedRef.current = true;
       setHasJoined(true);
       setJoinState("joined");
@@ -503,6 +517,15 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       socket.disconnect();
       connectionStartedRef.current = false;
       cleanupLocalMedia();
+    });
+
+    socket.on("connect_error", () => {
+      setRoomError(requestedAuthenticated
+        ? "Nao foi possivel validar a sessao da conta. Recarregue a pagina e tente novamente."
+        : "Erro de conexao. Verifique se o servidor esta rodando.");
+      setJoinState("error");
+      connectionStartedRef.current = false;
+      socket.disconnect();
     });
 
     socket.on("disconnect", (reason) => {

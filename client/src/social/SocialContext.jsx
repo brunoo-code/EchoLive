@@ -95,7 +95,6 @@ export function SocialProvider({ children }) {
         if (result?.ok) {
           setOnlineUserIds(new Set(result.onlineUserIds || []));
           setSocketReady(true);
-          setSocialStatus("ready");
         } else {
           setSocketReady(false);
           setSocialStatus("error");

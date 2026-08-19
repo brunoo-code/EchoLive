@@ -9,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import multer from "multer";
 import { Server } from "socket.io";
-import { registerAuthRoutes, startSessionCleanup } from "./auth.js";
+import { getSessionTokenFromCookieHeader, registerAuthRoutes, startSessionCleanup } from "./auth.js";
 import {
   attachSocialSocket,
   authenticateSocket,
@@ -183,7 +183,10 @@ const io = new Server(httpServer, {
 
 configureSocialSocket(io);
 io.use(async (socket, next) => {
+  const sessionCookiePresent = Boolean(getSessionTokenFromCookieHeader(socket.handshake.headers.cookie || ""));
   socket.data.accountUser = await authenticateSocket(socket);
+  socket.data.sessionCookiePresent = sessionCookiePresent;
+  socket.data.authenticated = Boolean(socket.data.accountUser);
   next();
 });
 
@@ -293,6 +296,7 @@ io.on("connection", (socket) => {
   socket.on("join-room", ({ roomCode, nickname, identity } = {}) => {
     const code = normalizeRoomCode(roomCode);
     const cleanNickname = normalizeNickname(nickname);
+    const requestedAccount = identity && typeof identity === "object" && identity.isGuest === false;
 
     if (!isValidRoomCode(code)) {
       emitRoomError(socket, "Codigo de sala invalido.");
@@ -310,6 +314,18 @@ io.on("connection", (socket) => {
     }
 
     const authenticatedUser = socket.data.accountUser;
+    if (requestedAccount && !authenticatedUser) {
+      console.warn("[room-auth-mismatch]", {
+        roomCode,
+        normalizedRoom: code,
+        socketId: socket.id,
+        authenticated: false,
+        sessionCookiePresent: Boolean(socket.data.sessionCookiePresent),
+        participantId: null
+      });
+      emitRoomError(socket, "Nao foi possivel validar sua conta. Recarregue a pagina e tente novamente.");
+      return;
+    }
     const resolvedIdentity = authenticatedUser
       ? {
           userId: authenticatedUser.id,
@@ -348,6 +364,14 @@ io.on("connection", (socket) => {
     socket.emit("message-history", {
       channelId: "general",
       messages: getRoomMessages(code)
+    });
+    console.info("[room-join-diagnostic]", {
+      roomCode,
+      normalizedRoom: code,
+      socketId: socket.id,
+      authenticated: Boolean(authenticatedUser),
+      participantId: result.participant.userId || null,
+      participantsCount: result.participants.length
     });
     console.log("[join-room]", code, socket.id, authenticatedUser ? "account" : "guest", cleanNickname, "users:", result.participants.length);
     console.log("[join-voice]", code, socket.id, "voiceUsers:", result.participants.length);

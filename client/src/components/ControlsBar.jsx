@@ -28,7 +28,7 @@ export default function ControlsBar({
           aria-label={isScreenSharing ? "Parar compartilhamento de tela" : "Compartilhar tela"}
         >
           <span className="control-icon" aria-hidden="true"><Icon name="screenShare" size={15} /></span>
-          <span>{isScreenSharing ? "Parar tela" : "Compartilhar"}</span>
+          <span>{isScreenSharing ? "Parar tela" : "Compartilhar tela"}</span>
           {isScreenSharing && <small>{screenShareLabel}</small>}
         </button>
         <button type="button" className="screen-preset-trigger" onClick={() => setIsPresetMenuOpen((value) => !value)} title="Escolher qualidade da transmissao" aria-label="Escolher qualidade da transmissao" aria-haspopup="menu" aria-expanded={isPresetMenuOpen}><Icon name="settings" size={14} /><Icon name="chevron" size={12} /></button>
