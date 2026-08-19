@@ -1,6 +1,7 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import BrandMark from "./BrandMark.jsx";
 import Icon from "./Icon.jsx";
+import ControlsBar from "./ControlsBar.jsx";
 import { useState } from "react";
 
 export default function Sidebar({
@@ -23,12 +24,17 @@ export default function Sidebar({
   connectionQuality,
   micEnabled,
   cameraEnabled,
+  isScreenSharing = false,
+  streamPreset = "720p30",
+  screenShareLabel = "720p · 30 FPS",
   isDeafened,
   isSpeaking,
   avatarUrl,
   onProfileClick,
   onToggleMicrophone,
   onToggleCamera,
+  onToggleScreenShare,
+  onStreamPresetChange,
   onToggleDeafen,
   onLeaveVoice,
   onJoinVoice,
@@ -114,6 +120,20 @@ export default function Sidebar({
           <div className="connected-voice-heading"><span className="voice-state-icon" aria-hidden="true"><Icon name={isInVoice ? "voice" : "headphones"} size={16} /></span><span className="connected-voice-copy"><strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong><span className="connected-voice-channel">Geral</span></span>{isInVoice && <span className="connection-quality" title={`Qualidade da conexao: ${connectionQuality}`}><Icon name="signal" size={14} />{connectionQuality}</span>}{isInVoice ? <button type="button" className="connected-voice-action" onClick={onLeaveVoice} data-tooltip="Desconectar" aria-label="Desconectar"><Icon name="phoneDisconnect" size={16} /></button> : <button type="button" className="connected-voice-action" onClick={onJoinVoice} data-tooltip="Entrar na voz" aria-label="Entrar na voz"><Icon name="voice" size={15} /></button>}</div>
         </section>
 
+        {isInVoice && <div className="sidebar-call-toolbar" aria-label="Controles da chamada">
+          <button type="button" className={`sidebar-call-button ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} data-tooltip={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-pressed={cameraEnabled}>
+            <Icon name={cameraEnabled ? "camera" : "cameraOff"} size={15} />
+            <span>Camera</span>
+          </button>
+          <ControlsBar
+            isScreenSharing={isScreenSharing}
+            onToggleScreenShare={onToggleScreenShare}
+            streamPreset={streamPreset}
+            screenShareLabel={screenShareLabel}
+            onStreamPresetChange={onStreamPresetChange}
+          />
+        </div>}
+
         <footer className="sidebar-user-footer">
         <button type="button" className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
           <span className="sidebar-user-avatar">
@@ -128,7 +148,6 @@ export default function Sidebar({
         <div className="sidebar-user-controls" aria-label="Controles do usuario">
           {isInVoice ? <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} data-tooltip={micEnabled ? "Silenciar microfone" : "Ativar microfone"} aria-label={micEnabled ? "Silenciar microfone" : "Ativar microfone"}><Icon name={micEnabled ? "mic" : "micOff"} size={16} /></button> : <span />}
           {isInVoice ? <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} data-tooltip={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}><Icon name="headphones" size={16} /></button> : <span />}
-          {isInVoice ? <button type="button" className={`control-glyph ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} data-tooltip={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"}><Icon name={cameraEnabled ? "camera" : "cameraOff"} size={16} /></button> : <span />}
         </div>
         </footer>
       </div>

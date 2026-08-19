@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
-import ControlsBar from "../components/ControlsBar.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
 import AudioParticipant from "../components/AudioParticipant.jsx";
 import AuthModal from "../components/AuthModal.jsx";
@@ -1591,12 +1590,17 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         connectionQuality={connectionQuality}
         micEnabled={micEnabled}
         cameraEnabled={cameraEnabled}
+        isScreenSharing={isScreenSharing}
+        streamPreset={streamPreset}
+        screenShareLabel={screenShareLabel}
         isDeafened={isDeafened}
         isSpeaking={isSpeaking}
         avatarUrl={localAvatarUrl}
         onProfileClick={openProfilePopover}
         onToggleMicrophone={toggleMicrophone}
         onToggleCamera={toggleCamera}
+        onToggleScreenShare={toggleScreenShare}
+        onStreamPresetChange={changeStreamPreset}
         onToggleDeafen={toggleDeafen}
         onLeaveVoice={leaveVoiceChannel}
         onJoinVoice={joinVoiceChannel}
@@ -1629,7 +1633,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
             <div className="empty-call-icon" aria-hidden="true"><Icon name="voice" size={22} /></div>
             <strong>Voce saiu da voz.</strong>
             <span>O chat continua disponivel enquanto voce estiver online na sala.</span>
-            <button type="button" className="small-button" onClick={joinVoiceChannel}>Entrar na voz</button>
           </section>
         ) : callParticipants.length > 0 ? (
           viewMode === "focus" && focusedParticipant ? (
@@ -1648,30 +1651,13 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
           <section className="empty-call-state">
             <div className="empty-call-avatar">{localAvatarUrl ? <img src={localAvatarUrl} alt="" /> : isGuest ? <BrandMark size={38} variant={localAvatarVariant} /> : localDisplayName.slice(0, 1).toUpperCase()}</div>
             <strong>A chamada esta pronta.</strong>
-            <span>Compartilhe sua tela ou espere alguem entrar.</span>
-            <div className="empty-call-actions">
-              <button type="button" onClick={toggleCamera}>Ligar camera</button>
-              <ControlsBar
-                isScreenSharing={isScreenSharing}
-                onToggleScreenShare={toggleScreenShare}
-                streamPreset={streamPreset}
-                screenShareLabel={screenShareLabel}
-                onStreamPresetChange={changeStreamPreset}
-              />
-            </div>
+            <span>Aguarde alguem entrar na chamada.</span>
             <div className="voice-roster-inline">
               {voiceParticipants.map((participant) => <span key={participant.socketId} title={participant.nickname}>{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.isGuest ? <BrandMark size={18} variant={participant.avatarVariant} /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>)}
             </div>
           </section>
         )}
 
-        {isInVoice && callParticipants.length > 0 && <ControlsBar
-          isScreenSharing={isScreenSharing}
-          onToggleScreenShare={toggleScreenShare}
-          streamPreset={streamPreset}
-          screenShareLabel={screenShareLabel}
-          onStreamPresetChange={changeStreamPreset}
-        />}
         </section>
 
         <section className={`chat-stage channel-view ${isVoiceChannel ? "is-hidden" : ""}`}>
