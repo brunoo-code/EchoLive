@@ -173,6 +173,8 @@ export function joinRoom(roomCode, socketId, nickname, identity = {}) {
     displayName,
     username,
     isGuest,
+    status: "online",
+    inRoom: true,
     avatarUrl,
     avatarVariant,
     micEnabled: room.get(socketId)?.micEnabled ?? false,

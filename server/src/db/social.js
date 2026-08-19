@@ -287,6 +287,10 @@ async function seedOfficialMessages(conversationId, displayName) {
 export async function ensureAccountSocialBootstrap(userId) {
   const official = await ensureOfficialIdentity();
   const conversation = await ensureConversation(userId, official.id);
+  await query(
+    "UPDATE dm_participants SET hidden_at = NULL WHERE conversation_id = $1 AND user_id = $2",
+    [conversation.id, userId]
+  );
   await grantBetaBadge(userId);
   const userResult = await query("SELECT display_name FROM users WHERE id = $1 LIMIT 1", [userId]);
   await seedOfficialMessages(conversation.id, userResult.rows[0]?.display_name);

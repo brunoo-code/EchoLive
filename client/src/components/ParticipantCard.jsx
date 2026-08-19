@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import Icon from "./Icon.jsx";
-import BrandMark from "./BrandMark.jsx";
+import UserAvatar from "./UserAvatar.jsx";
 
 function clampVolume(value) {
   const numericValue = Number(value);
@@ -92,7 +92,7 @@ export default function ParticipantCard({
       <div className="participant-topline">
         <div className="participant-identity">
           <div className="participant-avatar" aria-hidden="true">
-            {avatarUrl ? <img src={avatarUrl} alt="" /> : isGuest ? <BrandMark size={28} variant={avatarVariant} /> : nickname?.slice(0, 1).toUpperCase() || "?"}
+            <UserAvatar user={{ nickname, avatarUrl, avatarVariant, isGuest }} size={28} />
           </div>
           <div>
           <strong title={nickname}>{nickname}</strong>
@@ -108,7 +108,7 @@ export default function ParticipantCard({
           <video className={isScreenSharing ? "screen-video" : "camera-video"} data-video-peer={socketId} ref={videoRef} autoPlay playsInline muted={isLocal} onVolumeChange={handleNativeVolumeChange} />
         ) : (
           <div className="video-placeholder">
-            <div className="placeholder-avatar" aria-hidden="true">{avatarUrl ? <img src={avatarUrl} alt="" /> : isGuest ? <BrandMark size={40} variant={avatarVariant} /> : nickname?.slice(0, 1).toUpperCase() || "?"}</div>
+            <div className="placeholder-avatar" aria-hidden="true"><UserAvatar user={{ nickname, avatarUrl, avatarVariant, isGuest }} size={40} /></div>
             <span>Sem video</span>
           </div>
         )}

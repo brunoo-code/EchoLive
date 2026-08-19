@@ -59,7 +59,7 @@ function AppContent() {
   }
 
   if (route.name === "room") {
-    return <RoomPage roomCode={route.roomCode} onBack={navigateToHome} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} />;
+    return <RoomPage roomCode={route.roomCode} onBack={navigateToHome} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateDm={navigateToDm} />;
   }
   if (route.name === "social") return <SocialPage onNavigateHome={navigateToHome} onNavigateDm={navigateToDm} />;
   if (route.name === "dm") return <DirectMessagePage conversationId={route.conversationId} initialConversation={route.initialConversation} onNavigateHome={navigateToHome} onNavigateFriends={navigateToSocial} onNavigateDm={navigateToDm} />;

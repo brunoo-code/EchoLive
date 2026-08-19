@@ -1,6 +1,6 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import Icon from "./Icon.jsx";
-import BrandMark from "./BrandMark.jsx";
+import UserAvatar from "./UserAvatar.jsx";
 
 export default function ParticipantsPanel({ participants, onProfileClick, onParticipantClick }) {
   return (
@@ -13,7 +13,7 @@ export default function ParticipantsPanel({ participants, onProfileClick, onPart
         {participants.map((participant) => (
           <div className={`online-person ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-person" : ""}`} key={participant.socketId} onClick={(event) => { const anchor = event.currentTarget.getBoundingClientRect(); if (participant.isLocal) onProfileClick?.(); else onParticipantClick?.(participant, anchor); }} onKeyDown={(event) => { if (event.key !== "Enter" && event.key !== " ") return; event.preventDefault(); const anchor = event.currentTarget.getBoundingClientRect(); if (participant.isLocal) onProfileClick?.(); else onParticipantClick?.(participant, anchor); }} role="button" tabIndex={0}>
             <div className="avatar-dot" aria-hidden="true">
-              {participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.isGuest ? <BrandMark size={22} variant={participant.avatarVariant} /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}
+              <UserAvatar user={participant} size={28} />
               <UserStatusBadge status={participant.status} size="md" />
             </div>
             <div className="online-person-info">

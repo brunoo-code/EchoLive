@@ -6902,3 +6902,33 @@ video.screen-video {
     grid-template-columns: 1fr;
   }
 }
+
+/* Upgrade 7.3: keep social identity, presence and profile states consistent. */
+.user-avatar { display: block; flex: 0 0 auto; border-radius: 50%; object-fit: cover; }
+.user-avatar-eko { display: grid; place-items: center; overflow: hidden; flex: 0 0 auto; border-radius: 50%; background: #17212c; }
+.user-avatar-eko .brand-symbol-svg { display: block; width: 100%; height: 100%; }
+.user-status-badge--offline { background: #6f7b8a; }
+.social-profile-summary { margin: 14px 0 18px; color: var(--text-muted, #8e9aaa); font-size: 12px; }
+.social-profile-actions { flex-wrap: wrap; align-items: center; }
+.social-profile-relationship { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted, #8e9aaa); font-size: 11px; }
+.social-profile-relationship.is-friend { color: #8debb7; }
+.social-profile-remove-confirm { display: grid; gap: 7px; margin-top: 12px; border: 1px solid rgba(240,109,112,.24); border-radius: 8px; background: rgba(240,109,112,.08); padding: 10px; }
+.social-profile-remove-confirm strong { font-size: 12px; }
+.social-profile-remove-confirm > span { color: var(--text-muted, #8e9aaa); font-size: 11px; }
+.social-profile-remove-confirm > div { display: flex; gap: 7px; }
+.social-profile-remove-confirm .primary-button, .social-profile-remove-confirm .secondary-button { min-height: 29px; padding-inline: 9px; font-size: 11px; }
+.social-profile-tab-skeleton { display: grid; gap: 10px; padding-top: 10px; }
+.social-profile-tab-skeleton i { display: block; height: 12px; border-radius: 4px; background: linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.12), rgba(255,255,255,.05)); background-size: 200% 100%; animation: social-profile-skeleton 1.2s ease-in-out infinite; }
+.social-profile-tab-skeleton i:nth-child(2) { width: 72%; }
+.social-profile-tab-skeleton i:nth-child(3) { width: 48%; }
+.social-profile-tab-error { display: grid; justify-items: start; gap: 10px; padding-top: 16px; color: var(--text-muted, #8e9aaa); font-size: 12px; }
+.social-profile-tab-error .secondary-button { min-height: 31px; }
+@keyframes social-profile-skeleton { 0%, 100% { background-position: 0 0; } 50% { background-position: 100% 0; } }
+.social-profile-tabs button:hover { border-bottom-color: transparent; color: var(--text-primary, #f4f7fb); background: rgba(255,255,255,.035); }
+.social-profile-tabs button.is-active, .social-profile-tabs button.is-active:hover { border-bottom-color: var(--accent, #22d3ee); color: var(--text-primary, #f4f7fb); background: transparent; font-weight: 650; }
+.social-profile-tabs button:focus-visible { outline: 2px solid var(--accent, #22d3ee); outline-offset: -2px; }
+.dm-attachment-image-button { border: 0; background: transparent; padding: 0; cursor: zoom-in; text-align: left; }
+.dm-attachment-image-button:focus-visible { outline: 2px solid var(--accent, #22d3ee); outline-offset: 3px; border-radius: 8px; }
+.dm-lightbox { position: fixed; inset: 0; z-index: 120; display:grid; place-items:center; background: rgba(3,5,8,.86); padding: 30px; }
+.dm-lightbox img { display:block; max-width:min(92vw, 1100px); max-height:88vh; border-radius:8px; object-fit:contain; box-shadow:0 24px 80px rgba(0,0,0,.5); }
+.dm-lightbox-close { position:absolute; top:18px; right:18px; color:#fff; background:rgba(255,255,255,.1); }

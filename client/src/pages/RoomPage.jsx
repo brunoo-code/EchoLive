@@ -12,6 +12,7 @@ import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
 import RoomRail from "../components/RoomRail.jsx";
 import ProfilePopover from "../components/ProfilePopover.jsx";
 import SocialUserProfilePopover from "../components/SocialUserProfilePopover.jsx";
+import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
 import Icon from "../components/Icon.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
@@ -20,6 +21,7 @@ import { getPeerConnectionConfig, SERVER_URL } from "../utils/webrtc.js";
 import { playUiSound } from "../utils/uiSounds.js";
 import { getGuestAvatarVariant, getGuestIdentity } from "../utils/guestIdentity.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { useSocial } from "../social/SocialContext.jsx";
 
 const NICKNAME_KEY = "echolive.nickname";
 const AUDIO_DEVICE_KEY = "echolive.audioDeviceId";
@@ -59,8 +61,9 @@ function getActualScreenLabel(settings, fallbackPreset) {
   return `${resolution} · ${Math.round(settings.frameRate)} FPS`;
 }
 
-export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateSocial }) {
+export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateSocial, onNavigateDm }) {
   const { logout, updateProfile: updateAccountProfile, status: authStatus, user: accountUser } = useAuth();
+  const { startConversation } = useSocial();
   const debugRtc = new URLSearchParams(window.location.search).get("debugRtc") === "1";
   const [guestIdentity] = useState(() => getGuestIdentity());
   const [guestAvatarVariant, setGuestAvatarVariant] = useState(() => guestIdentity.avatarVariant);
@@ -105,6 +108,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const [isRoomSwitcherOpen, setIsRoomSwitcherOpen] = useState(false);
   const [isProfilePopoverOpen, setIsProfilePopoverOpen] = useState(false);
   const [selectedParticipantProfile, setSelectedParticipantProfile] = useState(null);
+  const [selectedSocialProfile, setSelectedSocialProfile] = useState(null);
   const [settingsInitialSection, setSettingsInitialSection] = useState("profile");
   const [recentRoomsRevision, setRecentRoomsRevision] = useState(0);
   const [devices, setDevices] = useState({ audio: [], video: [] });
@@ -207,6 +211,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     if (authStatus === "guest" || (authStatus === "authenticated" && accountUser)) {
       const identity = accountUser
         ? {
+            userId: accountUser.id,
             nickname: accountUser.displayName || accountUser.username,
             displayName: accountUser.displayName || accountUser.username,
             username: accountUser.username,
@@ -303,6 +308,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         roomCode,
         nickname: cleanNickname,
         identity: {
+          userId: identity.userId || accountUser?.id || "",
           displayName: identity.displayName || cleanNickname,
           username: identity.username || "",
           avatarUrl: identity.isGuest ? "" : identity.avatarUrl || "",
@@ -1515,6 +1521,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const localAvatarUrl = isGuest ? "" : avatarUrl || accountUser?.avatarUrl || "";
   const localAvatarVariant = isGuest ? guestAvatarVariant : 0;
   const localParticipant = {
+    id: accountUser?.id || "",
+    userId: accountUser?.id || "",
     socketId: selfId || "local",
     nickname: localDisplayName,
     displayName: localDisplayName,
@@ -1523,6 +1531,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     avatarVariant: localAvatarVariant,
     badges: accountUser?.badges || [],
     isGuest,
+    inRoom: true,
     stream: displayStream,
     isLocal: true,
     isScreenSharing,
@@ -1678,7 +1687,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       <ParticipantsPanel participants={onlineParticipants} onProfileClick={openProfilePopover} onParticipantClick={openParticipantProfile} />
 
       {isProfilePopoverOpen && <ProfilePopover accountUser={accountUser} profile={profile} nickname={nickname} avatarUrl={localAvatarUrl} isGuest={isGuest} guestAvatarVariant={localAvatarVariant} onStatusChange={(status) => saveProfile({ status })} onEditProfile={openProfileSettings} onOpenSettings={openSettings} onLogout={logoutAccount} onCreateAccount={() => { setIsProfilePopoverOpen(false); setAuthModalMode("register"); }} onClose={() => setIsProfilePopoverOpen(false)} />}
-      {selectedParticipantProfile && <SocialUserProfilePopover participant={selectedParticipantProfile.participant} anchorRect={selectedParticipantProfile.anchorRect} onClose={() => setSelectedParticipantProfile(null)} onMessage={() => { setSelectedParticipantProfile(null); onNavigateSocial?.(); }} onViewProfile={() => { setSelectedParticipantProfile(null); notify("O perfil completo estara disponivel em uma proxima etapa."); }} />}
+      {selectedParticipantProfile && <SocialUserProfilePopover participant={selectedParticipantProfile.participant} anchorRect={selectedParticipantProfile.anchorRect} onClose={() => setSelectedParticipantProfile(null)} onMessage={async (participant) => { if (!participant?.userId) return; try { const conversation = await startConversation(participant.userId); setSelectedParticipantProfile(null); onNavigateDm?.(conversation.id, conversation); } catch { notify("Nao foi possivel abrir a conversa."); } }} onViewProfile={(participant) => { setSelectedParticipantProfile(null); if (participant?.userId) setSelectedSocialProfile(participant); }} />}
+      {selectedSocialProfile && <SocialUserProfileModal userId={selectedSocialProfile.userId} initialUser={{ id: selectedSocialProfile.userId, username: selectedSocialProfile.username, displayName: selectedSocialProfile.displayName || selectedSocialProfile.nickname, avatarUrl: selectedSocialProfile.avatarUrl, avatarVariant: selectedSocialProfile.avatarVariant, badges: selectedSocialProfile.badges || [], status: "online" }} onClose={() => setSelectedSocialProfile(null)} onMessage={(conversation) => { setSelectedSocialProfile(null); onNavigateDm?.(conversation.id, conversation); }} />}
       {isDevicesModalOpen && (
         <DevicesModal
           devices={devices}

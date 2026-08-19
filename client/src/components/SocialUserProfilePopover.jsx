@@ -1,17 +1,27 @@
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import BrandMark from "./BrandMark.jsx";
 import Icon from "./Icon.jsx";
 import UserBadges from "./UserBadges.jsx";
 import UserStatusBadge from "./UserStatusBadge.jsx";
+import UserAvatar from "./UserAvatar.jsx";
 
 export default function SocialUserProfilePopover({ participant, anchorRect, onClose, onMessage, onViewProfile }) {
   const popoverRef = useRef(null);
   const [position, setPosition] = useState({ top: anchorRect?.top || 8, left: anchorRect?.left || 8, ready: false });
   const displayName = participant?.displayName || participant?.nickname || participant?.username || "Usuario";
   const username = participant?.username || participant?.nickname || "usuario";
-  const status = participant?.status === "dnd" ? "dnd" : "online";
+  const status = participant?.status === "dnd" ? "dnd" : participant?.status === "offline" ? "offline" : "online";
   const isGuest = Boolean(participant?.isGuest);
+  const isOfficial = Boolean(participant?.isOfficial || participant?.accountType === "system");
+  const presenceLabel = participant?.isSpeaking
+    ? "Falando agora"
+    : participant?.isLocal
+      ? "Voce"
+      : participant?.inRoom
+        ? "Em voz na sala"
+        : status === "offline"
+          ? "Offline"
+          : "Online";
 
   useLayoutEffect(() => {
     const node = popoverRef.current;
@@ -62,18 +72,18 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
       <div className="social-user-popover-cover" />
       <div className="social-user-popover-body">
         <div className="social-user-popover-avatar">
-          {participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : isGuest ? <BrandMark size={52} variant={participant.avatarVariant} /> : <span>{displayName.slice(0, 1).toUpperCase()}</span>}
+          <UserAvatar user={participant} size={52} />
           <UserStatusBadge status={status} size="lg" />
         </div>
         <div className="social-user-popover-identity">
           <strong>{displayName}</strong>
           <div className="social-user-popover-username"><span>@{username}</span><UserBadges badges={participant.badges} /></div>
         </div>
-        <div className="social-user-popover-meta"><span className="visitor-badge">{isGuest ? "Visitante" : "Online"}</span></div>
-        <p className="social-user-popover-presence"><i className="online-indicator" aria-hidden="true" />{participant.isSpeaking ? "Falando agora" : participant.isLocal ? "Voce" : "Online na sala"}</p>
+        <div className="social-user-popover-meta"><span className={isGuest ? "visitor-badge" : "social-presence-label"}>{isGuest ? "Visitante" : isOfficial ? "Conta oficial" : status === "offline" ? "Offline" : "Online"}</span></div>
+        <p className={`social-user-popover-presence ${status === "offline" ? "is-offline" : ""}`}><i className="online-indicator" aria-hidden="true" />{presenceLabel}</p>
         <div className="social-user-popover-actions">
-          {!isGuest && <button type="button" className="primary-button" onClick={() => onMessage?.(participant)}><Icon name="message" size={15} />Mensagem</button>}
-          <button type="button" className="secondary-button" onClick={() => onViewProfile?.(participant)}><Icon name="account" size={15} />Ver perfil</button>
+          {!isGuest && !isOfficial && <button type="button" className="primary-button" onClick={() => onMessage?.(participant)}><Icon name="message" size={15} />Mensagem</button>}
+          {!isGuest && <button type="button" className="secondary-button" onClick={() => onViewProfile?.(participant)}><Icon name="account" size={15} />Ver perfil</button>}
         </div>
       </div>
     </section>,

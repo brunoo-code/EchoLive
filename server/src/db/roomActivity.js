@@ -25,10 +25,26 @@ export async function markRoomActivityLeft(userId, roomCode) {
   );
 }
 
+export async function getActiveRoomActivity(userId) {
+  const result = await query(
+    `SELECT room_display_name, last_seen_at
+       FROM room_user_activity
+      WHERE user_id = $1
+        AND left_at IS NULL
+        AND expires_at > NOW()
+      ORDER BY last_seen_at DESC
+      LIMIT 1`,
+    [userId]
+  );
+  const row = result.rows[0];
+  return row ? { name: row.room_display_name, lastSeenAt: row.last_seen_at } : null;
+}
+
 export async function listMutualRooms(viewerId, otherUserId) {
   const result = await query(
     `SELECT a.room_display_name,
             bool_or(activity.left_at IS NULL AND activity.expires_at > NOW()) AS active,
+            COUNT(DISTINCT activity.user_id) FILTER (WHERE activity.left_at IS NULL AND activity.expires_at > NOW())::int AS live_participant_count,
             COUNT(DISTINCT activity.user_id)::int AS participant_count,
             MAX(GREATEST(a.last_seen_at, b.last_seen_at)) AS last_seen_at
      FROM room_user_activity a
@@ -50,6 +66,7 @@ export async function listMutualRooms(viewerId, otherUserId) {
     id: `room:${row.room_display_name}:${row.last_seen_at}`,
     name: row.room_display_name,
     active: Boolean(row.active),
+    liveParticipantCount: row.live_participant_count,
     participantCount: row.participant_count,
     joinable: false,
     lastSeenAt: row.last_seen_at

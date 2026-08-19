@@ -20,6 +20,7 @@ import {
 import { getSessionTokenFromCookieHeader, optionalAuth, requireAuth } from "./auth.js";
 import { findSessionUser } from "./db/sessions.js";
 import { isDatabaseAvailable } from "./db/pool.js";
+import { getActiveRoomActivity } from "./db/roomActivity.js";
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,24}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -122,9 +123,12 @@ export function registerSocialRoutes(app) {
       const profile = await getSocialProfile(request.params.userId, request.user.id);
       if (!profile) return response.status(404).json({ error: "Usuario nao encontrado." });
       const ids = onlineUserIds();
-      profile.user.status = ids.has(profile.user.id) ? "online" : "offline";
+      const roomActivity = await getActiveRoomActivity(profile.user.id).catch(() => null);
+      const isOnline = ids.has(profile.user.id) || Boolean(roomActivity);
+      profile.user.status = isOnline ? "online" : "offline";
       profile.activity.status = profile.user.status;
-      profile.activity.kind = profile.user.status;
+      profile.activity.kind = roomActivity ? "voice" : profile.user.status;
+      profile.activity.room = roomActivity ? { name: roomActivity.name, joinable: false } : null;
       return response.json(profile);
     } catch (error) {
       return handleSocialError(response, error);

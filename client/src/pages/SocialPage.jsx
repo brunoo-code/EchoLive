@@ -6,6 +6,7 @@ import SocialEmptyState from "../components/SocialEmptyState.jsx";
 import SocialRail from "../components/SocialRail.jsx";
 import SocialSidebar, { Avatar } from "../components/SocialSidebar.jsx";
 import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
+import SocialUserProfilePopover from "../components/SocialUserProfilePopover.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useSocial } from "../social/SocialContext.jsx";
 
@@ -25,6 +26,7 @@ function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm }) {
   const [isAdding, setIsAdding] = useState(false);
   const [removeTarget, setRemoveTarget] = useState(null);
   const [profileTarget, setProfileTarget] = useState(null);
+  const [profilePopover, setProfilePopover] = useState(null);
   const feedbackTimerRef = useRef(null);
 
   useEffect(() => () => window.clearTimeout(feedbackTimerRef.current), []);
@@ -73,6 +75,11 @@ function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm }) {
     }
   }
 
+  function openProfilePopover(profileUser, anchorRect) {
+    if (!profileUser) return;
+    setProfilePopover({ user: { ...profileUser, status: onlineUserIds.has(profileUser.id) ? "online" : "offline" }, anchorRect });
+  }
+
   async function confirmRemove(userId) {
     clearFeedback();
     try {
@@ -107,15 +114,21 @@ function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm }) {
   const pendingCount = receivedRequests.length + sentRequests.length;
   return <main className="page social-page">
     <SocialRail onHome={onNavigateHome} />
-    <SocialSidebar activeTab={activeTab} onTabChange={changeTab} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} onOpenProfile={setProfileTarget} />
+    <SocialSidebar activeTab={activeTab} onTabChange={changeTab} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} onOpenProfile={openProfilePopover} />
     <section className="social-content">
       <header className="social-topbar"><div className="social-topbar-title"><Icon name="account" size={18} /><strong>Amigos</strong></div><nav className="social-tabs" aria-label="Visoes de Amigos">{[["friends", "Amigos"], ["online", "Online"], ["all", "Todos"], ["pending", "Pendentes"]].map(([id, label]) => <button type="button" key={id} className={activeTab === id ? "is-active" : ""} onClick={() => changeTab(id)}>{label}{id === "pending" && pendingCount > 0 && <b className="social-tab-badge">{pendingCount > 9 ? "9+" : pendingCount}</b>}</button>)}<button type="button" className={`social-tab-add ${activeTab === "add" ? "is-active" : ""}`} onClick={() => changeTab("add")}><Icon name="plus" size={14} />Adicionar amigo</button></nav><span className="social-topbar-note">Sua rede no EchoLive</span></header>
-      {activeTab === "add" ? <AddFriendView addUsername={addUsername} setAddUsername={setAddUsername} onSubmit={handleAddFriend} isSubmitting={isAdding} /> : activeTab === "pending" ? <PendingView received={receivedRequests} sent={sentRequests} onAccept={handleAcceptRequest} onDelete={handleDeleteRequest} /> : <FriendsView friends={visibleFriends} allFriends={friends} onlineFriends={onlineFriends} onlineUserIds={onlineUserIds} activeTab={activeTab} search={friendQuery} onSearch={setFriendQuery} onMessage={openDm} onOpenProfile={setProfileTarget} removeTarget={removeTarget} setRemoveTarget={setRemoveTarget} onRemove={confirmRemove} onAdd={() => changeTab("add")} />}
+      {activeTab === "add" ? <AddFriendView addUsername={addUsername} setAddUsername={setAddUsername} onSubmit={handleAddFriend} isSubmitting={isAdding} /> : activeTab === "pending" ? <PendingView received={receivedRequests} sent={sentRequests} onAccept={handleAcceptRequest} onDelete={handleDeleteRequest} /> : <FriendsView friends={visibleFriends} allFriends={friends} onlineFriends={onlineFriends} onlineUserIds={onlineUserIds} activeTab={activeTab} search={friendQuery} onSearch={setFriendQuery} onMessage={openDm} onOpenProfile={openProfilePopover} removeTarget={removeTarget} setRemoveTarget={setRemoveTarget} onRemove={confirmRemove} onAdd={() => changeTab("add")} />}
     </section>
     {feedback && <div className="social-toast-stack" aria-live="polite"><div className={`social-toast is-${feedback.kind}`}><Icon name={feedback.kind === "error" ? "info" : feedback.kind === "neutral" ? "check" : "check"} size={15} /><span>{feedback.message}</span></div></div>}
-    <aside className="social-online-panel"><h2>Online agora</h2>{onlineFriends.length ? onlineFriends.slice(0, 8).map((item) => <div className="social-online-row" key={item.user.id}><button type="button" className="social-online-identity" onClick={() => setProfileTarget(item.user)}><Avatar user={item.user} size={32} /><span><strong>{item.user.displayName || item.user.username}</strong><small>Online</small></span></button><button type="button" className="icon-button" title="Enviar mensagem" aria-label={`Enviar mensagem para ${item.user.displayName || item.user.username}`} onClick={() => openDm(item.user.id)}><Icon name="message" size={15} /></button><i className="online-dot" /></div>) : <SocialEmptyState title="Tudo tranquilo por aqui." copy="Nenhum amigo esta online agora." variant={7} />}</aside>
+    <aside className="social-online-panel"><h2>Online agora</h2>{onlineFriends.length ? onlineFriends.slice(0, 8).map((item) => <div className="social-online-row" key={item.user.id}><button type="button" className="social-online-identity" onClick={(event) => openProfilePopover(item.user, event.currentTarget.getBoundingClientRect())}><Avatar user={item.user} size={32} /><span><strong>{item.user.displayName || item.user.username}</strong><small>Online</small></span></button><button type="button" className="icon-button" title="Enviar mensagem" aria-label={`Enviar mensagem para ${item.user.displayName || item.user.username}`} onClick={() => openDm(item.user.id)}><Icon name="message" size={15} /></button><i className="online-dot" /></div>) : <SocialEmptyState title="Tudo tranquilo por aqui." copy="Nenhum amigo esta online agora." variant={7} />}</aside>
+    {profilePopover && <SocialUserProfilePopover participant={profilePopover.user} anchorRect={profilePopover.anchorRect} onClose={() => setProfilePopover(null)} onMessage={openDmAndClose} onViewProfile={(profileUser) => { setProfilePopover(null); setProfileTarget(profileUser); }} />}
     {profileTarget && <SocialUserProfileModal userId={profileTarget.id} initialUser={profileTarget} onClose={() => setProfileTarget(null)} onMessage={(conversation) => { setProfileTarget(null); onNavigateDm(conversation.id, conversation); }} />}
   </main>;
+
+  async function openDmAndClose(profileUser) {
+    setProfilePopover(null);
+    await openDm(profileUser.id);
+  }
 }
 
 function AddFriendView({ addUsername, setAddUsername, onSubmit, isSubmitting }) {
@@ -138,5 +151,5 @@ function FriendsView({ friends, allFriends, onlineFriends, onlineUserIds, active
 }
 
 function FriendRow({ item, isOnline, onMessage, onOpenProfile, removeTarget, setRemoveTarget, onRemove }) {
-  return <div className="social-person-row"><button type="button" className="social-person-identity" onClick={() => onOpenProfile(item.user)}><span className="social-person-avatar"><Avatar user={item.user} size={42} /><i className={isOnline ? "is-online" : ""} /></span><span className="social-person-copy"><strong>{item.user.displayName || item.user.username}</strong><small><i className={isOnline ? "online-dot" : "offline-dot"} />{isOnline ? "Online" : "Offline"}</small></span></button><span className="social-row-actions"><button type="button" className="secondary-button compact" onClick={() => onMessage(item.user.id)}><Icon name="chat" size={14} />Mensagem</button><button type="button" className="icon-button" title="Mais acoes" aria-label={`Mais acoes para ${item.user.username}`} onClick={() => setRemoveTarget(removeTarget === item.user.id ? null : item.user.id)}><Icon name="more" size={16} /></button></span>{removeTarget === item.user.id && <span className="social-remove-confirm"><span>Remover amizade?</span><button type="button" className="text-button danger" onClick={() => onRemove(item.user.id)}>Remover</button><button type="button" className="text-button" onClick={() => setRemoveTarget(null)}>Cancelar</button></span>}</div>;
+  return <div className="social-person-row"><button type="button" className="social-person-identity" onClick={(event) => onOpenProfile(item.user, event.currentTarget.getBoundingClientRect())}><span className="social-person-avatar"><Avatar user={item.user} size={42} /><i className={isOnline ? "is-online" : ""} /></span><span className="social-person-copy"><strong>{item.user.displayName || item.user.username}</strong><small><i className={isOnline ? "online-dot" : "offline-dot"} />{isOnline ? "Online" : "Offline"}</small></span></button><span className="social-row-actions"><button type="button" className="secondary-button compact" onClick={() => onMessage(item.user.id)}><Icon name="chat" size={14} />Mensagem</button><button type="button" className="icon-button" title="Mais acoes" aria-label={`Mais acoes para ${item.user.username}`} onClick={() => setRemoveTarget(removeTarget === item.user.id ? null : item.user.id)}><Icon name="more" size={16} /></button></span>{removeTarget === item.user.id && <span className="social-remove-confirm"><span>Remover amizade?</span><button type="button" className="text-button danger" onClick={() => onRemove(item.user.id)}>Remover</button><button type="button" className="text-button" onClick={() => setRemoveTarget(null)}>Cancelar</button></span>}</div>;
 }

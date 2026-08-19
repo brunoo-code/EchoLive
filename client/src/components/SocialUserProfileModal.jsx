@@ -12,12 +12,28 @@ export default function SocialUserProfileModal({ userId, initialUser, onClose, o
   const [profile, setProfile] = useState(null);
   const [tab, setTab] = useState("activity");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
+
+  async function refreshProfile() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await loadUserProfile(userId);
+      setProfile(data);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
     setError("");
-    loadUserProfile(userId).then((data) => { if (active) setProfile(data); }).catch((requestError) => { if (active) setError(requestError.message); });
+    loadUserProfile(userId).then((data) => { if (active) setProfile(data); }).catch((requestError) => { if (active) setError(requestError.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [loadUserProfile, userId]);
 
@@ -40,10 +56,27 @@ export default function SocialUserProfileModal({ userId, initialUser, onClose, o
   }
 
   async function handleFriendAction() {
+    if (isFriend) {
+      setRemoveConfirmOpen(true);
+      return;
+    }
     setWorking(true);
     try {
-      if (isFriend) await removeFriend(userId);
-      else await sendFriendRequest(person.username);
+      await sendFriendRequest(person.username);
+      const next = await loadUserProfile(userId);
+      setProfile(next);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function confirmRemoveFriend() {
+    setWorking(true);
+    try {
+      await removeFriend(userId);
+      setRemoveConfirmOpen(false);
       const next = await loadUserProfile(userId);
       setProfile(next);
     } catch (requestError) {
@@ -62,17 +95,21 @@ export default function SocialUserProfileModal({ userId, initialUser, onClose, o
         <div className="social-profile-name"><h2>{person.displayName || person.username}</h2><span>@{person.username}</span><UserBadges badges={person.badges} /></div>
         <p className="social-profile-presence"><i className={person.status === "online" ? "is-online" : ""} />{person.status === "online" ? "Online" : "Offline"}</p>
         {person.bio && <p className="social-profile-bio">{person.bio}</p>}
-        {!isSelf && <div className="social-profile-actions"><button type="button" className="primary-button" onClick={handleMessage} disabled={working}><Icon name="message" size={15} />Mensagem</button>{relationship?.status !== "pending" && <button type="button" className="secondary-button" onClick={handleFriendAction} disabled={working}>{isFriend ? "Remover amigo" : "Adicionar amigo"}</button>}<span className={`social-profile-relationship ${isFriend ? "is-friend" : ""}`}>{isFriend ? "Amigos" : relationship?.status === "pending" ? "Pedido pendente" : "Ainda não são amigos"}</span></div>}
+        {!isSelf && !person.isOfficial && person.accountType !== "system" && <div className="social-profile-actions"><button type="button" className="primary-button" onClick={handleMessage} disabled={working}><Icon name="message" size={15} />Mensagem</button>{relationship?.status !== "pending" && <button type="button" className="secondary-button" onClick={handleFriendAction} disabled={working}>{isFriend ? "Remover amigo" : "Adicionar amigo"}</button>}{isFriend && <span className="social-profile-relationship is-friend"><Icon name="check" size={12} />Amigos</span>}{relationship?.status === "pending" && <span className="social-profile-relationship">Pedido pendente</span>}</div>}
+        {!isSelf && !person.isOfficial && person.accountType !== "system" && removeConfirmOpen && <div className="social-profile-remove-confirm"><strong>Remover esta amizade?</strong><span>Você poderá enviar um novo pedido depois.</span><div><button type="button" className="primary-button danger" onClick={confirmRemoveFriend} disabled={working}>Remover</button><button type="button" className="secondary-button" onClick={() => setRemoveConfirmOpen(false)} disabled={working}>Cancelar</button></div></div>}
         {error && <p className="social-feedback is-error">{error}</p>}
       </aside>
       <div className="social-profile-detail">
         <nav className="social-profile-tabs" aria-label="Detalhes do perfil">{[["activity", "Atividade"], ["friends", "Amigos em comum"], ["rooms", "Salas em comum"]].map(([id, label]) => <button type="button" key={id} className={tab === id ? "is-active" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>
-        {tab === "activity" && <Activity profile={profile} />}
-        {tab === "friends" && <MutualList title="Amigos em comum" items={profile?.mutualFriends || []} empty="Nenhum amigo em comum por enquanto." />}
-        {tab === "rooms" && <MutualRooms profile={profile} />}
+        <p className="social-profile-summary">{loading ? "Carregando conexões..." : `${profile?.mutualFriends?.length || 0} amigos em comum · ${profile?.mutualRooms?.length || 0} salas em comum`}</p>
+        {loading ? <ProfileTabSkeleton /> : error ? <div className="social-profile-tab-error"><strong>Não foi possível carregar este perfil.</strong><button type="button" className="secondary-button" onClick={refreshProfile}>Tentar novamente</button></div> : <>{tab === "activity" && <Activity profile={profile} />}{tab === "friends" && <MutualList title="Amigos em comum" items={profile?.mutualFriends || []} empty="Nenhum amigo em comum por enquanto." />}{tab === "rooms" && <MutualRooms profile={profile} />}</>}
       </div>
     </section>
   </div>;
+}
+
+function ProfileTabSkeleton() {
+  return <div className="social-profile-tab-skeleton" aria-label="Carregando perfil"><i /><i /><i /></div>;
 }
 
 function Activity({ profile }) {
@@ -88,5 +125,5 @@ function MutualList({ title, items, empty }) {
 function MutualRooms({ profile }) {
   if (!profile) return <div className="social-profile-list"><span className="section-label">Salas em comum</span><p className="social-profile-list-empty">Carregando salas...</p></div>;
   const rooms = profile.mutualRooms || [];
-  return <div className="social-profile-list"><span className="section-label">Salas em comum</span>{rooms.length ? rooms.map((room) => <div className="social-profile-list-row mutual-room-row" key={room.id}><span className="mutual-room-icon"><Icon name="voice" size={16} /></span><span><strong>{room.name}</strong><small>{room.active ? `Ativa agora · ${room.participantCount} participante${room.participantCount === 1 ? "" : "s"}` : "Visitada recentemente"}</small></span></div>) : <p className="social-profile-list-empty">Nenhuma sala recente em comum.</p>}</div>;
+  return <div className="social-profile-list"><span className="section-label">Salas em comum</span>{rooms.length ? rooms.map((room) => { const liveCount = Number(room.liveParticipantCount || 0); const recentCount = Number(room.participantCount || 0); const label = room.active && liveCount > 0 ? `Ativa agora · ${liveCount} participante${liveCount === 1 ? "" : "s"}` : room.active ? "Ativa agora" : recentCount > 0 ? `${recentCount} pessoa${recentCount === 1 ? "" : "s"} passaram por aqui` : "Visitada recentemente"; return <div className="social-profile-list-row mutual-room-row" key={room.id}><span className="mutual-room-icon"><Icon name="voice" size={16} /></span><span><strong>{room.name}</strong><small>{label}</small></span></div>; }) : <p className="social-profile-list-empty">Nenhuma sala recente em comum.</p>}</div>;
 }

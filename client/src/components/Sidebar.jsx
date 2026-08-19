@@ -2,6 +2,7 @@ import UserStatusBadge from "./UserStatusBadge.jsx";
 import BrandMark from "./BrandMark.jsx";
 import Icon from "./Icon.jsx";
 import ControlsBar from "./ControlsBar.jsx";
+import UserAvatar from "./UserAvatar.jsx";
 import { useState } from "react";
 
 export default function Sidebar({
@@ -102,7 +103,7 @@ export default function Sidebar({
         <div className="call-member-list">
           {participants.map((participant) => (
             <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} onKeyDown={(event) => { if (participant.isLocal && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onProfileClick?.(); } }} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
-              <span className="member-avatar" aria-hidden="true">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.isGuest ? <BrandMark size={18} variant={participant.avatarVariant} /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}<UserStatusBadge status={participant.status} size="sm" /></span>
+              <span className="member-avatar" aria-hidden="true"><UserAvatar user={participant} size={25} /><UserStatusBadge status={participant.status} size="sm" /></span>
               <span className="member-name" title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</span>
               {participant.isGuest && <span className="visitor-badge">Visitante</span>}
               <span className="member-status" aria-label="Status de midia">
@@ -138,7 +139,7 @@ export default function Sidebar({
         <footer className="sidebar-user-footer">
         <button type="button" className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
           <span className="sidebar-user-avatar">
-            {avatarUrl ? <img src={avatarUrl} alt="" /> : isGuest ? <BrandMark size={22} variant={avatarVariant} /> : nickname?.slice(0, 1).toUpperCase() || "?"}
+            <UserAvatar user={{ nickname, avatarUrl, avatarVariant, isGuest }} size={30} />
             <UserStatusBadge status={status} size="md" />
           </span>
           <div>

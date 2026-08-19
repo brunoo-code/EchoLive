@@ -32,6 +32,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(null);
   const [profilePopover, setProfilePopover] = useState(null);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const [showNewMessages, setShowNewMessages] = useState(false);
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
@@ -52,6 +53,15 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const isOfficial = Boolean(otherUser?.isOfficial);
   const isOnline = Boolean(otherUser && onlineUserIds.has(otherUser.id));
   const conversationStatus = otherUser ? "ready" : socialStatus === "error" ? "error" : "loading";
+
+  useEffect(() => {
+    if (!lightboxImage) return undefined;
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setLightboxImage(null);
+    }
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [lightboxImage]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -259,6 +269,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     });
   }
 
+  const openSidebarProfile = (profileUser, anchorRect) => setProfilePopover({ user: { ...profileUser, status: onlineUserIds.has(profileUser.id) ? "online" : "offline" }, anchorRect });
   const sidebarProps = { activeTab: "friends", onTabChange: onNavigateFriends, conversations, onlineUserIds, user, onHome: onNavigateHome, onOpenConversation: onNavigateDm, onHideConversation: async (id) => { await hideConversation(id); onNavigateFriends(); }, activeConversationId: conversationId };
   if (conversationStatus === "loading") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
   if (conversationStatus === "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
@@ -267,10 +278,10 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const historyError = historyStatus === "error";
   return <main className="page social-page">
     <SocialRail onHome={onNavigateHome} />
-    <SocialSidebar {...sidebarProps} onOpenProfile={setProfileOpen} />
+    <SocialSidebar {...sidebarProps} onOpenProfile={openSidebarProfile} />
     <section className="dm-content">
       <header className={`dm-header ${isOfficial ? "is-official" : ""}`}>
-        <button type="button" className="dm-header-profile" onClick={(event) => setProfilePopover({ user: otherUser, anchorRect: event.currentTarget.getBoundingClientRect() })}>
+        <button type="button" className="dm-header-profile" onClick={(event) => setProfilePopover({ user: { ...otherUser, status: isOnline ? "online" : "offline" }, anchorRect: event.currentTarget.getBoundingClientRect() })}>
           <Avatar user={otherUser} size={38} />
           <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? "Online" : "Offline"}`}</small></span>
         </button>
@@ -278,7 +289,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       <div ref={messagesRef} className="dm-messages" onScroll={handleMessagesScroll}>
         {showNewMessages && <button type="button" className="dm-new-messages" onClick={() => { shouldAutoScrollRef.current = true; setShowNewMessages(false); bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }}>↓ Novas mensagens</button>}
         {hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}
-        {historyLoading && !messages.length ? <DmSkeleton /> : historyError ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId && timestampValue(message.createdAt) - timestampValue(messages[index - 1].createdAt) < 5 * 60 * 1000} showDate={index === 0 || !sameDate(message.createdAt, messages[index - 1].createdAt)} />) : <div className="dm-intro"><Avatar user={otherUser} size={64} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p><span>Este e o inicio da conversa.</span></div>}
+        {historyLoading && !messages.length ? <DmSkeleton /> : historyError ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId && timestampValue(message.createdAt) - timestampValue(messages[index - 1].createdAt) < 5 * 60 * 1000} showDate={index === 0 || !sameDate(message.createdAt, messages[index - 1].createdAt)} onOpenImage={(source, alt) => setLightboxImage({ source, alt })} />) : <div className="dm-intro"><Avatar user={otherUser} size={64} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p><span>Este e o inicio da conversa.</span></div>}
         <div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div>
         <div ref={bottomRef} />
       </div>
@@ -298,6 +309,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     </section>
     {profilePopover && <SocialUserProfilePopover participant={profilePopover.user} anchorRect={profilePopover.anchorRect} onClose={() => setProfilePopover(null)} onMessage={(person) => { setProfilePopover(null); onNavigateDm?.(conversationId, conversation); }} onViewProfile={(person) => { setProfilePopover(null); setProfileOpen(person); }} />}
     {profileOpen && <SocialUserProfileModal userId={profileOpen.id} initialUser={profileOpen} onClose={() => setProfileOpen(null)} onMessage={(nextConversation) => { setProfileOpen(null); onNavigateDm(nextConversation.id, nextConversation); }} />}
+    {lightboxImage && <div className="dm-lightbox" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setLightboxImage(null); }}><button type="button" className="icon-button dm-lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Fechar imagem" title="Fechar"><Icon name="close" size={20} /></button><img src={lightboxImage.source} alt={lightboxImage.alt || "Imagem ampliada"} /></div>}
   </main>;
 }
 
@@ -312,10 +324,10 @@ function extractHistory(data) {
   return { messages, hasMore: Boolean(data?.hasMore ?? data?.data?.hasMore) };
 }
 
-function Message({ message, mine, compact, showDate }) {
+function Message({ message, mine, compact, showDate, onOpenImage }) {
   const sender = message.sender || {};
   const senderName = sender.displayName || sender.username || "Usuario";
-  return <>{showDate && <DateDivider value={message.createdAt} />}<article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={40} />}</div><div><div className="dm-message-meta">{!compact && <strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong>}<small>{formatMessageTime(message.createdAt)}</small></div>{message.content && <p>{message.content}</p>}{message.attachment && <Attachment attachment={message.attachment} />}</div></article></>;
+  return <>{showDate && <DateDivider value={message.createdAt} />}<article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={40} />}</div><div>{!compact && <div className="dm-message-meta"><strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong><small>{formatMessageTime(message.createdAt)}</small></div>}{message.content && <p>{message.content}</p>}{message.attachment && <Attachment attachment={message.attachment} onOpenImage={onOpenImage} />}</div></article></>;
 }
 
 function DmSkeleton() { return <div className="dm-skeleton" aria-label="Carregando mensagens">{[1, 2, 3, 4].map((item) => <div key={item}><i /><span /><b /></div>)}</div>; }
@@ -326,9 +338,9 @@ function sameDate(left, right) { const a = normalizeTimestamp(left); const b = n
 
 function SelectedAttachment({ file, onRemove }) { const [url, setUrl] = useState(""); useEffect(() => { const next = URL.createObjectURL(file); setUrl(next); return () => URL.revokeObjectURL(next); }, [file]); return <div className="dm-selected-file"><div className="dm-selected-file-preview">{file.type.startsWith("image/") && url ? <img src={url} alt="Pré-visualização do anexo" /> : file.type.startsWith("video/") && url ? <video src={url} muted preload="metadata" /> : <Icon name="file" size={18} />}<span><strong>{file.name}</strong><small>{formatFileSize(file.size)}</small></span></div><button type="button" className="icon-button" onClick={onRemove} aria-label="Remover anexo"><Icon name="close" size={14} /></button></div>; }
 
-function Attachment({ attachment }) {
+function Attachment({ attachment, onOpenImage }) {
   const source = `${SERVER_URL}${attachment.url}`;
-  if (attachment.type === "image") return <a className="dm-attachment" href={source} target="_blank" rel="noreferrer"><img src={source} alt={attachment.name || "Imagem anexada"} /></a>;
+  if (attachment.type === "image") return <button type="button" className="dm-attachment dm-attachment-image-button" onClick={() => onOpenImage?.(source, attachment.name || "Imagem anexada")}><img src={source} alt={attachment.name || "Imagem anexada"} /></button>;
   if (attachment.type === "video") return <video className="dm-attachment-video" controls preload="metadata" src={source} />;
   return <a className="dm-file-attachment" href={source} target="_blank" rel="noreferrer"><Icon name="file" size={16} /><span><strong>{attachment.name || "Arquivo"}</strong><small>{formatFileSize(attachment.size)}</small></span></a>;
 }

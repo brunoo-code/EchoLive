@@ -1,10 +1,10 @@
-import BrandMark from "./BrandMark.jsx";
 import Icon from "./Icon.jsx";
+import BrandMark from "./BrandMark.jsx";
+import UserAvatar from "./UserAvatar.jsx";
 import { useMemo, useState } from "react";
 
 function Avatar({ user, size = 34 }) {
-  if (user?.avatarUrl) return <img className="social-avatar" width={size} height={size} src={user.avatarUrl} alt="" />;
-  return <span className="social-avatar social-avatar-eko" style={{ width: size, height: size }}><BrandMark size={size} variant={user?.avatarVariant} /></span>;
+  return <UserAvatar user={user} size={size} className="social-avatar" />;
 }
 
 export default function SocialSidebar({ activeTab, onTabChange, conversations, onlineUserIds, user, onHome, onOpenConversation, onOpenProfile, onHideConversation, activeConversationId }) {
@@ -28,7 +28,7 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
     <div className="social-sidebar-section">
       <div className="social-sidebar-section-title"><span>Mensagens diretas</span><button type="button" title="Nova conversa" aria-label="Nova conversa" onClick={() => onTabChange("friends")}><Icon name="plus" size={14} /></button></div>
       <div className="social-conversation-list">
-        {visibleConversations.map((conversation) => <div className={`social-conversation-row ${conversation.user?.isOfficial ? "is-official" : ""} ${activeConversationId === conversation.id ? "is-active" : ""}`} key={conversation.id}><button type="button" className="social-conversation-main" onClick={() => onOpenConversation(conversation.id)}><span className="social-conversation-avatar" onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user); }}><Avatar user={conversation.user} size={32} /><i className={conversation.user?.isOfficial || onlineUserIds.has(conversation.user.id) ? "is-online" : ""} /></span><span className="social-conversation-copy"><strong onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user); }}>{conversation.user.displayName || conversation.user.username}{conversation.user?.isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{conversation.user?.isOfficial ? "Mensagem oficial do EchoLive" : (conversation.lastMessage?.content || `@${conversation.user.username}`)}</small></span>{conversation.unreadCount > 0 && <b className="social-unread-badge">{conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}</b>}</button>{!conversation.user?.isOfficial && <button type="button" className="social-conversation-close icon-button" title="Fechar conversa" aria-label="Fechar conversa" onClick={() => onHideConversation?.(conversation.id)}><Icon name="close" size={14} /></button>}</div>)}
+        {visibleConversations.map((conversation) => <div className={`social-conversation-row ${conversation.user?.isOfficial ? "is-official" : ""} ${activeConversationId === conversation.id ? "is-active" : ""}`} key={conversation.id}><button type="button" className="social-conversation-main" onClick={() => onOpenConversation(conversation.id)}><span className="social-conversation-avatar" onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user, event.currentTarget.getBoundingClientRect()); }}><Avatar user={conversation.user} size={32} /><i className={conversation.user?.isOfficial || onlineUserIds.has(conversation.user.id) ? "is-online" : ""} /></span><span className="social-conversation-copy"><strong onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user, event.currentTarget.getBoundingClientRect()); }}>{conversation.user.displayName || conversation.user.username}{conversation.user?.isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{conversation.user?.isOfficial ? "Mensagem oficial do EchoLive" : (conversation.lastMessage?.content || `@${conversation.user.username}`)}</small></span>{conversation.unreadCount > 0 && <b className="social-unread-badge">{conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}</b>}</button>{!conversation.user?.isOfficial && <button type="button" className="social-conversation-close icon-button" title="Fechar conversa" aria-label="Fechar conversa" onClick={() => onHideConversation?.(conversation.id)}><Icon name="close" size={14} /></button>}</div>)}
         {!visibleConversations.length && <p className="social-sidebar-empty">{normalizedQuery ? "Nenhuma conversa encontrada." : "Suas conversas aparecerao aqui."}</p>}
       </div>
     </div>
