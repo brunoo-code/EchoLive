@@ -11,6 +11,7 @@ import Sidebar from "../components/Sidebar.jsx";
 import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
 import RoomRail from "../components/RoomRail.jsx";
 import ProfilePopover from "../components/ProfilePopover.jsx";
+import SocialUserProfilePopover from "../components/SocialUserProfilePopover.jsx";
 import Icon from "../components/Icon.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
@@ -93,6 +94,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const [authModalMode, setAuthModalMode] = useState(null);
   const [roomName, setRoomName] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("voice-general");
+  const [activeContentView, setActiveContentView] = useState("media");
   const [messages, setMessages] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
   const [focusedMediaId, setFocusedMediaId] = useState("");
@@ -102,6 +104,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
   const [isRoomSwitcherOpen, setIsRoomSwitcherOpen] = useState(false);
   const [isProfilePopoverOpen, setIsProfilePopoverOpen] = useState(false);
+  const [selectedParticipantProfile, setSelectedParticipantProfile] = useState(null);
   const [settingsInitialSection, setSettingsInitialSection] = useState("profile");
   const [recentRoomsRevision, setRecentRoomsRevision] = useState(0);
   const [devices, setDevices] = useState({ audio: [], video: [] });
@@ -1337,6 +1340,18 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   }
 
   function openProfilePopover() { setIsSettingsOpen(false); setIsProfilePopoverOpen(true); }
+  function openParticipantProfile(participant, anchorRect) {
+    setIsProfilePopoverOpen(false);
+    setSelectedParticipantProfile({ participant, anchorRect });
+  }
+  function handleSelectChannel(channel) {
+    setSelectedChannel(channel);
+    setActiveContentView(channel === "voice-general" ? "media" : "text");
+  }
+  function handleToggleScreenShare() {
+    setActiveContentView("media");
+    return toggleScreenShare();
+  }
   function openProfileSettings() { setIsProfilePopoverOpen(false); setSettingsInitialSection("profile"); setIsSettingsOpen(true); }
   function openSettings() { setIsProfilePopoverOpen(false); setSettingsInitialSection("profile"); setIsSettingsOpen(true); }
 
@@ -1506,6 +1521,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     username: accountUser?.username || "",
     avatarUrl: localAvatarUrl,
     avatarVariant: localAvatarVariant,
+    badges: accountUser?.badges || [],
     isGuest,
     stream: displayStream,
     isLocal: true,
@@ -1546,8 +1562,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     );
   }
 
-  const isVoiceChannel = selectedChannel === "voice-general";
-
   return (
     <main className="page room-page app-shell">
       <ToastStack toasts={toasts} />
@@ -1576,7 +1590,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         maxParticipants={maxParticipants}
         participants={voiceParticipants}
         selectedChannel={selectedChannel}
-        onSelectChannel={setSelectedChannel}
+        onSelectChannel={handleSelectChannel}
         onCopyInvite={copyInvite}
         notify={notify}
         copyFallbackLink={copyFallbackLink}
@@ -1598,7 +1612,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         onProfileClick={openProfilePopover}
         onToggleMicrophone={toggleMicrophone}
         onToggleCamera={toggleCamera}
-        onToggleScreenShare={toggleScreenShare}
+        onToggleScreenShare={handleToggleScreenShare}
         onStreamPresetChange={changeStreamPreset}
         onToggleDeafen={toggleDeafen}
         onLeaveVoice={leaveVoiceChannel}
@@ -1607,7 +1621,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       />
 
       <section className="central-stage">
-        <section className={`call-stage channel-view ${isVoiceChannel ? "" : "is-hidden"}`}>
+        {activeContentView === "media" ? <section className="call-stage channel-view">
         <header className="room-header">
           <div>
             <p className="eyebrow">Voz</p>
@@ -1646,25 +1660,25 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
           <section className="voice-empty-surface" aria-label="Canal de voz vazio" />
         )}
 
-        </section>
-
-        <section className={`chat-stage channel-view ${isVoiceChannel ? "is-hidden" : ""}`}>
+        </section> : <section className="chat-stage channel-view">
+          {isScreenSharing && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name="screenShare" size={15} /><span>Transmissao ativa</span><strong>Ver transmissao</strong></button>}
           <ChatPanel
-            socket={socketInstance}
-            socketId={selfId}
-            roomCode={roomCode}
-            messages={messages}
-            notify={notify}
-            uiSounds={uiSounds}
-            displayName={localDisplayName}
-            isReady={hasJoined}
-          />
-        </section>
+              socket={socketInstance}
+              socketId={selfId}
+              roomCode={roomCode}
+              messages={messages}
+              notify={notify}
+              uiSounds={uiSounds}
+              displayName={localDisplayName}
+              isReady={hasJoined}
+            />
+        </section>}
       </section>
 
-      <ParticipantsPanel participants={onlineParticipants} onProfileClick={openProfilePopover} />
+      <ParticipantsPanel participants={onlineParticipants} onProfileClick={openProfilePopover} onParticipantClick={openParticipantProfile} />
 
       {isProfilePopoverOpen && <ProfilePopover accountUser={accountUser} profile={profile} nickname={nickname} avatarUrl={localAvatarUrl} isGuest={isGuest} guestAvatarVariant={localAvatarVariant} onStatusChange={(status) => saveProfile({ status })} onEditProfile={openProfileSettings} onOpenSettings={openSettings} onLogout={logoutAccount} onCreateAccount={() => { setIsProfilePopoverOpen(false); setAuthModalMode("register"); }} onClose={() => setIsProfilePopoverOpen(false)} />}
+      {selectedParticipantProfile && <SocialUserProfilePopover participant={selectedParticipantProfile.participant} anchorRect={selectedParticipantProfile.anchorRect} onClose={() => setSelectedParticipantProfile(null)} onMessage={() => { setSelectedParticipantProfile(null); onNavigateSocial?.(); }} onViewProfile={() => { setSelectedParticipantProfile(null); notify("O perfil completo estara disponivel em uma proxima etapa."); }} />}
       {isDevicesModalOpen && (
         <DevicesModal
           devices={devices}

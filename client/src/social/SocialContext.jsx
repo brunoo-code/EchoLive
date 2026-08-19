@@ -67,16 +67,14 @@ export function SocialProvider({ children }) {
     if (status !== "authenticated") return;
     setSocialStatus("loading");
     socialDataReadyRef.current = false;
-    setSocialReady(false);
     try {
       await Promise.all([refreshFriends(), refreshConversations()]);
       socialDataReadyRef.current = true;
-      const ready = socketSubscribedRef.current;
-      setSocialReady(ready);
-      setSocialStatus(ready ? "ready" : "loading");
+      setSocialStatus(socketSubscribedRef.current ? "ready" : "loading");
+      if (socketSubscribedRef.current) setSocialReady(true);
     } catch {
       socialDataReadyRef.current = false;
-      setSocialReady(false);
+      setSocialReady(socketSubscribedRef.current);
       setSocialStatus("error");
     }
   }, [refreshConversations, refreshFriends, status]);
@@ -99,6 +97,7 @@ export function SocialProvider({ children }) {
     }
 
     const socialSocket = io(SERVER_URL, { withCredentials: true });
+    if (import.meta.env.DEV) console.debug("[SOCIAL:socket:create]");
     socketRef.current = socialSocket;
     setSocket(socialSocket);
     socialDataReadyRef.current = false;
@@ -107,13 +106,14 @@ export function SocialProvider({ children }) {
     setSocialStatus("connecting");
 
     const subscribe = () => {
+      if (import.meta.env.DEV) console.debug("[SOCIAL:subscribe:emit]", { userId: user?.id || null });
       socialSocket.emit("social:subscribe", (result) => {
+        if (import.meta.env.DEV) console.debug("[SOCIAL:subscribe:ack]", { ok: Boolean(result?.ok) });
         if (result?.ok) {
           setOnlineUserIds(new Set(result.onlineUserIds || []));
           socketSubscribedRef.current = true;
-          const ready = socialDataReadyRef.current;
-          setSocialReady(ready);
-          setSocialStatus(ready ? "ready" : "loading");
+          setSocialReady(true);
+          setSocialStatus(socialDataReadyRef.current ? "ready" : "loading");
         } else {
           socketSubscribedRef.current = false;
           setSocialReady(false);
@@ -125,7 +125,23 @@ export function SocialProvider({ children }) {
       refreshFriends().catch(() => {});
       refreshConversations().catch(() => {});
     };
-    socialSocket.on("connect", subscribe);
+    const handleConnect = () => {
+      if (import.meta.env.DEV) console.debug("[SOCIAL:socket:connect]", { socketId: socialSocket.id, connected: socialSocket.connected });
+      subscribe();
+    };
+    const handleConnectError = (error) => {
+      if (import.meta.env.DEV) console.debug("[SOCIAL:realtime:error]", { reason: error?.message || "connect_error" });
+      socketSubscribedRef.current = false;
+      setSocialReady(false);
+      setSocialStatus("error");
+    };
+    const handleDisconnect = (reason) => {
+      if (import.meta.env.DEV) console.debug("[DM:socket:disconnect]", { reason: reason || "unknown" });
+      socketSubscribedRef.current = false;
+      setSocialReady(false);
+      setSocialStatus("connecting");
+    };
+    socialSocket.on("connect", handleConnect);
     socialSocket.on("social:presence", ({ userId, status: nextStatus } = {}) => {
       setOnlineUserIds((current) => {
         const next = new Set(current);
@@ -137,18 +153,18 @@ export function SocialProvider({ children }) {
     socialSocket.on("social:friend-request", refreshFromEvent);
     socialSocket.on("social:friend-updated", refreshFromEvent);
     socialSocket.on("social:conversation-updated", refreshConversations);
-    socialSocket.on("connect_error", () => { socketSubscribedRef.current = false; setSocialReady(false); setSocialStatus("error"); });
-    socialSocket.on("disconnect", () => { socketSubscribedRef.current = false; setSocialReady(false); setSocialStatus("connecting"); });
+    socialSocket.on("connect_error", handleConnectError);
+    socialSocket.on("disconnect", handleDisconnect);
 
     refreshSocial();
     return () => {
-      socialSocket.off("connect", subscribe);
+      socialSocket.off("connect", handleConnect);
       socialSocket.off("social:presence");
       socialSocket.off("social:friend-request", refreshFromEvent);
       socialSocket.off("social:friend-updated", refreshFromEvent);
       socialSocket.off("social:conversation-updated", refreshConversations);
-      socialSocket.off("connect_error");
-      socialSocket.off("disconnect");
+      socialSocket.off("connect_error", handleConnectError);
+      socialSocket.off("disconnect", handleDisconnect);
       socialSocket.disconnect();
       socketSubscribedRef.current = false;
       socialDataReadyRef.current = false;

@@ -1,6 +1,7 @@
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import Icon from "./Icon.jsx";
 import BrandMark from "./BrandMark.jsx";
+import UserBadges from "./UserBadges.jsx";
 
 export default function ProfilePopover({ accountUser, profile, nickname, avatarUrl, isGuest = false, guestAvatarVariant = 0, onStatusChange, onEditProfile, onOpenSettings, onLogout, onCreateAccount, onClose }) {
   if (isGuest) {
@@ -21,7 +22,7 @@ export default function ProfilePopover({ accountUser, profile, nickname, avatarU
   return <section className="profile-popover" role="dialog" aria-label="Menu do perfil">
     <div className="profile-popover-header">
       <div className="profile-popover-avatar">{avatarUrl ? <img src={avatarUrl} alt="" /> : displayName.slice(0, 1).toUpperCase()}<UserStatusBadge status={currentStatus} size="lg" /></div>
-      <div className="profile-popover-identity"><strong title={displayName}>{displayName}</strong><span>@{accountNickname}</span><small title={profile.customStatus || ""}>{profile.customStatus || (currentStatus === "dnd" ? "Nao perturbe" : "Online")}</small>{accountUser?.badges?.length > 0 && <span className="profile-badges">{accountUser.badges.slice(0, 3).map((badge) => <em key={badge.code} title={badge.description || badge.label}>{badge.label}</em>)}</span>}</div>
+      <div className="profile-popover-identity"><strong title={displayName}>{displayName}</strong><span>@{accountNickname}</span><small title={profile.customStatus || ""}>{profile.customStatus || (currentStatus === "dnd" ? "Nao perturbe" : "Online")}</small><UserBadges badges={accountUser?.badges} /></div>
     </div>
     <div className="profile-status-options" aria-label="Status do perfil">
       <button type="button" className={currentStatus === "online" ? "is-selected" : ""} onClick={() => onStatusChange("online")}><UserStatusBadge status="online" size="sm" /><span>Online</span>{currentStatus === "online" && <Icon name="check" size={14} />}</button>
