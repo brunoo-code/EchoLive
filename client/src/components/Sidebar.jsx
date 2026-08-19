@@ -122,10 +122,11 @@ export default function Sidebar({
 
         {isInVoice && <div className="sidebar-call-toolbar" aria-label="Controles da chamada">
           <button type="button" className={`sidebar-call-button ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} data-tooltip={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-pressed={cameraEnabled}>
-            <Icon name={cameraEnabled ? "camera" : "cameraOff"} size={15} />
+            <span className="camera-control-icon" aria-hidden="true"><Icon name={cameraEnabled ? "camera" : "cameraOff"} size={15} /></span>
             <span>Camera</span>
           </button>
           <ControlsBar
+            compact
             isScreenSharing={isScreenSharing}
             onToggleScreenShare={onToggleScreenShare}
             streamPreset={streamPreset}
