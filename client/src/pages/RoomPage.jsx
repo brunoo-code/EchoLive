@@ -324,6 +324,22 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       emitMediaStatus();
     });
 
+    socket.on("room-roster", ({ participants: nextParticipants, voiceParticipants: nextVoiceParticipants, count, maxParticipants, roomName: joinedRoomName } = {}) => {
+      const safeParticipants = Array.isArray(nextParticipants) ? nextParticipants : [];
+      const safeVoiceParticipants = Array.isArray(nextVoiceParticipants) ? nextVoiceParticipants : [];
+
+      setParticipantCount(Number.isInteger(count) ? count : safeParticipants.length);
+      setMaxParticipants(maxParticipants || 10);
+      setRoomName(joinedRoomName || `Sala ${roomCode}`);
+      setRoomParticipants(safeParticipants.filter((participant) => participant.socketId !== socket.id));
+
+      if (isInVoiceRef.current) {
+        syncRemoteParticipants(safeVoiceParticipants.filter((participant) => participant.socketId !== socket.id));
+      } else {
+        setRemoteParticipants([]);
+      }
+    });
+
     socket.on("message-history", ({ channelId, messages: history } = {}) => {
       if (channelId === "general") {
         setMessages(Array.isArray(history) ? history : []);
@@ -1610,14 +1626,23 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
             <div className="empty-call-avatar">{localAvatarUrl ? <img src={localAvatarUrl} alt="" /> : isGuest ? <BrandMark size={38} variant={localAvatarVariant} /> : localDisplayName.slice(0, 1).toUpperCase()}</div>
             <strong>A chamada esta pronta.</strong>
             <span>Compartilhe sua tela ou espere alguem entrar.</span>
-            <div className="empty-call-actions"><button type="button" onClick={toggleCamera}>Ligar camera</button></div>
+            <div className="empty-call-actions">
+              <button type="button" onClick={toggleCamera}>Ligar camera</button>
+              <ControlsBar
+                isScreenSharing={isScreenSharing}
+                onToggleScreenShare={toggleScreenShare}
+                streamPreset={streamPreset}
+                screenShareLabel={screenShareLabel}
+                onStreamPresetChange={changeStreamPreset}
+              />
+            </div>
             <div className="voice-roster-inline">
               {voiceParticipants.map((participant) => <span key={participant.socketId} title={participant.nickname}>{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.isGuest ? <BrandMark size={18} variant={participant.avatarVariant} /> : participant.nickname?.slice(0, 1).toUpperCase() || "?"}</span>)}
             </div>
           </section>
         )}
 
-        {isInVoice && <ControlsBar
+        {isInVoice && callParticipants.length > 0 && <ControlsBar
           isScreenSharing={isScreenSharing}
           onToggleScreenShare={toggleScreenShare}
           streamPreset={streamPreset}

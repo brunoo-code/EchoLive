@@ -34,6 +34,7 @@ export function SocialProvider({ children }) {
   const socketRef = useRef(null);
   const [socket, setSocket] = useState(null);
   const [socialStatus, setSocialStatus] = useState("idle");
+  const [socketReady, setSocketReady] = useState(false);
   const [friends, setFriends] = useState([]);
   const [receivedRequests, setReceivedRequests] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
@@ -73,6 +74,7 @@ export function SocialProvider({ children }) {
       socketRef.current?.disconnect();
       socketRef.current = null;
       setSocket(null);
+      setSocketReady(false);
       setFriends([]);
       setReceivedRequests([]);
       setSentRequests([]);
@@ -85,13 +87,18 @@ export function SocialProvider({ children }) {
     const socialSocket = io(SERVER_URL, { withCredentials: true });
     socketRef.current = socialSocket;
     setSocket(socialSocket);
+    setSocketReady(false);
     setSocialStatus("connecting");
 
     const subscribe = () => {
       socialSocket.emit("social:subscribe", (result) => {
         if (result?.ok) {
           setOnlineUserIds(new Set(result.onlineUserIds || []));
+          setSocketReady(true);
           setSocialStatus("ready");
+        } else {
+          setSocketReady(false);
+          setSocialStatus("error");
         }
       });
     };
@@ -111,7 +118,8 @@ export function SocialProvider({ children }) {
     socialSocket.on("social:friend-request", refreshFromEvent);
     socialSocket.on("social:friend-updated", refreshFromEvent);
     socialSocket.on("social:conversation-updated", refreshConversations);
-    socialSocket.on("connect_error", () => setSocialStatus("error"));
+    socialSocket.on("connect_error", () => { setSocketReady(false); setSocialStatus("error"); });
+    socialSocket.on("disconnect", () => setSocketReady(false));
 
     refreshSocial();
     return () => {
@@ -120,7 +128,10 @@ export function SocialProvider({ children }) {
       socialSocket.off("social:friend-request", refreshFromEvent);
       socialSocket.off("social:friend-updated", refreshFromEvent);
       socialSocket.off("social:conversation-updated", refreshConversations);
+      socialSocket.off("connect_error");
+      socialSocket.off("disconnect");
       socialSocket.disconnect();
+      setSocketReady(false);
       if (socketRef.current === socialSocket) socketRef.current = null;
     };
   }, [refreshConversations, refreshFriends, refreshSocial, status, user?.id]);
@@ -177,10 +188,11 @@ export function SocialProvider({ children }) {
     sendFriendRequest,
     sentRequests,
     socket,
+    socketReady,
     socialStatus,
     startConversation,
     user
-  }), [acceptFriendRequest, conversations, deleteFriendRequest, friends, loadMessages, markRead, onlineUserIds, receivedRequests, refreshSocial, removeFriend, sendFriendRequest, sentRequests, socket, socialStatus, startConversation, user]);
+  }), [acceptFriendRequest, conversations, deleteFriendRequest, friends, loadMessages, markRead, onlineUserIds, receivedRequests, refreshSocial, removeFriend, sendFriendRequest, sentRequests, socket, socketReady, socialStatus, startConversation, user]);
 
   return <SocialContext.Provider value={value}>{children}</SocialContext.Provider>;
 }

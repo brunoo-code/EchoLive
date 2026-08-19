@@ -26,6 +26,7 @@ import {
   getParticipants,
   getRoomSize,
   getRoomMessages,
+  getRoomDetails,
   getSocketRoom,
   getVoiceParticipants,
   hasRoom,
@@ -206,6 +207,20 @@ function emitRoomError(socket, message) {
   socket.emit("room-error", { message });
 }
 
+function emitRoomRoster(roomCode) {
+  const code = normalizeRoomCode(roomCode);
+  const participants = getParticipants(code);
+
+  io.to(code).emit("room-roster", {
+    roomCode: code,
+    roomName: getRoomDetails(code).name,
+    participants,
+    voiceParticipants: getVoiceParticipants(code),
+    count: participants.length,
+    maxParticipants: getMaxParticipantsPerRoom()
+  });
+}
+
 function clearTyping(socket, announce = true) {
   const roomCode = typingSockets.get(socket.id);
   const timer = typingTimers.get(socket.id);
@@ -250,6 +265,7 @@ function handleLeave(socket) {
     count: getRoomSize(result.roomCode),
     maxParticipants: getMaxParticipantsPerRoom()
   });
+  emitRoomRoster(result.roomCode);
 
   if (getRoomSize(result.roomCode) === 0) {
     console.log("[room-deleted]", result.roomCode);
@@ -293,7 +309,22 @@ io.on("connection", (socket) => {
       handleLeave(socket);
     }
 
-    const result = joinRoom(code, socket.id, cleanNickname, identity);
+    const authenticatedUser = socket.data.accountUser;
+    const resolvedIdentity = authenticatedUser
+      ? {
+          userId: authenticatedUser.id,
+          displayName: authenticatedUser.displayName || authenticatedUser.username,
+          username: authenticatedUser.username,
+          avatarUrl: authenticatedUser.avatarUrl || "",
+          isGuest: false,
+          avatarVariant: 0
+        }
+      : {
+          ...(identity && typeof identity === "object" ? identity : {}),
+          userId: "",
+          isGuest: Boolean(identity?.isGuest)
+        };
+    const result = joinRoom(code, socket.id, cleanNickname, resolvedIdentity);
 
     if (!result.ok) {
       emitRoomError(socket, result.error);
@@ -318,7 +349,7 @@ io.on("connection", (socket) => {
       channelId: "general",
       messages: getRoomMessages(code)
     });
-    console.log("[join-room]", code, socket.id, cleanNickname, "users:", result.participants.length);
+    console.log("[join-room]", code, socket.id, authenticatedUser ? "account" : "guest", cleanNickname, "users:", result.participants.length);
     console.log("[join-voice]", code, socket.id, "voiceUsers:", result.participants.length);
 
     socket.to(code).emit("user-joined", {
@@ -329,6 +360,7 @@ io.on("connection", (socket) => {
       count: result.participants.length,
       maxParticipants: getMaxParticipantsPerRoom()
     });
+    emitRoomRoster(code);
   });
 
   socket.on("join-voice", () => {

@@ -168,6 +168,7 @@ export function joinRoom(roomCode, socketId, nickname, identity = {}) {
   const participant = {
     ...room.get(socketId),
     socketId,
+    userId: String(identity.userId || "").trim(),
     nickname: cleanNickname,
     displayName,
     username,
