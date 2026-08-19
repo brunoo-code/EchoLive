@@ -6,9 +6,9 @@ import SocialEmptyState from "../components/SocialEmptyState.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useSocial } from "../social/SocialContext.jsx";
 
-export default function DirectMessagePage({ conversationId, onNavigateHome, onNavigateFriends, onNavigateDm }) {
+export default function DirectMessagePage({ conversationId, initialConversation, onNavigateHome, onNavigateFriends, onNavigateDm }) {
   const { user } = useAuth();
-  const { conversations, onlineUserIds, socket, socketReady, loadMessages, markRead, socialStatus } = useSocial();
+  const { conversations, onlineUserIds, socket, socialReady, loadMessages, markRead, socialStatus } = useSocial();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
@@ -22,12 +22,12 @@ export default function DirectMessagePage({ conversationId, onNavigateHome, onNa
   const bottomRef = useRef(null);
   const composerRef = useRef(null);
   const typingTimerRef = useRef(null);
-  const conversation = conversations.find((item) => item.id === conversationId);
+  const conversation = conversations.find((item) => item.id === conversationId) || (initialConversation?.id === conversationId ? initialConversation : null);
   const otherUser = conversation?.user;
   const isOnline = Boolean(otherUser && onlineUserIds.has(otherUser.id));
 
   useEffect(() => {
-    if (!conversationId || !otherUser || !socket || !socketReady) return undefined;
+    if (!conversationId || !otherUser || !socket || !socialReady) return undefined;
     let active = true;
     setLoading(true);
     setError("");
@@ -52,12 +52,16 @@ export default function DirectMessagePage({ conversationId, onNavigateHome, onNa
         setLoading(false);
         return;
       }
-      setConversationReady(true);
       loadMessages(conversationId).then((data) => {
         if (!active) return;
-        setMessages(data.messages || []);
+        setMessages((current) => {
+          const merged = new Map((data.messages || []).map((message) => [message.id, message]));
+          current.forEach((message) => merged.set(message.id, message));
+          return Array.from(merged.values()).sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt));
+        });
         setHasMore(Boolean(data.hasMore));
         setLoading(false);
+        setConversationReady(true);
         markRead(conversationId).catch(() => {});
       }).catch((requestError) => {
         if (active) { setError(requestError.message); setLoadFailed(true); setLoading(false); }
@@ -71,7 +75,7 @@ export default function DirectMessagePage({ conversationId, onNavigateHome, onNa
       socket.off("dm:new-message", handleMessage);
       socket.off("dm:typing", handleTyping);
     };
-  }, [conversationId, loadMessages, markRead, otherUser?.id, retryVersion, socket, socketReady, user?.id]);
+  }, [conversationId, loadMessages, markRead, otherUser?.id, retryVersion, socialReady, socket, user?.id]);
 
   useEffect(() => {
     const textarea = composerRef.current;

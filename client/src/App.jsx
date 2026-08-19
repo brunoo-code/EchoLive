@@ -49,20 +49,20 @@ function AppContent() {
     setRoute({ name: "social" });
   }
 
-  function navigateToDm(conversationId) {
+  function navigateToDm(conversationId, initialConversation = null) {
     if (!/^[0-9a-f-]{36}$/i.test(String(conversationId || ""))) {
       navigateToSocial();
       return;
     }
     window.history.pushState({}, "", `/dm/${conversationId}`);
-    setRoute({ name: "dm", conversationId });
+    setRoute({ name: "dm", conversationId, initialConversation });
   }
 
   if (route.name === "room") {
     return <RoomPage roomCode={route.roomCode} onBack={navigateToHome} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} />;
   }
   if (route.name === "social") return <SocialPage onNavigateHome={navigateToHome} onNavigateDm={navigateToDm} />;
-  if (route.name === "dm") return <DirectMessagePage conversationId={route.conversationId} onNavigateHome={navigateToHome} onNavigateFriends={navigateToSocial} onNavigateDm={navigateToDm} />;
+  if (route.name === "dm") return <DirectMessagePage conversationId={route.conversationId} initialConversation={route.initialConversation} onNavigateHome={navigateToHome} onNavigateFriends={navigateToSocial} onNavigateDm={navigateToDm} />;
 
   return <HomePage onRoomCreated={navigateToRoom} onNavigateSocial={navigateToSocial} />;
 }

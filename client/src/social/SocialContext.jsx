@@ -32,9 +32,11 @@ async function socialRequest(path, options = {}) {
 export function SocialProvider({ children }) {
   const { status, user } = useAuth();
   const socketRef = useRef(null);
+  const socialDataReadyRef = useRef(false);
+  const socketSubscribedRef = useRef(false);
   const [socket, setSocket] = useState(null);
   const [socialStatus, setSocialStatus] = useState("idle");
-  const [socketReady, setSocketReady] = useState(false);
+  const [socialReady, setSocialReady] = useState(false);
   const [friends, setFriends] = useState([]);
   const [receivedRequests, setReceivedRequests] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
@@ -61,10 +63,17 @@ export function SocialProvider({ children }) {
   const refreshSocial = useCallback(async () => {
     if (status !== "authenticated") return;
     setSocialStatus("loading");
+    socialDataReadyRef.current = false;
+    setSocialReady(false);
     try {
       await Promise.all([refreshFriends(), refreshConversations()]);
-      setSocialStatus("ready");
+      socialDataReadyRef.current = true;
+      const ready = socketSubscribedRef.current;
+      setSocialReady(ready);
+      setSocialStatus(ready ? "ready" : "loading");
     } catch {
+      socialDataReadyRef.current = false;
+      setSocialReady(false);
       setSocialStatus("error");
     }
   }, [refreshConversations, refreshFriends, status]);
@@ -73,8 +82,10 @@ export function SocialProvider({ children }) {
     if (status !== "authenticated" || !user?.id) {
       socketRef.current?.disconnect();
       socketRef.current = null;
+      socialDataReadyRef.current = false;
+      socketSubscribedRef.current = false;
       setSocket(null);
-      setSocketReady(false);
+      setSocialReady(false);
       setFriends([]);
       setReceivedRequests([]);
       setSentRequests([]);
@@ -87,16 +98,22 @@ export function SocialProvider({ children }) {
     const socialSocket = io(SERVER_URL, { withCredentials: true });
     socketRef.current = socialSocket;
     setSocket(socialSocket);
-    setSocketReady(false);
+    socialDataReadyRef.current = false;
+    socketSubscribedRef.current = false;
+    setSocialReady(false);
     setSocialStatus("connecting");
 
     const subscribe = () => {
       socialSocket.emit("social:subscribe", (result) => {
         if (result?.ok) {
           setOnlineUserIds(new Set(result.onlineUserIds || []));
-          setSocketReady(true);
+          socketSubscribedRef.current = true;
+          const ready = socialDataReadyRef.current;
+          setSocialReady(ready);
+          setSocialStatus(ready ? "ready" : "loading");
         } else {
-          setSocketReady(false);
+          socketSubscribedRef.current = false;
+          setSocialReady(false);
           setSocialStatus("error");
         }
       });
@@ -117,8 +134,8 @@ export function SocialProvider({ children }) {
     socialSocket.on("social:friend-request", refreshFromEvent);
     socialSocket.on("social:friend-updated", refreshFromEvent);
     socialSocket.on("social:conversation-updated", refreshConversations);
-    socialSocket.on("connect_error", () => { setSocketReady(false); setSocialStatus("error"); });
-    socialSocket.on("disconnect", () => setSocketReady(false));
+    socialSocket.on("connect_error", () => { socketSubscribedRef.current = false; setSocialReady(false); setSocialStatus("error"); });
+    socialSocket.on("disconnect", () => { socketSubscribedRef.current = false; setSocialReady(false); setSocialStatus("connecting"); });
 
     refreshSocial();
     return () => {
@@ -130,7 +147,9 @@ export function SocialProvider({ children }) {
       socialSocket.off("connect_error");
       socialSocket.off("disconnect");
       socialSocket.disconnect();
-      setSocketReady(false);
+      socketSubscribedRef.current = false;
+      socialDataReadyRef.current = false;
+      setSocialReady(false);
       if (socketRef.current === socialSocket) socketRef.current = null;
     };
   }, [refreshConversations, refreshFriends, refreshSocial, status, user?.id]);
@@ -158,8 +177,10 @@ export function SocialProvider({ children }) {
 
   const startConversation = useCallback(async (userId) => {
     const data = await socialRequest(`/api/social/dms/${userId}`, { method: "POST" });
-    await refreshConversations();
-    return data.conversation;
+    const conversation = data.conversation;
+    setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)]);
+    refreshConversations().catch(() => {});
+    return conversation;
   }, [refreshConversations]);
 
   const loadMessages = useCallback(async (conversationId, before = "") => {
@@ -187,11 +208,11 @@ export function SocialProvider({ children }) {
     sendFriendRequest,
     sentRequests,
     socket,
-    socketReady,
+    socialReady,
     socialStatus,
     startConversation,
     user
-  }), [acceptFriendRequest, conversations, deleteFriendRequest, friends, loadMessages, markRead, onlineUserIds, receivedRequests, refreshSocial, removeFriend, sendFriendRequest, sentRequests, socket, socketReady, socialStatus, startConversation, user]);
+  }), [acceptFriendRequest, conversations, deleteFriendRequest, friends, loadMessages, markRead, onlineUserIds, receivedRequests, refreshSocial, removeFriend, sendFriendRequest, sentRequests, socket, socialReady, socialStatus, startConversation, user]);
 
   return <SocialContext.Provider value={value}>{children}</SocialContext.Provider>;
 }
