@@ -3,8 +3,10 @@ import HomePage from "./pages/HomePage.jsx";
 import RoomPage from "./pages/RoomPage.jsx";
 import SocialPage from "./pages/SocialPage.jsx";
 import DirectMessagePage from "./pages/DirectMessagePage.jsx";
+import ServerPage from "./pages/ServerPage.jsx";
 import { AuthProvider } from "./auth/AuthContext.jsx";
 import { SocialProvider } from "./social/SocialContext.jsx";
+import { ServerProvider } from "./servers/ServerContext.jsx";
 
 function getRoute() {
   const pathname = window.location.pathname;
@@ -12,12 +14,15 @@ function getRoute() {
   if (roomMatch) return { name: "room", roomCode: roomMatch[1].toUpperCase() };
   const dmMatch = pathname.match(/^\/dm\/([0-9a-f-]{36})$/i);
   if (dmMatch) return { name: "dm", conversationId: dmMatch[1] };
+  const serverMatch = pathname.match(/^\/server\/([0-9a-f-]{36})$/i);
+  if (serverMatch) return { name: "server", serverId: serverMatch[1] };
+  if (pathname === "/servers") return { name: "servers" };
   if (pathname === "/friends") return { name: "social" };
   return { name: "home" };
 }
 
 export default function App() {
-  return <AuthProvider><SocialProvider><AppContent /></SocialProvider></AuthProvider>;
+  return <AuthProvider><ServerProvider><SocialProvider><AppContent /></SocialProvider></ServerProvider></AuthProvider>;
 }
 
 function AppContent() {
@@ -49,6 +54,20 @@ function AppContent() {
     setRoute({ name: "social" });
   }
 
+  function navigateToServers() {
+    window.history.pushState({}, "", "/servers");
+    setRoute({ name: "servers" });
+  }
+
+  function navigateToServer(serverId) {
+    if (!/^[0-9a-f-]{36}$/i.test(String(serverId || ""))) {
+      navigateToServers();
+      return;
+    }
+    window.history.pushState({}, "", `/server/${serverId}`);
+    setRoute({ name: "server", serverId });
+  }
+
   function navigateToDm(conversationId, initialConversation = null) {
     if (!/^[0-9a-f-]{36}$/i.test(String(conversationId || ""))) {
       navigateToSocial();
@@ -59,10 +78,11 @@ function AppContent() {
   }
 
   if (route.name === "room") {
-    return <RoomPage roomCode={route.roomCode} onBack={navigateToHome} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateDm={navigateToDm} />;
+    return <RoomPage roomCode={route.roomCode} onBack={navigateToHome} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateDm={navigateToDm} onNavigateServer={navigateToServer} />;
   }
+  if (route.name === "server" || route.name === "servers") return <ServerPage serverId={route.serverId || ""} onNavigateHome={navigateToHome} onNavigateSocial={navigateToSocial} onNavigateServer={navigateToServer} />;
   if (route.name === "social") return <SocialPage onNavigateHome={navigateToHome} onNavigateDm={navigateToDm} />;
   if (route.name === "dm") return <DirectMessagePage conversationId={route.conversationId} initialConversation={route.initialConversation} onNavigateHome={navigateToHome} onNavigateFriends={navigateToSocial} onNavigateDm={navigateToDm} />;
 
-  return <HomePage onRoomCreated={navigateToRoom} onNavigateSocial={navigateToSocial} />;
+  return <HomePage onRoomCreated={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateServers={navigateToServers} />;
 }

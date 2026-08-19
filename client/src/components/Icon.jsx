@@ -1,5 +1,7 @@
 const iconPaths = {
   home: <><path d="m3 10 5-5 5 5" /><path d="M5 9v5h6V9" /></>,
+  hash: <><path d="M5 2 3.5 14M11.5 2 10 14M2 6h12M1.5 10h12" /></>,
+  server: <><rect x="2" y="2" width="12" height="4" rx="1" /><rect x="2" y="10" width="12" height="4" rx="1" /><path d="M5 4h.1M5 12h.1" /></>,
   plus: <><path d="M8 3v10M3 8h10" /></>,
   more: <><circle cx="3" cy="8" r=".8" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r=".8" fill="currentColor" stroke="none" /><circle cx="13" cy="8" r=".8" fill="currentColor" stroke="none" /></>,
   copy: <><rect x="5" y="4" width="7" height="8" rx="1" /><path d="M3 10V3.5A1.5 1.5 0 0 1 4.5 2H10" /></>,
@@ -34,6 +36,7 @@ const iconPaths = {
   warning: <><path d="m8 2 6 12H2L8 2Z" /><path d="M8 6v3M8 11v.2" /></>,
   speaker: <><path d="M2.5 6h3l3-2.5v9l-3-2.5h-3z" /><path d="M11 6a3 3 0 0 1 0 4M12.5 4.5a5 5 0 0 1 0 7" /></>,
   link: <><path d="M6.5 9.5 5 11a2.8 2.8 0 0 1-4-4l2-2a2.8 2.8 0 0 1 4 0" /><path d="m9.5 6.5 1.5-1.5a2.8 2.8 0 0 1 4 4l-2 2a2.8 2.8 0 0 1-4 0" /><path d="m5.5 8.5 5-5" /></>,
+  reply: <><path d="M6 4 2.5 7.5 6 11" /><path d="M3 7.5h5.5a4 4 0 0 1 4 4" /></>,
   pulse: <path d="M2 8h3l1.5-4L9 12l1.5-4H14" />,
   search: <><circle cx="7" cy="7" r="4.5" /><path d="m10.5 10.5 3 3" /></>,
   send: <path d="m2 2 12 6-12 6 2.4-5.2L10 8 4.4 7.2 2 2Z" />,

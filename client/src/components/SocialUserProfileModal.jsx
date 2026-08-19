@@ -92,7 +92,7 @@ export default function SocialUserProfileModal({ userId, initialUser, onClose, o
       <button type="button" className="icon-button social-profile-modal-close" onClick={onClose} aria-label="Fechar perfil" title="Fechar"><Icon name="close" size={18} /></button>
       <aside className="social-profile-identity">
         <Avatar user={person} size={108} />
-        <div className="social-profile-name"><h2>{person.displayName || person.username}</h2><span>@{person.username}</span><UserBadges badges={person.badges} /></div>
+        <div className="social-profile-name"><h2>{person.displayName || person.username}</h2><span>@{person.username}</span><UserBadges user={person} badges={person.badges} /><span className="social-profile-badge-note">Insígnias da conta</span></div>
         <p className="social-profile-presence"><i className={person.status === "online" ? "is-online" : ""} />{person.status === "online" ? "Online" : "Offline"}</p>
         {person.bio && <p className="social-profile-bio">{person.bio}</p>}
         {!isSelf && !person.isOfficial && person.accountType !== "system" && <div className="social-profile-actions"><button type="button" className="primary-button" onClick={handleMessage} disabled={working}><Icon name="message" size={15} />Mensagem</button>{relationship?.status !== "pending" && <button type="button" className="secondary-button" onClick={handleFriendAction} disabled={working}>{isFriend ? "Remover amigo" : "Adicionar amigo"}</button>}{isFriend && <span className="social-profile-relationship is-friend"><Icon name="check" size={12} />Amigos</span>}{relationship?.status === "pending" && <span className="social-profile-relationship">Pedido pendente</span>}</div>}

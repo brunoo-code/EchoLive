@@ -11,7 +11,8 @@ const BADGE_META = {
   }
 };
 
-export default function UserBadges({ badges = [], compact = false }) {
+export default function UserBadges({ badges = [], compact = false, user = null, isGuest = false }) {
+  if (isGuest || user?.isGuest || user?.accountType === "guest") return null;
   const supportedBadges = badges.filter((badge) => badge?.code && BADGE_META[badge.code]);
   const visibleBadges = supportedBadges.slice(0, 3);
   const overflowCount = Math.max(0, supportedBadges.length - visibleBadges.length);

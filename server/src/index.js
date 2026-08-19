@@ -17,6 +17,7 @@ import {
   registerAccountPresence,
   registerSocialRoutes
 } from "./social.js";
+import { attachServerSocket, registerServerRoutes } from "./serverRoutes.js";
 import { checkDatabase, getDatabaseError, isDatabaseConfigured } from "./db/pool.js";
 import { getConversationForUser } from "./db/social.js";
 import { markRoomActivityLeft, recordRoomActivity } from "./db/roomActivity.js";
@@ -208,6 +209,7 @@ app.get("/ice-config", (_request, response) => {
 
 registerAuthRoutes(app);
 registerSocialRoutes(app);
+registerServerRoutes(app);
 
 if (existsSync(CLIENT_DIST_DIR)) {
   app.use("/assets", express.static(path.join(CLIENT_DIST_DIR, "assets")));
@@ -336,6 +338,7 @@ function handleLeave(socket) {
 io.on("connection", (socket) => {
   registerAccountPresence(io, socket, socket.data.accountUser);
   attachSocialSocket(io, socket);
+  attachServerSocket(io, socket);
 
   socket.on("create-room", ({ roomCode, roomName } = {}) => {
     const result = createRoom(roomCode, roomName);

@@ -61,7 +61,7 @@ function getActualScreenLabel(settings, fallbackPreset) {
   return `${resolution} · ${Math.round(settings.frameRate)} FPS`;
 }
 
-export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateSocial, onNavigateDm }) {
+export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateSocial, onNavigateDm, onNavigateServer }) {
   const { logout, updateProfile: updateAccountProfile, status: authStatus, user: accountUser } = useAuth();
   const { startConversation } = useSocial();
   const debugRtc = new URLSearchParams(window.location.search).get("debugRtc") === "1";
@@ -1591,7 +1591,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
           <AudioParticipant key={participant.socketId} peerSocketId={participant.socketId} stream={participant.stream} volume={participant.volume} isDeafened={isDeafened} outputDeviceId={selectedOutputId} />
         ))}
       </div>
-      <RoomRail roomCode={roomCode} roomName={roomName} recentRooms={recentRooms()} onHome={onBack} onSocial={onNavigateSocial} onOpenSwitcher={() => setIsRoomSwitcherOpen(true)} />
+      <RoomRail roomCode={roomCode} roomName={roomName} recentRooms={recentRooms()} onHome={onBack} onSocial={onNavigateSocial} onOpenSwitcher={() => setIsRoomSwitcherOpen(true)} onOpenServer={onNavigateServer} />
       <Sidebar
         roomCode={roomCode}
         roomName={roomName}
