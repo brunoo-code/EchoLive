@@ -6711,6 +6711,65 @@ video.screen-video {
   color: #f2b4b4;
 }
 
+/* DM parity: keep the conversation anchored to the left edge like #geral. */
+.dm-content .dm-messages {
+  padding: 24px 28px 20px;
+}
+
+.dm-content .dm-message,
+.dm-content .dm-message.is-mine {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 7px 0;
+}
+
+.dm-content .dm-message > div:last-child {
+  max-width: min(760px, 100%);
+}
+
+.dm-content .dm-message-avatar {
+  width: 40px;
+  min-width: 40px;
+  flex-basis: 40px;
+}
+
+.dm-content .dm-message-meta strong { font-size: 14px; font-weight: 650; }
+.dm-content .dm-message-meta small { font-size: 11px; }
+.dm-content .dm-message p { font-size: 14px; line-height: 1.5; }
+
+.dm-date-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 8px;
+  color: var(--text-muted, #9ba4b2);
+  font-size: 11px;
+}
+
+.dm-date-divider::before,
+.dm-date-divider::after { content: ""; height: 1px; flex: 1; background: var(--border, rgba(255,255,255,.1)); }
+.dm-date-divider span { white-space: nowrap; }
+
+.dm-new-messages { position: sticky; top: 8px; z-index: 2; display: block; margin: 0 auto 8px; padding: 6px 10px; border: 1px solid rgba(92,226,236,.35); border-radius: 999px; color: var(--accent, #5ce2ec); background: #151b21; box-shadow: 0 4px 16px rgba(0,0,0,.25); cursor: pointer; font-size: 11px; }
+
+.dm-skeleton { display: grid; gap: 17px; padding: 10px 0; }
+.dm-skeleton > div { display: grid; grid-template-columns: 40px minmax(100px, 280px) 50px; gap: 10px; align-items: center; }
+.dm-skeleton i { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.08); }
+.dm-skeleton span, .dm-skeleton b { height: 12px; border-radius: 4px; background: rgba(255,255,255,.07); }
+.dm-skeleton b { width: 42px; }
+
+.dm-selected-file { min-height: 56px; padding: 6px 8px; }
+.dm-selected-file-preview { display: flex; align-items: center; min-width: 0; gap: 9px; }
+.dm-selected-file-preview img, .dm-selected-file-preview video { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; }
+.dm-selected-file-preview > span { display: grid; min-width: 0; gap: 2px; }
+.dm-selected-file-preview strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.dm-selected-file-preview small { color: var(--text-muted, #9ba4b2); font-size: 10px; }
+
+@media (max-width: 1366px) {
+  .dm-content .dm-messages { padding-inline: 22px; }
+}
+
 .social-user-popover {
   position: fixed;
   z-index: 40;
@@ -6724,6 +6783,9 @@ video.screen-video {
   background: #171a20;
   box-shadow: 0 18px 50px rgba(0,0,0,.48);
 }
+
+.mutual-room-row { min-height: 48px; }
+.mutual-room-icon { display: inline-grid; width: 32px; height: 32px; place-items: center; border: 1px solid rgba(92,226,236,.24); border-radius: 8px; color: var(--accent, #5ce2ec); background: rgba(92,226,236,.08); }
 
 .social-user-popover-cover {
   height: 64px;

@@ -1,4 +1,5 @@
 import { query, withTransaction } from "./pool.js";
+import { listMutualRooms } from "./roomActivity.js";
 
 function mapSocialUser(row) {
   if (!row) return null;
@@ -105,11 +106,12 @@ export async function getSocialProfile(userId, viewerId) {
        LIMIT 20`,
     [viewerId, userId]
   );
+  const mutualRooms = viewerId === userId ? [] : await listMutualRooms(viewerId, userId).catch(() => []);
   return {
     user,
     relationship: relationship ? { status: relationship.status, direction: relationship.requester_user_id === viewerId ? "sent" : "received" } : null,
     mutualFriends: mutualResult.rows.map(mapSocialUser),
-    mutualRooms: [],
+    mutualRooms,
     activity: { status: "offline", kind: "offline", room: null }
   };
 }

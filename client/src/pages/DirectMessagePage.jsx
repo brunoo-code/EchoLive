@@ -5,13 +5,14 @@ import SocialSidebar, { Avatar } from "../components/SocialSidebar.jsx";
 import SocialEmptyState from "../components/SocialEmptyState.jsx";
 import EmojiPicker from "../components/EmojiPicker.jsx";
 import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
+import SocialUserProfilePopover from "../components/SocialUserProfilePopover.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useSocial } from "../social/SocialContext.jsx";
 import { SERVER_URL } from "../utils/webrtc.js";
+import { UPLOAD_MIME_TYPES, validateUploadFile } from "../utils/uploadLimits.js";
 
 const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
 const FILE_ACCEPT = "application/pdf,application/zip,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,.docx,.xlsx,.pptx";
-const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 export default function DirectMessagePage({ conversationId, initialConversation, onNavigateHome, onNavigateFriends, onNavigateDm }) {
   const { user } = useAuth();
@@ -30,8 +31,12 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const [selectedFile, setSelectedFile] = useState(null);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(null);
+  const [profilePopover, setProfilePopover] = useState(null);
+  const [showNewMessages, setShowNewMessages] = useState(false);
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
+  const messagesRef = useRef(null);
+  const shouldAutoScrollRef = useRef(true);
   const composerRef = useRef(null);
   const typingTimerRef = useRef(null);
   const listedConversation = conversations.find((item) => item.id === conversationId) || null;
@@ -163,8 +168,16 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   }, [text]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (shouldAutoScrollRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    else if (messages.length) setShowNewMessages(true);
   }, [messages.length]);
+
+  function handleMessagesScroll(event) {
+    const node = event.currentTarget;
+    const nearBottom = node.scrollHeight - node.scrollTop - node.clientHeight < 80;
+    shouldAutoScrollRef.current = nearBottom;
+    if (nearBottom) setShowNewMessages(false);
+  }
 
   function handleTypingInput(value) {
     if (isOfficial) return;
@@ -180,9 +193,11 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     if (isOfficial) return;
     const cleanText = text.trim();
     if ((!cleanText && !selectedFile) || sending || !socket || !conversationReady) return;
+    setError("");
     setSending(true);
-    const submit = (attachment) => socket.emit("dm:message", { conversationId, content: cleanText, attachment }, (result) => {
+    const submit = (attachment) => socket.timeout(10000).emit("dm:message", { conversationId, content: cleanText, attachment }, (transportError, result) => {
       setSending(false);
+      if (transportError) { setError("Não foi possível enviar a mensagem."); return; }
       if (!result?.ok) { setError(result?.error || "Nao foi possivel enviar a mensagem."); return; }
       const savedMessage = normalizeMessage(result.message, conversationId, user);
       if (savedMessage) setMessages((current) => appendUniqueMessage(current, savedMessage, conversationId));
@@ -203,18 +218,24 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    const acceptedTypes = ["image/png", "image/jpeg", "image/webp", "image/gif", "video/mp4", "video/webm", "video/quicktime", "application/pdf", "application/zip", "text/plain", "application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.presentationml.presentation"];
-    if (!acceptedTypes.includes(file.type)) { setError("Tipo de arquivo nao permitido."); return; }
-    if (file.size > MAX_FILE_SIZE) { setError("Este arquivo excede o limite de 100 MB."); return; }
+    if (!UPLOAD_MIME_TYPES.includes(file.type)) { setError("Este tipo de arquivo não é compatível."); return; }
+    const validation = validateUploadFile(file);
+    if (!validation.ok) { setError(validation.error); return; }
+    setError("");
     setSelectedFile(file);
   }
 
   async function uploadFile(file) {
     const body = new FormData();
     body.append("file", file);
-    const response = await fetch(`${SERVER_URL}/api/social/dms/${conversationId}/upload`, { method: "POST", body, credentials: "include" });
+    let response;
+    try {
+      response = await fetch(`${SERVER_URL}/api/social/dms/${conversationId}/upload`, { method: "POST", body, credentials: "include" });
+    } catch {
+      throw new Error("Não foi possível enviar a mensagem.");
+    }
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Nao foi possivel enviar o arquivo.");
+    if (!response.ok) throw new Error(data.error || "Não foi possível enviar a mensagem.");
     return data.attachment;
   }
 
@@ -228,9 +249,14 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   async function loadOlder() {
     const first = messages[0];
     if (!first || !hasMore) return;
+    const node = messagesRef.current;
+    const previousHeight = node?.scrollHeight || 0;
     const data = await loadMessages(conversationId, first.createdAt);
     setMessages((current) => mergeMessages(current, data.messages || [], conversationId, user));
     setHasMore(Boolean(data.hasMore));
+    window.requestAnimationFrame(() => {
+      if (node) node.scrollTop += node.scrollHeight - previousHeight;
+    });
   }
 
   const sidebarProps = { activeTab: "friends", onTabChange: onNavigateFriends, conversations, onlineUserIds, user, onHome: onNavigateHome, onOpenConversation: onNavigateDm, onHideConversation: async (id) => { await hideConversation(id); onNavigateFriends(); }, activeConversationId: conversationId };
@@ -244,21 +270,22 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     <SocialSidebar {...sidebarProps} onOpenProfile={setProfileOpen} />
     <section className="dm-content">
       <header className={`dm-header ${isOfficial ? "is-official" : ""}`}>
-        <button type="button" className="dm-header-profile" onClick={() => setProfileOpen(otherUser)}>
+        <button type="button" className="dm-header-profile" onClick={(event) => setProfilePopover({ user: otherUser, anchorRect: event.currentTarget.getBoundingClientRect() })}>
           <Avatar user={otherUser} size={38} />
           <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? "Online" : "Offline"}`}</small></span>
         </button>
       </header>
-      <div className="dm-messages">
+      <div ref={messagesRef} className="dm-messages" onScroll={handleMessagesScroll}>
+        {showNewMessages && <button type="button" className="dm-new-messages" onClick={() => { shouldAutoScrollRef.current = true; setShowNewMessages(false); bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }}>↓ Novas mensagens</button>}
         {hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}
-        {historyLoading && !messages.length ? <p className="dm-loading">Carregando conversa...</p> : historyError ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId} />) : <div className="dm-intro"><Avatar user={otherUser} size={64} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p><span>Este e o inicio da conversa.</span></div>}
+        {historyLoading && !messages.length ? <DmSkeleton /> : historyError ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId && timestampValue(message.createdAt) - timestampValue(messages[index - 1].createdAt) < 5 * 60 * 1000} showDate={index === 0 || !sameDate(message.createdAt, messages[index - 1].createdAt)} />) : <div className="dm-intro"><Avatar user={otherUser} size={64} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p><span>Este e o inicio da conversa.</span></div>}
         <div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div>
         <div ref={bottomRef} />
       </div>
       {error && !historyError && <p className="social-feedback is-error dm-error">{error}</p>}
       {!isOfficial && realtimeStatus !== "connected" && <p className={`dm-realtime-status ${realtimeStatus === "error" ? "is-error" : ""}`} role="status">{realtimeError || (realtimeStatus === "reconnecting" ? "Reconectando..." : "Conectando ao tempo real...")}</p>}
       {isOfficial ? <div className="dm-official-notice"><Icon name="lock" size={16} /><span>Esta é uma mensagem oficial do EchoLive. Este canal é somente leitura.</span></div> : <form className="dm-composer" onSubmit={sendMessage}>
-        {selectedFile && <div className="dm-selected-file"><span>{selectedFile.name}</span><button type="button" className="icon-button" onClick={() => setSelectedFile(null)} aria-label="Remover anexo"><Icon name="close" size={14} /></button></div>}
+        {selectedFile && <SelectedAttachment file={selectedFile} onRemove={() => setSelectedFile(null)} />}
         <div className="dm-composer-row">
           <button type="button" className="composer-icon-button" onClick={() => fileInputRef.current?.click()} title="Adicionar anexo" aria-label="Adicionar anexo"><Icon name="plus" size={17} /></button>
           <input ref={fileInputRef} className="visually-hidden" type="file" accept={`${MEDIA_ACCEPT},${FILE_ACCEPT}`} onChange={handleFileChange} />
@@ -269,6 +296,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
         </div>
       </form>}
     </section>
+    {profilePopover && <SocialUserProfilePopover participant={profilePopover.user} anchorRect={profilePopover.anchorRect} onClose={() => setProfilePopover(null)} onMessage={(person) => { setProfilePopover(null); onNavigateDm?.(conversationId, conversation); }} onViewProfile={(person) => { setProfilePopover(null); setProfileOpen(person); }} />}
     {profileOpen && <SocialUserProfileModal userId={profileOpen.id} initialUser={profileOpen} onClose={() => setProfileOpen(null)} onMessage={(nextConversation) => { setProfileOpen(null); onNavigateDm(nextConversation.id, nextConversation); }} />}
   </main>;
 }
@@ -284,11 +312,19 @@ function extractHistory(data) {
   return { messages, hasMore: Boolean(data?.hasMore ?? data?.data?.hasMore) };
 }
 
-function Message({ message, mine, compact }) {
+function Message({ message, mine, compact, showDate }) {
   const sender = message.sender || {};
   const senderName = sender.displayName || sender.username || "Usuario";
-  return <article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={32} />}</div><div><div className="dm-message-meta">{!compact && <strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong>}<small>{formatMessageTime(message.createdAt)}</small></div>{message.content && <p>{message.content}</p>}{message.attachment && <Attachment attachment={message.attachment} />}</div></article>;
+  return <>{showDate && <DateDivider value={message.createdAt} />}<article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={40} />}</div><div><div className="dm-message-meta">{!compact && <strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong>}<small>{formatMessageTime(message.createdAt)}</small></div>{message.content && <p>{message.content}</p>}{message.attachment && <Attachment attachment={message.attachment} />}</div></article></>;
 }
+
+function DmSkeleton() { return <div className="dm-skeleton" aria-label="Carregando mensagens">{[1, 2, 3, 4].map((item) => <div key={item}><i /><span /><b /></div>)}</div>; }
+
+function DateDivider({ value }) { const date = normalizeTimestamp(value); if (!date) return null; const current = new Date(date); const today = new Date(); const dayStart = (input) => new Date(input.getFullYear(), input.getMonth(), input.getDate()).getTime(); const delta = Math.round((dayStart(today) - dayStart(current)) / 86400000); const label = delta === 0 ? "Hoje" : delta === 1 ? "Ontem" : current.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }); return <div className="dm-date-divider"><span>{label}</span></div>; }
+
+function sameDate(left, right) { const a = normalizeTimestamp(left); const b = normalizeTimestamp(right); return a && b && new Date(a).toDateString() === new Date(b).toDateString(); }
+
+function SelectedAttachment({ file, onRemove }) { const [url, setUrl] = useState(""); useEffect(() => { const next = URL.createObjectURL(file); setUrl(next); return () => URL.revokeObjectURL(next); }, [file]); return <div className="dm-selected-file"><div className="dm-selected-file-preview">{file.type.startsWith("image/") && url ? <img src={url} alt="Pré-visualização do anexo" /> : file.type.startsWith("video/") && url ? <video src={url} muted preload="metadata" /> : <Icon name="file" size={18} />}<span><strong>{file.name}</strong><small>{formatFileSize(file.size)}</small></span></div><button type="button" className="icon-button" onClick={onRemove} aria-label="Remover anexo"><Icon name="close" size={14} /></button></div>; }
 
 function Attachment({ attachment }) {
   const source = `${SERVER_URL}${attachment.url}`;

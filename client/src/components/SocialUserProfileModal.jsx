@@ -69,7 +69,7 @@ export default function SocialUserProfileModal({ userId, initialUser, onClose, o
         <nav className="social-profile-tabs" aria-label="Detalhes do perfil">{[["activity", "Atividade"], ["friends", "Amigos em comum"], ["rooms", "Salas em comum"]].map(([id, label]) => <button type="button" key={id} className={tab === id ? "is-active" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>
         {tab === "activity" && <Activity profile={profile} />}
         {tab === "friends" && <MutualList title="Amigos em comum" items={profile?.mutualFriends || []} empty="Nenhum amigo em comum por enquanto." />}
-        {tab === "rooms" && <MutualList title="Salas em comum" items={profile?.mutualRooms || []} empty="Nenhuma sala recente em comum." />}
+        {tab === "rooms" && <MutualRooms profile={profile} />}
       </div>
     </section>
   </div>;
@@ -83,4 +83,10 @@ function Activity({ profile }) {
 
 function MutualList({ title, items, empty }) {
   return <div className="social-profile-list"><span className="section-label">{title}</span>{items.length ? items.map((item) => <div className="social-profile-list-row" key={item.id}><Avatar user={item} size={40} /><span><strong>{item.displayName || item.username}</strong><small>@{item.username}</small></span></div>) : <p className="social-profile-list-empty">{empty}</p>}</div>;
+}
+
+function MutualRooms({ profile }) {
+  if (!profile) return <div className="social-profile-list"><span className="section-label">Salas em comum</span><p className="social-profile-list-empty">Carregando salas...</p></div>;
+  const rooms = profile.mutualRooms || [];
+  return <div className="social-profile-list"><span className="section-label">Salas em comum</span>{rooms.length ? rooms.map((room) => <div className="social-profile-list-row mutual-room-row" key={room.id}><span className="mutual-room-icon"><Icon name="voice" size={16} /></span><span><strong>{room.name}</strong><small>{room.active ? `Ativa agora · ${room.participantCount} participante${room.participantCount === 1 ? "" : "s"}` : "Visitada recentemente"}</small></span></div>) : <p className="social-profile-list-empty">Nenhuma sala recente em comum.</p>}</div>;
 }

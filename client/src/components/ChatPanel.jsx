@@ -3,22 +3,8 @@ import { SERVER_URL } from "../utils/webrtc.js";
 import { playUiSound } from "../utils/uiSounds.js";
 import Icon from "./Icon.jsx";
 import EmojiPicker from "./EmojiPicker.jsx";
+import { validateUploadFile } from "../utils/uploadLimits.js";
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024;
-const ACCEPTED_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-  "application/pdf", "application/zip", "application/x-zip-compressed", "audio/mpeg", "audio/wav", "audio/ogg", "text/plain",
-  "application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-]);
 const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
 const FILE_ACCEPT = "application/pdf,application/zip,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,.docx,.xlsx,.pptx";
 const ALL_ACCEPT = `${MEDIA_ACCEPT},${FILE_ACCEPT}`;
@@ -136,13 +122,9 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
       return false;
     }
 
-    if (!ACCEPTED_TYPES.has(file.type) || file.name.toLowerCase().endsWith(".svg")) {
-      notify("Tipo de arquivo nao permitido.");
-      return false;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      notify("Este arquivo excede o limite de 100 MB.");
+    const result = validateUploadFile(file);
+    if (!result.ok) {
+      notify(result.error);
       return false;
     }
 
@@ -336,7 +318,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           {draft.length >= 3400 && <span className="message-counter">{draft.length} / 4000</span>}
           <div className="composer-actions">
             <button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}>😊</button>
-            <button type="button" className="composer-icon-button" onClick={() => { setIsStickerPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsEmojiPickerOpen(false); }} disabled={isSending} title="Abrir figurinhas do Eko" aria-label="Abrir figurinhas do Eko" aria-expanded={isStickerPickerOpen}><Icon name="sticker" size={16} /></button>
+            {false && <button type="button" className="composer-icon-button" onClick={() => { setIsStickerPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsEmojiPickerOpen(false); }} disabled={isSending} title="Abrir figurinhas do Eko" aria-label="Abrir figurinhas do Eko" aria-expanded={isStickerPickerOpen}><Icon name="sticker" size={16} /></button>}
             <button className="send-button" type="submit" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}>
               {isSending ? "Enviando" : "Enviar"}
             </button>

@@ -168,7 +168,7 @@ Essa reducao usa recursos nativos do navegador e pode reduzir ruido de teclado, 
 - O chat aceita texto de ate 4.000 caracteres.
 - Imagens aceitas: PNG, JPEG, WebP e GIF.
 - Videos aceitos: MP4, WebM e MOV/QuickTime.
-- Um unico anexo de ate 100 MB pode acompanhar cada mensagem.
+- Limites por tipo: imagens ate 15 MB, videos ate 50 MB e outros arquivos ate 25 MB.
 - Uploads ficam localmente em `server/uploads` e sao servidos por `/uploads/...`.
 - O backend gera nomes aleatorios; o nome original e usado apenas para exibicao.
 - Salas, mensagens e uploads continuam temporarios; o PostgreSQL e usado apenas para contas e sessoes quando `DATABASE_URL` esta configurada.

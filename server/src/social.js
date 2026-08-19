@@ -29,6 +29,7 @@ const onlineSockets = new Map();
 const socialSubscribers = new Set();
 const socialRateLog = new Map();
 const typingRateLog = new Map();
+const DM_ATTACHMENT_LIMITS = Object.freeze({ image: 15 * 1024 * 1024, video: 50 * 1024 * 1024, file: 25 * 1024 * 1024 });
 
 function normalizeUsername(value) {
   return String(value || "").trim().replace(/^@+/, "").toLowerCase();
@@ -348,7 +349,7 @@ export function attachSocialSocket(io, socket) {
     const acknowledge = typeof ack === "function" ? ack : null;
     const user = socket.data.accountUser;
     const cleanContent = String(content || "").trim();
-    if (!user || !socket.data.socialSubscribed || !isUuid(conversationId) || !cleanContent || cleanContent.length > 4000) {
+    if (!user || !socket.data.socialSubscribed || !socket.data.dmConversations?.has(conversationId) || !isUuid(conversationId) || cleanContent.length > 4000) {
       acknowledge?.({ ok: false, error: "A mensagem deve ter entre 1 e 4.000 caracteres.", code: "INVALID_MESSAGE" });
       return;
     }
@@ -368,7 +369,7 @@ export function attachSocialSocket(io, socket) {
     const safeAttachment = attachment && typeof attachment === "object" &&
       ["image", "video", "file"].includes(attachment.type) &&
       /^\/uploads\/[A-Za-z0-9._-]+$/.test(String(attachment.url || "")) &&
-      Number.isInteger(attachment.size) && attachment.size <= 100 * 1024 * 1024
+      Number.isInteger(attachment.size) && attachment.size <= (DM_ATTACHMENT_LIMITS[attachment.type] || 0)
       ? {
           type: attachment.type,
           url: attachment.url,
@@ -379,6 +380,10 @@ export function attachSocialSocket(io, socket) {
       : null;
     if (attachment && !safeAttachment) {
       acknowledge?.({ ok: false, error: "Anexo invalido.", code: "INVALID_ATTACHMENT" });
+      return;
+    }
+    if (!cleanContent && !safeAttachment) {
+      acknowledge?.({ ok: false, error: "A mensagem deve ter texto ou um anexo.", code: "INVALID_MESSAGE" });
       return;
     }
     const message = await createMessage(conversationId, user.id, cleanContent, safeAttachment).catch(() => null);

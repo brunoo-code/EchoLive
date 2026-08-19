@@ -9,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import multer from "multer";
 import { Server } from "socket.io";
-import { getSessionTokenFromCookieHeader, registerAuthRoutes, startSessionCleanup } from "./auth.js";
+import { getSessionTokenFromCookieHeader, optionalAuth, registerAuthRoutes, requireAuth, startSessionCleanup } from "./auth.js";
 import {
   attachSocialSocket,
   authenticateSocket,
@@ -18,6 +18,8 @@ import {
   registerSocialRoutes
 } from "./social.js";
 import { checkDatabase, getDatabaseError, isDatabaseConfigured } from "./db/pool.js";
+import { getConversationForUser } from "./db/social.js";
+import { markRoomActivityLeft, recordRoomActivity } from "./db/roomActivity.js";
 import {
   areSocketsInSameRoom,
   addRoomMessage,
@@ -43,12 +45,14 @@ import {
   updateParticipantNickname
 } from "./rooms.js";
 
-const PORT = Number(process.env.PORT || 3001);
+const PORT = Number(process.env.PORT) || 3001;
+const HOST = "0.0.0.0";
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || process.env.RENDER_EXTERNAL_URL || "http://localhost:5173";
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST_DIR = path.resolve(SERVER_DIR, "../../client/dist");
 const UPLOAD_DIR = path.resolve(SERVER_DIR, "../uploads");
-const MAX_UPLOAD_SIZE = 100 * 1024 * 1024;
+const UPLOAD_LIMITS = Object.freeze({ image: 15 * 1024 * 1024, video: 50 * 1024 * 1024, file: 25 * 1024 * 1024 });
+const MAX_UPLOAD_SIZE = UPLOAD_LIMITS.video;
 const ALLOWED_UPLOADS = new Map([
   ["image/png", [".png"]],
   ["image/jpeg", [".jpg", ".jpeg"]],
@@ -64,10 +68,23 @@ const ALLOWED_UPLOADS = new Map([
   ["audio/wav", [".wav"]],
   ["audio/ogg", [".ogg"]],
   ["text/plain", [".txt"]],
+  ["application/msword", [".doc"]],
+  ["application/vnd.ms-excel", [".xls"]],
+  ["application/vnd.ms-powerpoint", [".ppt"]],
   ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", [".docx"]],
   ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", [".xlsx"]],
   ["application/vnd.openxmlformats-officedocument.presentationml.presentation", [".pptx"]]
 ]);
+
+function uploadKind(mimeType) {
+  if (String(mimeType || "").startsWith("image/")) return "image";
+  if (String(mimeType || "").startsWith("video/")) return "video";
+  return "file";
+}
+
+function uploadLimitFor(mimeType) {
+  return UPLOAD_LIMITS[uploadKind(mimeType)];
+}
 
 const app = express();
 app.use(express.json());
@@ -97,7 +114,7 @@ app.post("/rooms/:roomCode/upload", (request, response) => {
   upload.single("file")(request, response, async (error) => {
     if (error) {
       const status = error.code === "LIMIT_FILE_SIZE" ? 413 : 400;
-      response.status(status).json({ error: "Arquivo invalido ou maior que 100 MB." });
+      response.status(status).json({ error: error.code === "LIMIT_FILE_SIZE" ? "Este arquivo ultrapassa o limite permitido." : "Arquivo invalido." });
       return;
     }
 
@@ -121,6 +138,11 @@ app.post("/rooms/:roomCode/upload", (request, response) => {
       return response.status(400).json({ error: "Tipo de arquivo nao permitido." });
     }
 
+    if (file.size > uploadLimitFor(file.mimetype)) {
+      await unlink(file.path).catch(() => {});
+      return response.status(413).json({ error: "Este arquivo ultrapassa o limite permitido." });
+    }
+
     const type = file.mimetype.startsWith("image/") ? "image" : file.mimetype.startsWith("video/") ? "video" : "file";
     return response.json({
       attachment: {
@@ -131,6 +153,36 @@ app.post("/rooms/:roomCode/upload", (request, response) => {
         mimeType: file.mimetype
       }
     });
+  });
+});
+
+app.post("/api/social/dms/:conversationId/upload", optionalAuth, requireAuth, (request, response) => {
+  upload.single("file")(request, response, async (error) => {
+    if (error) {
+      const status = error.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+      response.status(status).json({ error: error.code === "LIMIT_FILE_SIZE" ? "Este arquivo ultrapassa o limite permitido." : "Arquivo invalido." });
+      return;
+    }
+    const conversation = await getConversationForUser(request.params.conversationId, request.user.id).catch(() => null);
+    const file = request.file;
+    const extension = file ? path.extname(file.originalname).toLowerCase() : "";
+    const expectedExtensions = file ? ALLOWED_UPLOADS.get(file.mimetype) : null;
+    if (!conversation || conversation.user?.isOfficial || !file || !expectedExtensions?.includes(extension)) {
+      if (file) await unlink(file.path).catch(() => {});
+      return response.status(conversation?.user?.isOfficial ? 403 : 400).json({ error: conversation?.user?.isOfficial ? "Essa conversa oficial e somente leitura." : "Tipo de arquivo nao permitido." });
+    }
+    if (file.size > uploadLimitFor(file.mimetype)) {
+      await unlink(file.path).catch(() => {});
+      return response.status(413).json({ error: "Este arquivo ultrapassa o limite permitido." });
+    }
+    const type = file.mimetype.startsWith("image/") ? "image" : file.mimetype.startsWith("video/") ? "video" : "file";
+    return response.json({ attachment: {
+      type,
+      url: `/uploads/${file.filename}`,
+      name: file.originalname.replace(/[\\/\0]/g, "").slice(0, 120),
+      size: file.size,
+      mimeType: file.mimetype
+    } });
   });
 });
 
@@ -260,6 +312,12 @@ function handleLeave(socket) {
     return;
   }
 
+  if (result.participant.userId) {
+    markRoomActivityLeft(result.participant.userId, result.roomCode).catch((error) => {
+      console.warn("[ROOM] activity leave could not be recorded:", error.message);
+    });
+  }
+
   socket.leave(result.roomCode);
   console.log("[leave-room]", result.roomCode, socket.id, "users:", getRoomSize(result.roomCode));
   socket.to(result.roomCode).emit("user-left", {
@@ -345,6 +403,12 @@ io.on("connection", (socket) => {
     if (!result.ok) {
       emitRoomError(socket, result.error);
       return;
+    }
+
+    if (result.participant.userId) {
+      recordRoomActivity(result.participant.userId, code, result.roomName).catch((error) => {
+        console.warn("[ROOM] activity join could not be recorded:", error.message);
+      });
     }
 
     socket.join(code);
@@ -446,7 +510,7 @@ io.on("connection", (socket) => {
         typeof attachment.url === "string" &&
         /^\/uploads\/[A-Za-z0-9._-]+$/.test(attachment.url) &&
         Number.isInteger(attachment.size) &&
-        attachment.size <= MAX_UPLOAD_SIZE
+        attachment.size <= uploadLimitFor(attachment.mimeType)
     );
 
     if (!roomCode || !participant || !validChannel) {
@@ -576,8 +640,8 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(PORT, "0.0.0.0", async () => {
-  console.log(`[SERVER] listening on port ${PORT}`);
+httpServer.listen(PORT, HOST, async () => {
+  console.log(`[SERVER] listening on ${HOST}:${PORT}`);
   if (!isDatabaseConfigured) {
     console.log("[DB] DATABASE_URL nao configurada; autenticacao de contas desativada.");
     return;
