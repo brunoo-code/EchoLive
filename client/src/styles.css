@@ -6398,3 +6398,83 @@ video.screen-video {
     left: auto;
   }
 }
+
+/* Official EchoLive identity: quiet, recognizable, and present in the DM list. */
+.official-badge {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  margin-left: 6px;
+  padding: 2px 5px;
+  border: 1px solid rgba(92, 226, 236, 0.22);
+  border-radius: 4px;
+  color: var(--accent, #5ce2ec);
+  background: rgba(92, 226, 236, 0.08);
+  font-size: 0.58rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.social-conversation-row.is-official {
+  border-left: 2px solid var(--accent, #5ce2ec);
+  background: rgba(92, 226, 236, 0.055);
+}
+
+.social-conversation-row.is-official .social-conversation-copy strong {
+  color: var(--text-main, #f4f7fb);
+}
+
+.dm-header.is-official {
+  background: linear-gradient(90deg, rgba(92, 226, 236, 0.06), transparent 48%);
+}
+
+.dm-header.is-official .dm-header-copy small,
+.dm-header.is-official small {
+  color: var(--accent, #5ce2ec);
+}
+
+.dm-message.is-official {
+  padding-left: 10px;
+  border-left: 2px solid rgba(92, 226, 236, 0.7);
+  background: rgba(92, 226, 236, 0.035);
+}
+
+.dm-official-notice {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  margin: 0 14px 14px;
+  padding: 0 14px;
+  border: 1px solid var(--border, rgba(255,255,255,.1));
+  border-radius: 9px;
+  color: var(--text-muted, #9ba4b2);
+  background: var(--bg-card, rgba(255,255,255,.035));
+  font-size: 0.76rem;
+}
+
+.dm-official-notice .ui-icon {
+  flex: 0 0 auto;
+  color: var(--accent, #5ce2ec);
+}
+
+.profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.profile-badges em {
+  padding: 2px 5px;
+  border: 1px solid rgba(92, 226, 236, 0.2);
+  border-radius: 4px;
+  color: var(--text-muted, #9ba4b2);
+  background: rgba(92, 226, 236, 0.06);
+  font-size: 0.6rem;
+  font-style: normal;
+  font-weight: 700;
+}

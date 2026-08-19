@@ -1,5 +1,6 @@
 import { deleteExpiredSessions, deleteSession, findSessionUser, createSession, getSessionDurationSeconds } from "./db/sessions.js";
-import { createUser, findUserByUsername, updateUserDisplayName } from "./db/users.js";
+import { createUser, findUserById, findUserByUsername, updateUserDisplayName } from "./db/users.js";
+import { ensureAccountSocialBootstrap } from "./db/social.js";
 import { isDatabaseAvailable, isDatabaseConfigured } from "./db/pool.js";
 import { getBcrypt } from "./password.js";
 
@@ -13,6 +14,7 @@ function publicUser(user) {
     username: user.username,
     displayName: user.displayName,
     avatarUrl: user.avatarUrl || "",
+    badges: user.badges || [],
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
@@ -147,9 +149,13 @@ export function registerAuthRoutes(app) {
       const bcrypt = await getBcrypt();
       const passwordHash = await bcrypt.hash(validation.value.password, 12);
       const user = await createUser({ ...validation.value, passwordHash });
+      await ensureAccountSocialBootstrap(user.id).catch((error) => {
+        console.error("[SOCIAL] account bootstrap failed:", error.message);
+      });
+      const responseUser = await findUserById(user.id).catch(() => user);
       const session = await createSession(user.id);
       setSessionCookie(response, session.token);
-      return response.status(201).json({ user: publicUser(user) });
+      return response.status(201).json({ user: publicUser(responseUser) });
     } catch (error) {
       if (error?.code === "23505") return response.status(409).json({ error: "Esse nome de usuario ja esta em uso.", code: "USERNAME_TAKEN" });
       console.error("[AUTH] register failed:", error.message);
@@ -170,7 +176,7 @@ export function registerAuthRoutes(app) {
     try {
       const user = await findUserByUsername(username);
       const bcrypt = await getBcrypt();
-      const valid = user ? await bcrypt.compare(password, user.passwordHash) : false;
+      const valid = user?.accountType === "user" ? await bcrypt.compare(password, user.passwordHash) : false;
       if (!valid) return response.status(401).json({ error: "Usuario ou senha invalidos." });
       const session = await createSession(user.id);
       setSessionCookie(response, session.token);

@@ -37,7 +37,10 @@ function publicSocialUser(user) {
     id: user.id,
     username: user.username,
     displayName: user.displayName,
-    avatarUrl: user.avatarUrl || ""
+    avatarUrl: user.avatarUrl || "",
+    accountType: user.accountType || "user",
+    isOfficial: Boolean(user.isOfficial || user.accountType === "system"),
+    badges: user.badges || []
   };
 }
 
@@ -129,6 +132,7 @@ export function registerSocialRoutes(app) {
     try {
       const target = await findSocialUserByUsername(username);
       if (!target) return response.status(404).json({ error: "Nao encontramos esse usuario.", code: "USER_NOT_FOUND" });
+      if (target.isOfficial) return response.status(404).json({ error: "Nao encontramos esse usuario.", code: "USER_NOT_FOUND" });
       if (target.id === request.user.id) return response.status(400).json({ error: "Voce nao pode adicionar a si mesmo.", code: "SELF_REQUEST" });
       const existing = await findRelationshipBetween(request.user.id, target.id);
       if (existing?.status === "accepted") return response.status(409).json({ error: "Voces ja sao amigos.", code: "ALREADY_FRIENDS" });
@@ -326,6 +330,10 @@ export function attachSocialSocket(io, socket) {
     const conversation = await getConversationForUser(conversationId, user.id).catch(() => null);
     if (!conversation) {
       acknowledge?.({ ok: false, error: "Conversa nao encontrada.", code: "DM_NOT_FOUND" });
+      return;
+    }
+    if (conversation.user?.isOfficial) {
+      acknowledge?.({ ok: false, error: "Essa conversa oficial e somente leitura.", code: "OFFICIAL_DM_READ_ONLY" });
       return;
     }
     const message = await createMessage(conversationId, user.id, cleanContent).catch(() => null);

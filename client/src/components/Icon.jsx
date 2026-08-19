@@ -29,6 +29,8 @@ const iconPaths = {
   trash: <><path d="M3 4h10M6 4V2h4v2M5 6v6m3-6v6m3-6v6M4 4l.6 10h6.8L12 4" /></>,
   check: <path d="m3 8 3 3 6-7" />,
   info: <><circle cx="8" cy="8" r="5.5" /><path d="M8 7v4M8 4.8v.2" /></>,
+  lock: <><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5 7V5a3 3 0 0 1 6 0v2" /></>,
+  sparkles: <><path d="m8 2 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3ZM13 9l.5 1.5L15 11l-1.5.5L13 13l-.5-1.5L11 11l1.5-.5L13 9Z" /></>,
   warning: <><path d="m8 2 6 12H2L8 2Z" /><path d="M8 6v3M8 11v.2" /></>,
   speaker: <><path d="M2.5 6h3l3-2.5v9l-3-2.5h-3z" /><path d="M11 6a3 3 0 0 1 0 4M12.5 4.5a5 5 0 0 1 0 7" /></>,
   link: <><path d="M6.5 9.5 5 11a2.8 2.8 0 0 1-4-4l2-2a2.8 2.8 0 0 1 4 0" /><path d="m9.5 6.5 1.5-1.5a2.8 2.8 0 0 1 4 4l-2 2a2.8 2.8 0 0 1-4 0" /><path d="m5.5 8.5 5-5" /></>,

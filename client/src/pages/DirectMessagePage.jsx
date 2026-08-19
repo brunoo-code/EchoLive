@@ -24,6 +24,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const typingTimerRef = useRef(null);
   const conversation = conversations.find((item) => item.id === conversationId) || (initialConversation?.id === conversationId ? initialConversation : null);
   const otherUser = conversation?.user;
+  const isOfficial = Boolean(otherUser?.isOfficial);
   const isOnline = Boolean(otherUser && onlineUserIds.has(otherUser.id));
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   }, [messages.length]);
 
   function handleTypingInput(value) {
+    if (isOfficial) return;
     setText(value.slice(0, 4000));
     if (!socket || !conversationId || !conversationReady) return;
     socket.emit("dm:typing", { conversationId, typing: true });
@@ -95,6 +97,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
 
   function sendMessage(event) {
     event.preventDefault();
+    if (isOfficial) return;
     const cleanText = text.trim();
     if (!cleanText || sending || !socket || !conversationReady) return;
     setSending(true);
@@ -126,13 +129,13 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   if (!otherUser && socialStatus !== "ready" && socialStatus !== "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
   if (!otherUser) return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
 
-  return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><header className="dm-header"><Avatar user={otherUser} size={38} /><div><strong>{otherUser.displayName || otherUser.username}</strong><small>@{otherUser.username} · {isOnline ? "Online" : "Offline"}</small></div></header><div className="dm-messages">{hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}{loading ? <p className="dm-loading">Conectando a conversa...</p> : loadFailed ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId} />) : <div className="dm-intro"><Avatar user={otherUser} size={76} /><h2>{otherUser.displayName || otherUser.username}</h2><p>@{otherUser.username}</p></div>}<div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div><div ref={bottomRef} /></div>{error && !loadFailed && <p className="social-feedback is-error dm-error">{error}</p>}<form className="dm-composer" onSubmit={sendMessage}><label className="sr-only" htmlFor="dm-message">Mensagem</label><textarea ref={composerRef} id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Conversar com ${otherUser.displayName || otherUser.username}`} disabled={!conversationReady} /><button type="submit" className="primary-button" disabled={!text.trim() || sending || !conversationReady} aria-label="Enviar mensagem"><Icon name="send" size={16} /></button></form></section></main>;
+  return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><header className={`dm-header ${isOfficial ? "is-official" : ""}`}><Avatar user={otherUser} size={38} /><div><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? "Online" : "Offline"}`}</small></div></header><div className="dm-messages">{hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}{loading ? <p className="dm-loading">Conectando a conversa...</p> : loadFailed ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId} />) : <div className="dm-intro"><Avatar user={otherUser} size={76} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p></div>}<div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div><div ref={bottomRef} /></div>{error && !loadFailed && <p className="social-feedback is-error dm-error">{error}</p>}{isOfficial ? <div className="dm-official-notice"><Icon name="lock" size={16} /><span>Esta é uma mensagem oficial do EchoLive. Este canal é somente leitura.</span></div> : <form className="dm-composer" onSubmit={sendMessage}><label className="sr-only" htmlFor="dm-message">Mensagem</label><textarea ref={composerRef} id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Conversar com ${otherUser.displayName || otherUser.username}`} disabled={!conversationReady} /><button type="submit" className="primary-button" disabled={!text.trim() || sending || !conversationReady} aria-label="Enviar mensagem"><Icon name="send" size={16} /></button></form>}</section></main>;
 }
 
 function Message({ message, mine, compact }) {
   const sender = message.sender || {};
   const senderName = sender.displayName || sender.username || "Usuario";
-  return <article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={32} />}</div><div><div className="dm-message-meta">{!compact && <strong>{senderName}</strong>}<small>{formatMessageTime(message.createdAt)}</small></div><p>{message.content}</p></div></article>;
+  return <article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={32} />}</div><div><div className="dm-message-meta">{!compact && <strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong>}<small>{formatMessageTime(message.createdAt)}</small></div><p>{message.content}</p></div></article>;
 }
 
 function normalizeMessage(message, fallbackConversationId, fallbackUser) {
@@ -147,6 +150,8 @@ function normalizeMessage(message, fallbackConversationId, fallbackUser) {
     conversationId: String(messageConversationId),
     senderUserId: senderUserId || null,
     sender,
+    messageType: message.messageType ?? message.message_type ?? "user",
+    officialKey: message.officialKey ?? message.official_key ?? null,
     createdAt: normalizeTimestamp(message.createdAt ?? message.created_at ?? message.timestamp)
   };
 }

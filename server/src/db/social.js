@@ -2,11 +2,16 @@ import { query, withTransaction } from "./pool.js";
 
 function mapSocialUser(row) {
   if (!row) return null;
+  const badges = Array.isArray(row.badges) ? row.badges : [];
+  const accountType = row.account_type || "user";
   return {
     id: row.user_id || row.id,
     username: row.username,
     displayName: row.display_name,
-    avatarUrl: row.avatar_url || ""
+    avatarUrl: row.avatar_url || "",
+    accountType,
+    isOfficial: accountType === "system",
+    badges
   };
 }
 
@@ -16,7 +21,11 @@ function orderPair(left, right) {
 
 export async function findSocialUserByUsername(usernameNormalized) {
   const result = await query(
-    `SELECT id AS user_id, username, display_name, avatar_url
+    `SELECT id AS user_id, username, display_name, avatar_url, account_type,
+            COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
+                      ORDER BY ub.granted_at DESC)
+                      FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+                      WHERE ub.user_id = users.id), '[]'::json) AS badges
      FROM users
      WHERE username_normalized = $1
      LIMIT 1`,
@@ -28,7 +37,11 @@ export async function findSocialUserByUsername(usernameNormalized) {
 export async function listRelationships(userId) {
   const result = await query(
     `SELECT f.id, f.status, f.requester_user_id, f.addressee_user_id, f.created_at, f.updated_at,
-            u.id AS user_id, u.username, u.display_name, u.avatar_url
+            u.id AS user_id, u.username, u.display_name, u.avatar_url, u.account_type,
+            COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
+                      ORDER BY ub.granted_at DESC)
+                      FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+                      WHERE ub.user_id = u.id), '[]'::json) AS badges
      FROM friendships f
      JOIN users u ON u.id = CASE
        WHEN f.requester_user_id = $1 THEN f.addressee_user_id
@@ -128,11 +141,107 @@ export async function ensureConversation(userId, otherUserId) {
   });
 }
 
+export async function ensureOfficialIdentity() {
+  return withTransaction(async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('echolive.system.identity'))");
+    const existing = await client.query(
+      `SELECT id, username, display_name, avatar_url, account_type, system_key
+       FROM users WHERE system_key = 'echolive_official' LIMIT 1`
+    );
+    if (existing.rows[0]) return existing.rows[0];
+
+    const candidates = [
+      ["system_echolive", "system_echolive"],
+      ["echolive_oficial", "echolive_oficial"],
+      ["echolive_system", "echolive_system"],
+      ["echolive_ekobot", "echolive_ekobot"]
+    ];
+    let selected = null;
+    for (const [username, normalized] of candidates) {
+      const collision = await client.query(
+        "SELECT 1 FROM users WHERE username_normalized = $1 LIMIT 1",
+        [normalized]
+      );
+      if (!collision.rowCount) {
+        selected = { username, normalized };
+        break;
+      }
+    }
+    if (!selected) {
+      for (let suffix = 1; suffix < 1000; suffix += 1) {
+        const username = `echolive_system_${suffix}`;
+        const collision = await client.query(
+          "SELECT 1 FROM users WHERE username_normalized = $1 LIMIT 1",
+          [username]
+        );
+        if (!collision.rowCount) {
+          selected = { username, normalized: username };
+          break;
+        }
+      }
+    }
+    if (!selected) throw new Error("OFFICIAL_IDENTITY_UNAVAILABLE");
+    const result = await client.query(
+      `INSERT INTO users (username, username_normalized, display_name, password_hash, account_type, system_key)
+       VALUES ($1, $2, 'EchoLive', '!system-account', 'system', 'echolive_official')
+       RETURNING id, username, display_name, avatar_url, account_type, system_key`,
+      [selected.username, selected.normalized]
+    );
+    return result.rows[0];
+  });
+}
+
+async function grantBetaBadge(userId) {
+  await query(
+    `INSERT INTO user_badges (user_id, badge_id)
+     SELECT $1, id FROM badges WHERE code = 'echolive_beta'
+     ON CONFLICT (user_id, badge_id) DO NOTHING`,
+    [userId]
+  );
+}
+
+async function seedOfficialMessages(conversationId, displayName) {
+  const messages = [
+    ["welcome", `Oi, ${displayName || "por aqui"}. Eu sou o Eko, a presença do EchoLive por aqui.`],
+    ["identity", "Com uma conta, sua identidade continua com você entre amigos, mensagens e salas."],
+    ["quick-room", "Só quer conversar agora? Uma sala rápida resolve."],
+    ["stay", "Quer ficar por aqui? Sua conta vai acompanhar você quando voltar."]
+  ];
+  for (const [officialKey, content] of messages) {
+    await query(
+      `INSERT INTO dm_messages (conversation_id, sender_user_id, content, message_type, official_key)
+       SELECT $1, u.id, $2, 'official', $3
+       FROM users u
+       WHERE u.system_key = 'echolive_official'
+         AND NOT EXISTS (
+           SELECT 1 FROM dm_messages m
+           WHERE m.conversation_id = $1 AND m.official_key = $3
+         )
+       ON CONFLICT (conversation_id, official_key) WHERE official_key IS NOT NULL DO NOTHING`,
+      [conversationId, content, officialKey]
+    );
+  }
+}
+
+export async function ensureAccountSocialBootstrap(userId) {
+  const official = await ensureOfficialIdentity();
+  const conversation = await ensureConversation(userId, official.id);
+  await grantBetaBadge(userId);
+  const userResult = await query("SELECT display_name FROM users WHERE id = $1 LIMIT 1", [userId]);
+  await seedOfficialMessages(conversation.id, userResult.rows[0]?.display_name);
+  return conversation;
+}
+
 export async function getConversationForUser(conversationId, userId) {
   const result = await query(
     `SELECT c.id, c.user_one_id, c.user_two_id, c.created_at, c.updated_at,
             other.id AS other_user_id, other.username AS other_username,
-            other.display_name AS other_display_name, other.avatar_url AS other_avatar_url
+            other.display_name AS other_display_name, other.avatar_url AS other_avatar_url,
+            other.account_type AS other_account_type,
+            COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
+                      ORDER BY ub.granted_at DESC)
+                      FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+                      WHERE ub.user_id = other.id), '[]'::json) AS other_badges
      FROM dm_conversations c
      JOIN dm_participants mine ON mine.conversation_id = c.id AND mine.user_id = $2
      JOIN users other ON other.id = CASE WHEN c.user_one_id = $2 THEN c.user_two_id ELSE c.user_one_id END
@@ -150,16 +259,25 @@ export async function getConversationForUser(conversationId, userId) {
       id: row.other_user_id,
       username: row.other_username,
       displayName: row.other_display_name,
-      avatarUrl: row.other_avatar_url || ""
+      avatarUrl: row.other_avatar_url || "",
+      accountType: row.other_account_type || "user",
+      isOfficial: row.other_account_type === "system",
+      badges: row.other_badges || []
     }
   };
 }
 
 export async function listConversations(userId) {
+  await ensureAccountSocialBootstrap(userId);
   const result = await query(
     `SELECT c.id, c.created_at, c.updated_at, p.last_read_at,
             other.id AS other_user_id, other.username AS other_username,
             other.display_name AS other_display_name, other.avatar_url AS other_avatar_url,
+            other.account_type AS other_account_type,
+            COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
+                      ORDER BY ub.granted_at DESC)
+                      FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+                      WHERE ub.user_id = other.id), '[]'::json) AS other_badges,
             latest.id AS last_message_id, latest.content AS last_message_content,
             latest.created_at AS last_message_created_at, latest.sender_user_id AS last_message_sender_id,
             COALESCE(unread.unread_count, 0)::int AS unread_count
@@ -181,7 +299,8 @@ export async function listConversations(userId) {
          AND m.created_at > p.last_read_at
      ) unread ON TRUE
      WHERE p.user_id = $1
-     ORDER BY COALESCE(latest.created_at, c.updated_at) DESC, c.id DESC`,
+     ORDER BY (other.account_type = 'system') DESC,
+              COALESCE(latest.created_at, c.updated_at) DESC, c.id DESC`,
     [userId]
   );
 
@@ -194,7 +313,10 @@ export async function listConversations(userId) {
       id: row.other_user_id,
       username: row.other_username,
       displayName: row.other_display_name,
-      avatarUrl: row.other_avatar_url || ""
+      avatarUrl: row.other_avatar_url || "",
+      accountType: row.other_account_type || "user",
+      isOfficial: row.other_account_type === "system",
+      badges: row.other_badges || []
     },
     lastMessage: row.last_message_id ? {
       id: row.last_message_id,
@@ -214,7 +336,8 @@ export async function listMessages(conversationId, userId, { before = "", limit 
   const limitIndex = params.length;
   const result = await query(
     `SELECT m.id, m.conversation_id, m.sender_user_id, m.content, m.created_at,
-            u.username, u.display_name, u.avatar_url
+            m.message_type, m.official_key,
+            u.username, u.display_name, u.avatar_url, u.account_type
      FROM dm_messages m
      JOIN dm_participants p ON p.conversation_id = m.conversation_id AND p.user_id = $2
      JOIN users u ON u.id = m.sender_user_id
@@ -230,11 +353,15 @@ export async function listMessages(conversationId, userId, { before = "", limit 
       senderUserId: row.sender_user_id,
       content: row.content,
       createdAt: row.created_at,
+      messageType: row.message_type || "user",
+      officialKey: row.official_key || null,
       sender: {
         id: row.sender_user_id,
         username: row.username,
         displayName: row.display_name,
-        avatarUrl: row.avatar_url || ""
+        avatarUrl: row.avatar_url || "",
+        accountType: row.account_type || "user",
+        isOfficial: row.account_type === "system"
       }
     })),
     hasMore: result.rows.length === safeLimit

@@ -14,7 +14,7 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
     if (!normalizedQuery) return true;
     const name = conversation.user.displayName || "";
     return `${name} ${conversation.user.username}`.toLowerCase().includes(normalizedQuery);
-  }), [conversations, normalizedQuery]);
+  }).sort((left, right) => Number(Boolean(right.user?.isOfficial)) - Number(Boolean(left.user?.isOfficial))), [conversations, normalizedQuery]);
 
   return <aside className="social-sidebar">
     <div className="social-sidebar-brand">
@@ -28,7 +28,7 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
     <div className="social-sidebar-section">
       <div className="social-sidebar-section-title"><span>Mensagens diretas</span><button type="button" title="Nova conversa" aria-label="Nova conversa" onClick={() => onTabChange("friends")}><Icon name="plus" size={14} /></button></div>
       <div className="social-conversation-list">
-        {visibleConversations.map((conversation) => <button type="button" className={`social-conversation-row ${activeConversationId === conversation.id ? "is-active" : ""}`} key={conversation.id} onClick={() => onOpenConversation(conversation.id)}><span className="social-conversation-avatar"><Avatar user={conversation.user} size={32} /><i className={onlineUserIds.has(conversation.user.id) ? "is-online" : ""} /></span><span className="social-conversation-copy"><strong>{conversation.user.displayName || conversation.user.username}</strong><small>{conversation.lastMessage?.content || `@${conversation.user.username}`}</small></span>{conversation.unreadCount > 0 && <b className="social-unread-badge">{conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}</b>}</button>)}
+        {visibleConversations.map((conversation) => <button type="button" className={`social-conversation-row ${conversation.user?.isOfficial ? "is-official" : ""} ${activeConversationId === conversation.id ? "is-active" : ""}`} key={conversation.id} onClick={() => onOpenConversation(conversation.id)}><span className="social-conversation-avatar"><Avatar user={conversation.user} size={32} /><i className={conversation.user?.isOfficial || onlineUserIds.has(conversation.user.id) ? "is-online" : ""} /></span><span className="social-conversation-copy"><strong>{conversation.user.displayName || conversation.user.username}{conversation.user?.isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{conversation.user?.isOfficial ? "Mensagem oficial do EchoLive" : (conversation.lastMessage?.content || `@${conversation.user.username}`)}</small></span>{conversation.unreadCount > 0 && <b className="social-unread-badge">{conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}</b>}</button>)}
         {!visibleConversations.length && <p className="social-sidebar-empty">{normalizedQuery ? "Nenhuma conversa encontrada." : "Suas conversas aparecerao aqui."}</p>}
       </div>
     </div>
