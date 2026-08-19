@@ -8,11 +8,14 @@ import {
   findSocialUserByUsername,
   getConversationForUser,
   getConversationUserIds,
+  getSocialProfile,
+  hideConversation,
   listConversations,
   listMessages,
   listRelationships,
   markConversationRead,
-  removeFriendship
+  removeFriendship,
+  revealConversationForUsers
 } from "./db/social.js";
 import { getSessionTokenFromCookieHeader, optionalAuth, requireAuth } from "./auth.js";
 import { findSessionUser } from "./db/sessions.js";
@@ -112,6 +115,21 @@ function handleSocialError(response, error) {
 }
 
 export function registerSocialRoutes(app) {
+  app.get("/api/social/users/:userId/profile", optionalAuth, requireAuth, async (request, response) => {
+    if (!isUuid(request.params.userId)) return response.status(400).json({ error: "Usuario invalido." });
+    try {
+      const profile = await getSocialProfile(request.params.userId, request.user.id);
+      if (!profile) return response.status(404).json({ error: "Usuario nao encontrado." });
+      const ids = onlineUserIds();
+      profile.user.status = ids.has(profile.user.id) ? "online" : "offline";
+      profile.activity.status = profile.user.status;
+      profile.activity.kind = profile.user.status;
+      return response.json(profile);
+    } catch (error) {
+      return handleSocialError(response, error);
+    }
+  });
+
   app.get("/api/social/friends", optionalAuth, requireAuth, async (request, response) => {
     try {
       return response.json(await socialSnapshot(request.user.id));
@@ -188,6 +206,17 @@ export function registerSocialRoutes(app) {
     try {
       const conversations = await listConversations(request.user.id);
       return response.json({ conversations });
+    } catch (error) {
+      return handleSocialError(response, error);
+    }
+  });
+
+  app.post("/api/social/dms/:conversationId/hide", optionalAuth, requireAuth, async (request, response) => {
+    if (!isUuid(request.params.conversationId)) return response.status(400).json({ error: "Conversa invalida." });
+    try {
+      const hidden = await hideConversation(request.params.conversationId, request.user.id);
+      if (!hidden) return response.status(404).json({ error: "Conversa nao encontrada." });
+      return response.json({ ok: true });
     } catch (error) {
       return handleSocialError(response, error);
     }
@@ -315,7 +344,7 @@ export function attachSocialSocket(io, socket) {
     socket.leave(`dm:${conversationId}`);
   });
 
-  socket.on("dm:message", async ({ conversationId, content } = {}, ack) => {
+  socket.on("dm:message", async ({ conversationId, content, attachment } = {}, ack) => {
     const acknowledge = typeof ack === "function" ? ack : null;
     const user = socket.data.accountUser;
     const cleanContent = String(content || "").trim();
@@ -336,7 +365,23 @@ export function attachSocialSocket(io, socket) {
       acknowledge?.({ ok: false, error: "Essa conversa oficial e somente leitura.", code: "OFFICIAL_DM_READ_ONLY" });
       return;
     }
-    const message = await createMessage(conversationId, user.id, cleanContent).catch(() => null);
+    const safeAttachment = attachment && typeof attachment === "object" &&
+      ["image", "video", "file"].includes(attachment.type) &&
+      /^\/uploads\/[A-Za-z0-9._-]+$/.test(String(attachment.url || "")) &&
+      Number.isInteger(attachment.size) && attachment.size <= 100 * 1024 * 1024
+      ? {
+          type: attachment.type,
+          url: attachment.url,
+          name: String(attachment.name || "arquivo").replace(/[\\/\0]/g, "").slice(0, 120),
+          size: attachment.size,
+          mimeType: String(attachment.mimeType || "application/octet-stream").slice(0, 120)
+        }
+      : null;
+    if (attachment && !safeAttachment) {
+      acknowledge?.({ ok: false, error: "Anexo invalido.", code: "INVALID_ATTACHMENT" });
+      return;
+    }
+    const message = await createMessage(conversationId, user.id, cleanContent, safeAttachment).catch(() => null);
     if (!message) {
       acknowledge?.({ ok: false, error: "Nao foi possivel enviar a mensagem.", code: "MESSAGE_FAILED" });
       return;
@@ -347,6 +392,7 @@ export function attachSocialSocket(io, socket) {
     };
     io.to(`dm:${conversationId}`).emit("dm:new-message", payload);
     const userIds = await getConversationUserIds(conversationId).catch(() => []);
+    await revealConversationForUsers(conversationId, userIds).catch(() => {});
     for (const userId of userIds) {
       emitToSocialUser(userId, "social:conversation-updated", { conversationId, message: payload });
     }

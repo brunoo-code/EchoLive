@@ -5287,6 +5287,70 @@ video.screen-video {
 @media (max-width: 720px) { .social-page { display:block; }.social-rail { display:none; }.social-page-gate .social-guest-gate { min-height:100vh; }.social-topbar { display:block; padding:14px 16px; }.social-topbar-title { margin-bottom:8px; }.social-tabs { margin-left:0; overflow:auto; padding-bottom:2px; }.social-tabs button { flex:0 0 auto; padding:0 9px; font-size:12px; }.social-topbar-note { display:none; }.social-add-layout { display:block; }.social-add-eko { display:none; }.social-add-divider { margin-top:20px; }.social-sidebar { min-height:auto; }.social-nav { grid-template-columns:repeat(3, 1fr); }.social-nav-badge { display:none; } }
 @media (prefers-reduced-motion: reduce) { .dm-typing i { animation:none; }.dm-typing { transition:none; } }
 
+/* Social 7.1: expanded identity, activity rows, and shared emoji surface. */
+.social-person-identity, .social-online-identity, .social-conversation-main { display:flex; align-items:center; min-width:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.social-person-identity { flex:1; gap:13px; padding:0; }
+.social-online-row { display:flex; align-items:center; gap:6px; padding:5px 7px; }
+.social-online-identity { flex:1; gap:9px; padding:3px 0; }
+.social-online-identity > span { display:grid; min-width:0; flex:1; gap:2px; }
+.social-online-identity small { color:#65d59b; font-size:10px; }
+.social-online-row .icon-button { opacity:0; }
+.social-online-row:hover .icon-button, .social-online-row:focus-within .icon-button { opacity:1; }
+.social-conversation-row { display:flex; align-items:center; gap:2px; min-width:0; border-radius:7px; }
+.social-conversation-main { flex:1; gap:9px; padding:8px 7px; }
+.social-conversation-main .social-conversation-copy { min-width:0; flex:1; }
+.social-conversation-close { flex:0 0 auto; margin-right:4px; opacity:0; }
+.social-conversation-row:hover .social-conversation-close, .social-conversation-row:focus-within .social-conversation-close { opacity:1; }
+.social-profile-modal-backdrop { position:fixed; inset:0; z-index:80; display:grid; place-items:center; background:rgba(3,5,8,.68); padding:24px; }
+.social-profile-modal { position:relative; display:grid; grid-template-columns:280px minmax(0,1fr); width:min(820px,92vw); max-height:84vh; overflow:hidden; border:1px solid rgba(255,255,255,.12); border-radius:16px; background:#11161d; box-shadow:0 24px 80px rgba(0,0,0,.45); }
+.social-profile-modal-close { position:absolute; z-index:1; top:14px; right:14px; }
+.social-profile-identity { display:flex; flex-direction:column; align-items:flex-start; gap:14px; min-width:0; border-right:1px solid rgba(255,255,255,.08); background:linear-gradient(180deg,rgba(34,211,238,.08),transparent 40%); padding:34px 26px 28px; }
+.social-profile-identity > .social-avatar { border:1px solid rgba(255,255,255,.16); box-shadow:0 10px 26px rgba(0,0,0,.25); }
+.social-profile-name { display:grid; gap:4px; min-width:0; }
+.social-profile-name h2 { margin:0; font-size:22px; line-height:1.15; overflow-wrap:anywhere; }
+.social-profile-name > span { color:#a9b5c5; font-size:13px; }
+.social-profile-presence { display:flex; align-items:center; gap:7px; margin:0; color:#b8c3d1; font-size:12px; }
+.social-profile-presence i, .social-person-presence i { width:8px; height:8px; border-radius:50%; background:#7b8795; }
+.social-profile-presence i.is-online { background:#3ed184; box-shadow:0 0 0 3px rgba(62,209,132,.14); }
+.social-profile-bio { margin:0; color:#b8c3d1; font-size:12px; line-height:1.45; }
+.social-profile-actions { display:grid; gap:10px; width:100%; margin-top:auto; }
+.social-profile-actions .primary-button { justify-content:center; }
+.social-profile-relationship { color:#8e9aaa; font-size:11px; }
+.social-profile-relationship.is-friend { color:#70dfa0; }
+.social-profile-detail { min-width:0; overflow:auto; padding:20px 26px 28px; }
+.social-profile-tabs { display:flex; gap:4px; border-bottom:1px solid rgba(255,255,255,.08); }
+.social-profile-tabs button { min-height:36px; border:0; border-bottom:2px solid transparent; background:transparent; color:#9ba8b8; padding:0 10px; font:inherit; font-size:12px; cursor:pointer; }
+.social-profile-tabs button:hover, .social-profile-tabs button.is-active { border-bottom-color:var(--accent,#22d3ee); color:#f4f7fb; }
+.social-profile-activity, .social-profile-list { display:grid; align-content:start; gap:11px; padding:28px 4px 0; }
+.social-profile-activity h3 { margin:0; font-size:20px; }
+.social-profile-activity p { margin:0; color:#a9b5c5; font-size:13px; }
+.social-profile-activity .secondary-button { justify-self:start; margin-top:6px; }
+.social-profile-list-row { display:flex; align-items:center; gap:10px; min-height:44px; border-bottom:1px solid rgba(255,255,255,.06); }
+.social-profile-list-row > span { display:grid; gap:2px; }
+.social-profile-list-row strong { font-size:13px; }
+.social-profile-list-row small, .social-profile-list-empty { color:#8e9aaa; font-size:11px; }
+.social-profile-list-empty { margin:6px 0; }
+.emoji-picker-rich { display:grid; gap:8px; width:min(360px, calc(100vw - 32px)); padding:10px; }
+.emoji-picker-rich > input { min-height:30px; border:1px solid rgba(255,255,255,.12); border-radius:6px; background:rgba(255,255,255,.04); color:#f4f7fb; padding:0 9px; font:inherit; font-size:12px; }
+.emoji-category-tabs { display:flex; gap:3px; overflow:auto; scrollbar-width:none; }
+.emoji-category-tabs button { flex:0 0 auto; border:0; border-radius:5px; background:transparent; color:#8e9aaa; padding:5px 6px; font:inherit; font-size:10px; cursor:pointer; }
+.emoji-category-tabs button:hover, .emoji-category-tabs button.is-active { background:rgba(34,211,238,.12); color:#dffbff; }
+.emoji-picker-rich .emoji-grid { max-height:190px; overflow:auto; }
+.emoji-empty { grid-column:1/-1; color:#8e9aaa; padding:10px; font-size:11px; }
+.dm-header-profile { display:flex; align-items:center; gap:12px; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.dm-header-profile > span { display:grid; gap:3px; }
+.dm-attachment { display:block; width:min(400px,100%); margin-top:6px; }
+.dm-attachment img { display:block; max-width:100%; max-height:360px; border-radius:8px; object-fit:contain; }
+.dm-attachment-video { display:block; width:min(420px,100%); max-height:360px; margin-top:6px; border-radius:8px; }
+.dm-file-attachment { display:flex; align-items:center; gap:9px; width:min(360px,100%); margin-top:6px; border:1px solid rgba(255,255,255,.1); border-radius:8px; background:rgba(255,255,255,.04); color:inherit; padding:9px 11px; text-decoration:none; }
+.dm-file-attachment span { display:grid; min-width:0; gap:2px; }
+.dm-file-attachment strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+.dm-file-attachment small { color:#8e9aaa; font-size:10px; }
+.dm-selected-file { display:flex; align-items:center; justify-content:space-between; gap:8px; color:#b8c3d1; padding:4px 8px; font-size:11px; }
+.dm-composer-row { position:relative; display:flex; align-items:center; gap:7px; width:100%; }
+.dm-emoji-popover { position:absolute; right:8px; bottom:48px; z-index:5; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:#161c24; box-shadow:0 16px 35px rgba(0,0,0,.35); }
+@media (max-width:720px) { .social-profile-modal { display:flex; flex-direction:column; max-height:90vh; }.social-profile-identity { border-right:0; border-bottom:1px solid rgba(255,255,255,.08); padding:24px; }.social-profile-identity > .social-avatar { width:82px !important; height:82px !important; }.social-profile-actions { margin-top:0; }.social-profile-detail { padding:16px 20px 24px; }.social-profile-tabs { overflow:auto; }.social-profile-tabs button { white-space:nowrap; } }
+
 /* Etapa 5.1.1: keep the sidebar focused on navigation and direct conversations. */
 .social-sidebar-search { display:flex; align-items:center; gap:8px; margin:12px 12px 2px; border:1px solid var(--border-strong, rgba(255,255,255,.16)); border-radius:7px; background:rgba(255,255,255,.025); color:var(--text-muted, #8e9aaa); padding:0 9px; }
 .social-sidebar-search:focus-within { border-color:var(--accent, #22d3ee); box-shadow:0 0 0 2px var(--accent-soft, rgba(34,211,238,.1)); }

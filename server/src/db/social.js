@@ -74,6 +74,46 @@ export async function findRelationshipBetween(userId, otherUserId) {
   return result.rows[0] || null;
 }
 
+export async function getSocialProfile(userId, viewerId) {
+  const userResult = await query(
+    `SELECT u.id AS user_id, u.username, u.display_name, u.avatar_url, u.account_type,
+            COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
+                      ORDER BY ub.granted_at DESC)
+                      FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+                      WHERE ub.user_id = u.id), '[]'::json) AS badges
+       FROM users u WHERE u.id = $1 LIMIT 1`,
+    [userId]
+  );
+  const user = mapSocialUser(userResult.rows[0]);
+  if (!user) return null;
+  const relationship = viewerId === userId ? null : await findRelationshipBetween(viewerId, userId);
+  const mutualResult = viewerId === userId ? { rows: [] } : await query(
+    `SELECT u.id AS user_id, u.username, u.display_name, u.avatar_url, u.account_type,
+            COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
+                      ORDER BY ub.granted_at DESC)
+                      FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+                      WHERE ub.user_id = u.id), '[]'::json) AS badges
+       FROM users u
+       JOIN friendships f1 ON f1.status = 'accepted'
+         AND ((f1.requester_user_id = $1 AND f1.addressee_user_id = u.id)
+           OR (f1.addressee_user_id = $1 AND f1.requester_user_id = u.id))
+       JOIN friendships f2 ON f2.status = 'accepted'
+         AND ((f2.requester_user_id = $2 AND f2.addressee_user_id = u.id)
+           OR (f2.addressee_user_id = $2 AND f2.requester_user_id = u.id))
+       WHERE u.id NOT IN ($1, $2)
+       ORDER BY u.display_name, u.username
+       LIMIT 20`,
+    [viewerId, userId]
+  );
+  return {
+    user,
+    relationship: relationship ? { status: relationship.status, direction: relationship.requester_user_id === viewerId ? "sent" : "received" } : null,
+    mutualFriends: mutualResult.rows.map(mapSocialUser),
+    mutualRooms: [],
+    activity: { status: "offline", kind: "offline", room: null }
+  };
+}
+
 export async function createFriendRequest(requesterUserId, addresseeUserId) {
   const result = await query(
     `INSERT INTO friendships (requester_user_id, addressee_user_id, status)
@@ -139,6 +179,25 @@ export async function ensureConversation(userId, otherUserId) {
     );
     return conversation;
   });
+}
+
+export async function hideConversation(conversationId, userId) {
+  const result = await query(
+    `UPDATE dm_participants SET hidden_at = NOW()
+     WHERE conversation_id = $1 AND user_id = $2
+     RETURNING conversation_id`,
+    [conversationId, userId]
+  );
+  return Boolean(result.rowCount);
+}
+
+export async function revealConversationForUsers(conversationId, userIds) {
+  if (!userIds?.length) return;
+  await query(
+    `UPDATE dm_participants SET hidden_at = NULL
+     WHERE conversation_id = $1 AND user_id = ANY($2::uuid[])`,
+    [conversationId, userIds]
+  );
 }
 
 export async function ensureOfficialIdentity() {
@@ -298,7 +357,7 @@ export async function listConversations(userId) {
          AND m.sender_user_id <> $1
          AND m.created_at > p.last_read_at
      ) unread ON TRUE
-     WHERE p.user_id = $1
+     WHERE p.user_id = $1 AND p.hidden_at IS NULL
      ORDER BY (other.account_type = 'system') DESC,
               COALESCE(latest.created_at, c.updated_at) DESC, c.id DESC`,
     [userId]
@@ -336,7 +395,7 @@ export async function listMessages(conversationId, userId, { before = "", limit 
   const limitIndex = params.length;
   const result = await query(
     `SELECT m.id, m.conversation_id, m.sender_user_id, m.content, m.created_at,
-            m.message_type, m.official_key,
+            m.message_type, m.official_key, m.attachment,
             u.username, u.display_name, u.avatar_url, u.account_type
      FROM dm_messages m
      JOIN dm_participants p ON p.conversation_id = m.conversation_id AND p.user_id = $2
@@ -355,6 +414,7 @@ export async function listMessages(conversationId, userId, { before = "", limit 
       createdAt: row.created_at,
       messageType: row.message_type || "user",
       officialKey: row.official_key || null,
+      attachment: row.attachment || null,
       sender: {
         id: row.sender_user_id,
         username: row.username,
@@ -368,16 +428,16 @@ export async function listMessages(conversationId, userId, { before = "", limit 
   };
 }
 
-export async function createMessage(conversationId, senderUserId, content) {
+export async function createMessage(conversationId, senderUserId, content, attachment = null) {
   const result = await query(
-    `INSERT INTO dm_messages (conversation_id, sender_user_id, content)
-     SELECT $1, $2, $3
+    `INSERT INTO dm_messages (conversation_id, sender_user_id, content, attachment)
+     SELECT $1, $2, $3, $4::jsonb
      WHERE EXISTS (
        SELECT 1 FROM dm_participants
        WHERE conversation_id = $1 AND user_id = $2
      )
-     RETURNING id, conversation_id, sender_user_id, content, created_at`,
-    [conversationId, senderUserId, content]
+     RETURNING id, conversation_id, sender_user_id, content, created_at, attachment`,
+    [conversationId, senderUserId, content, attachment ? JSON.stringify(attachment) : null]
   );
   return result.rows[0] || null;
 }

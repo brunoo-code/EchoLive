@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { SERVER_URL } from "../utils/webrtc.js";
 import { playUiSound } from "../utils/uiSounds.js";
 import Icon from "./Icon.jsx";
+import EmojiPicker from "./EmojiPicker.jsx";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const ACCEPTED_TYPES = new Set([
@@ -13,14 +14,14 @@ const ACCEPTED_TYPES = new Set([
   "video/webm",
   "video/quicktime",
   "application/pdf", "application/zip", "application/x-zip-compressed", "audio/mpeg", "audio/wav", "audio/ogg", "text/plain",
+  "application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 ]);
 const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
-const FILE_ACCEPT = "application/pdf,application/zip,audio/mpeg,audio/wav,audio/ogg,text/plain,.docx,.xlsx,.pptx";
+const FILE_ACCEPT = "application/pdf,application/zip,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,.docx,.xlsx,.pptx";
 const ALL_ACCEPT = `${MEDIA_ACCEPT},${FILE_ACCEPT}`;
-const COMMON_EMOJIS = ["😀", "😊", "😂", "😍", "😎", "🤔", "😮", "😢", "😡", "👏", "🙌", "🔥", "✨", "🎉", "❤️", "👍", "👀", "💬"];
 
 function formatTime(value) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -340,10 +341,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
               {isSending ? "Enviando" : "Enviar"}
             </button>
           </div>
-          {isEmojiPickerOpen && <div className="composer-popover emoji-picker" role="dialog" aria-label="Escolher emoji">
-            <strong>Emojis</strong>
-            <div className="emoji-grid">{COMMON_EMOJIS.map((emoji) => <button type="button" key={emoji} onClick={() => insertEmoji(emoji)} aria-label={`Inserir ${emoji}`}>{emoji}</button>)}</div>
-          </div>}
+          {isEmojiPickerOpen && <div className="composer-popover"><EmojiPicker onSelect={insertEmoji} /></div>}
           {isStickerPickerOpen && <div className="composer-popover sticker-picker" role="dialog" aria-label="Figurinhas do Eko">
             <strong>Figurinhas do Eko</strong>
             <span>As figurinhas oficiais serão adicionadas aqui.</span>

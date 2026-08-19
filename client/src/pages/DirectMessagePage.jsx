@@ -3,12 +3,19 @@ import Icon from "../components/Icon.jsx";
 import SocialRail from "../components/SocialRail.jsx";
 import SocialSidebar, { Avatar } from "../components/SocialSidebar.jsx";
 import SocialEmptyState from "../components/SocialEmptyState.jsx";
+import EmojiPicker from "../components/EmojiPicker.jsx";
+import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useSocial } from "../social/SocialContext.jsx";
+import { SERVER_URL } from "../utils/webrtc.js";
+
+const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
+const FILE_ACCEPT = "application/pdf,application/zip,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,.docx,.xlsx,.pptx";
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 export default function DirectMessagePage({ conversationId, initialConversation, onNavigateHome, onNavigateFriends, onNavigateDm }) {
   const { user } = useAuth();
-  const { conversations, onlineUserIds, socket, socialReady, loadMessages, markRead, socialStatus } = useSocial();
+  const { conversations, onlineUserIds, socket, socialReady, loadMessages, markRead, socialStatus, hideConversation } = useSocial();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
@@ -20,6 +27,10 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const [sending, setSending] = useState(false);
   const [conversationReady, setConversationReady] = useState(false);
   const [retryVersion, setRetryVersion] = useState(0);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(null);
+  const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
   const composerRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -168,16 +179,43 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     event.preventDefault();
     if (isOfficial) return;
     const cleanText = text.trim();
-    if (!cleanText || sending || !socket || !conversationReady) return;
+    if ((!cleanText && !selectedFile) || sending || !socket || !conversationReady) return;
     setSending(true);
-    socket.emit("dm:message", { conversationId, content: cleanText }, (result) => {
+    const submit = (attachment) => socket.emit("dm:message", { conversationId, content: cleanText, attachment }, (result) => {
       setSending(false);
       if (!result?.ok) { setError(result?.error || "Nao foi possivel enviar a mensagem."); return; }
       const savedMessage = normalizeMessage(result.message, conversationId, user);
       if (savedMessage) setMessages((current) => appendUniqueMessage(current, savedMessage, conversationId));
       setText("");
+      setSelectedFile(null);
       socket.emit("dm:typing", { conversationId, typing: false });
     });
+    if (!selectedFile) { submit(null); return; }
+    uploadFile(selectedFile).then(submit).catch((requestError) => { setSending(false); setError(requestError.message); });
+  }
+
+  function insertEmoji(emoji) {
+    setText((current) => `${current}${emoji}`.slice(0, 4000));
+    setIsEmojiOpen(false);
+  }
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const acceptedTypes = ["image/png", "image/jpeg", "image/webp", "image/gif", "video/mp4", "video/webm", "video/quicktime", "application/pdf", "application/zip", "text/plain", "application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.presentationml.presentation"];
+    if (!acceptedTypes.includes(file.type)) { setError("Tipo de arquivo nao permitido."); return; }
+    if (file.size > MAX_FILE_SIZE) { setError("Este arquivo excede o limite de 100 MB."); return; }
+    setSelectedFile(file);
+  }
+
+  async function uploadFile(file) {
+    const body = new FormData();
+    body.append("file", file);
+    const response = await fetch(`${SERVER_URL}/api/social/dms/${conversationId}/upload`, { method: "POST", body, credentials: "include" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Nao foi possivel enviar o arquivo.");
+    return data.attachment;
   }
 
   function handleComposerKeyDown(event) {
@@ -195,12 +233,44 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     setHasMore(Boolean(data.hasMore));
   }
 
-  if (conversationStatus === "loading") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
-  if (conversationStatus === "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
+  const sidebarProps = { activeTab: "friends", onTabChange: onNavigateFriends, conversations, onlineUserIds, user, onHome: onNavigateHome, onOpenConversation: onNavigateDm, onHideConversation: async (id) => { await hideConversation(id); onNavigateFriends(); }, activeConversationId: conversationId };
+  if (conversationStatus === "loading") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
+  if (conversationStatus === "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
 
   const historyLoading = historyStatus === "loading";
   const historyError = historyStatus === "error";
-  return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><header className={`dm-header ${isOfficial ? "is-official" : ""}`}><Avatar user={otherUser} size={38} /><div><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? "Online" : "Offline"}`}</small></div></header><div className="dm-messages">{hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}{historyLoading && !messages.length ? <p className="dm-loading">Carregando conversa...</p> : historyError ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId} />) : <div className="dm-intro"><Avatar user={otherUser} size={76} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p></div>}<div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div><div ref={bottomRef} /></div>{error && !historyError && <p className="social-feedback is-error dm-error">{error}</p>}{!isOfficial && realtimeStatus !== "connected" && <p className={`dm-realtime-status ${realtimeStatus === "error" ? "is-error" : ""}`} role="status">{realtimeError || (realtimeStatus === "reconnecting" ? "Reconectando..." : "Conectando ao tempo real...")}</p>}{isOfficial ? <div className="dm-official-notice"><Icon name="lock" size={16} /><span>Esta é uma mensagem oficial do EchoLive. Este canal é somente leitura.</span></div> : <form className="dm-composer" onSubmit={sendMessage}><label className="sr-only" htmlFor="dm-message">Mensagem</label><textarea ref={composerRef} id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Conversar com ${otherUser.displayName || otherUser.username}`} disabled={!conversationReady} /><button type="submit" className="primary-button" disabled={!text.trim() || sending || !conversationReady} aria-label="Enviar mensagem"><Icon name="send" size={16} /></button></form>}</section></main>;
+  return <main className="page social-page">
+    <SocialRail onHome={onNavigateHome} />
+    <SocialSidebar {...sidebarProps} onOpenProfile={setProfileOpen} />
+    <section className="dm-content">
+      <header className={`dm-header ${isOfficial ? "is-official" : ""}`}>
+        <button type="button" className="dm-header-profile" onClick={() => setProfileOpen(otherUser)}>
+          <Avatar user={otherUser} size={38} />
+          <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? "Online" : "Offline"}`}</small></span>
+        </button>
+      </header>
+      <div className="dm-messages">
+        {hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}
+        {historyLoading && !messages.length ? <p className="dm-loading">Carregando conversa...</p> : historyError ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId} />) : <div className="dm-intro"><Avatar user={otherUser} size={64} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p><span>Este e o inicio da conversa.</span></div>}
+        <div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div>
+        <div ref={bottomRef} />
+      </div>
+      {error && !historyError && <p className="social-feedback is-error dm-error">{error}</p>}
+      {!isOfficial && realtimeStatus !== "connected" && <p className={`dm-realtime-status ${realtimeStatus === "error" ? "is-error" : ""}`} role="status">{realtimeError || (realtimeStatus === "reconnecting" ? "Reconectando..." : "Conectando ao tempo real...")}</p>}
+      {isOfficial ? <div className="dm-official-notice"><Icon name="lock" size={16} /><span>Esta é uma mensagem oficial do EchoLive. Este canal é somente leitura.</span></div> : <form className="dm-composer" onSubmit={sendMessage}>
+        {selectedFile && <div className="dm-selected-file"><span>{selectedFile.name}</span><button type="button" className="icon-button" onClick={() => setSelectedFile(null)} aria-label="Remover anexo"><Icon name="close" size={14} /></button></div>}
+        <div className="dm-composer-row">
+          <button type="button" className="composer-icon-button" onClick={() => fileInputRef.current?.click()} title="Adicionar anexo" aria-label="Adicionar anexo"><Icon name="plus" size={17} /></button>
+          <input ref={fileInputRef} className="visually-hidden" type="file" accept={`${MEDIA_ACCEPT},${FILE_ACCEPT}`} onChange={handleFileChange} />
+          <textarea ref={composerRef} id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Conversar com ${otherUser.displayName || otherUser.username}`} disabled={!conversationReady || sending} />
+          <button type="button" className="composer-icon-button" onClick={() => setIsEmojiOpen((value) => !value)} title="Inserir emoji" aria-label="Inserir emoji"><span aria-hidden="true">😊</span></button>
+          <button type="submit" className="primary-button" disabled={(!text.trim() && !selectedFile) || sending || !conversationReady} aria-label="Enviar mensagem"><Icon name="send" size={16} /></button>
+          {isEmojiOpen && <div className="composer-popover dm-emoji-popover"><EmojiPicker onSelect={insertEmoji} /></div>}
+        </div>
+      </form>}
+    </section>
+    {profileOpen && <SocialUserProfileModal userId={profileOpen.id} initialUser={profileOpen} onClose={() => setProfileOpen(null)} onMessage={(nextConversation) => { setProfileOpen(null); onNavigateDm(nextConversation.id, nextConversation); }} />}
+  </main>;
 }
 
 function extractHistory(data) {
@@ -217,7 +287,20 @@ function extractHistory(data) {
 function Message({ message, mine, compact }) {
   const sender = message.sender || {};
   const senderName = sender.displayName || sender.username || "Usuario";
-  return <article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={32} />}</div><div><div className="dm-message-meta">{!compact && <strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong>}<small>{formatMessageTime(message.createdAt)}</small></div><p>{message.content}</p></div></article>;
+  return <article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={32} />}</div><div><div className="dm-message-meta">{!compact && <strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong>}<small>{formatMessageTime(message.createdAt)}</small></div>{message.content && <p>{message.content}</p>}{message.attachment && <Attachment attachment={message.attachment} />}</div></article>;
+}
+
+function Attachment({ attachment }) {
+  const source = `${SERVER_URL}${attachment.url}`;
+  if (attachment.type === "image") return <a className="dm-attachment" href={source} target="_blank" rel="noreferrer"><img src={source} alt={attachment.name || "Imagem anexada"} /></a>;
+  if (attachment.type === "video") return <video className="dm-attachment-video" controls preload="metadata" src={source} />;
+  return <a className="dm-file-attachment" href={source} target="_blank" rel="noreferrer"><Icon name="file" size={16} /><span><strong>{attachment.name || "Arquivo"}</strong><small>{formatFileSize(attachment.size)}</small></span></a>;
+}
+
+function formatFileSize(bytes = 0) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function normalizeMessage(message, fallbackConversationId, fallbackUser) {
@@ -234,6 +317,7 @@ function normalizeMessage(message, fallbackConversationId, fallbackUser) {
     sender,
     messageType: message.messageType ?? message.message_type ?? "user",
     officialKey: message.officialKey ?? message.official_key ?? null,
+    attachment: message.attachment || null,
     createdAt: normalizeTimestamp(message.createdAt ?? message.created_at ?? message.timestamp)
   };
 }

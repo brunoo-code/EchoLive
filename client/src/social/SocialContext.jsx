@@ -202,6 +202,15 @@ export function SocialProvider({ children }) {
     return conversation;
   }, [refreshConversations]);
 
+  const loadUserProfile = useCallback(async (userId) => {
+    return socialRequest(`/api/social/users/${userId}/profile`);
+  }, []);
+
+  const hideConversation = useCallback(async (conversationId) => {
+    await socialRequest(`/api/social/dms/${conversationId}/hide`, { method: "POST" });
+    setConversations((current) => current.filter((conversation) => conversation.id !== conversationId));
+  }, []);
+
   const loadMessages = useCallback(async (conversationId, before = "") => {
     const query = before ? `?before=${encodeURIComponent(before)}&limit=50` : "?limit=50";
     return socialRequest(`/api/social/dms/${conversationId}/messages${query}`);
@@ -219,6 +228,7 @@ export function SocialProvider({ children }) {
     deleteFriendRequest,
     friends,
     loadMessages,
+    loadUserProfile,
     markRead,
     onlineUserIds,
     receivedRequests,
@@ -226,12 +236,13 @@ export function SocialProvider({ children }) {
     removeFriend,
     sendFriendRequest,
     sentRequests,
+    hideConversation,
     socket,
     socialReady,
     socialStatus,
     startConversation,
     user
-  }), [acceptFriendRequest, conversations, deleteFriendRequest, friends, loadMessages, markRead, onlineUserIds, receivedRequests, refreshSocial, removeFriend, sendFriendRequest, sentRequests, socket, socialReady, socialStatus, startConversation, user]);
+  }), [acceptFriendRequest, conversations, deleteFriendRequest, friends, hideConversation, loadMessages, loadUserProfile, markRead, onlineUserIds, receivedRequests, refreshSocial, removeFriend, sendFriendRequest, sentRequests, socket, socialReady, socialStatus, startConversation, user]);
 
   return <SocialContext.Provider value={value}>{children}</SocialContext.Provider>;
 }
