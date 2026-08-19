@@ -6,7 +6,8 @@ const BADGE_META = {
   echolive_beta: {
     label: "EchoLive Beta",
     description: "Participou da fase beta do EchoLive.",
-    iconKey: "eko-beta"
+    iconKey: "eko-beta",
+    variant: "beta"
   }
 };
 
@@ -41,9 +42,10 @@ function BadgeItem({ meta, compact }) {
     const top = canOpenAbove
       ? anchor.top - tooltip.height - gap
       : Math.min(window.innerHeight - tooltip.height - padding, anchor.bottom + gap);
+    const preferredLeft = anchor.left + 4;
     const left = Math.max(
       padding,
-      Math.min(window.innerWidth - tooltip.width - padding, anchor.left + (anchor.width - tooltip.width) / 2)
+      Math.min(window.innerWidth - tooltip.width - padding, preferredLeft)
     );
     setPosition({ top: Math.max(padding, top), left, ready: true });
   }, [isOpen]);
@@ -61,7 +63,7 @@ function BadgeItem({ meta, compact }) {
   return <>
     <span
       ref={badgeRef}
-      className="user-badge"
+      className={`user-badge user-badge--${meta.variant || "default"}`}
       tabIndex={0}
       role="img"
       aria-label={`${meta.label}. ${meta.description}`}

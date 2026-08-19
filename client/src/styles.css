@@ -654,6 +654,7 @@ h2 {
 .social-user-popover-username { display: flex; min-width: 0; align-items: center; gap: 5px; }
 .profile-popover-identity > .profile-popover-username > span,
 .profile-popover-identity > small { color: var(--text-muted); font-size: 0.74rem; }
+.profile-popover-identity > small { line-height: 1.35; }
 .profile-popover-identity > .profile-popover-username .user-badges { flex: 0 0 auto; margin-top: 0; }
 .profile-status-options, .profile-popover-actions { display: grid; gap: 4px; margin-top: 10px; }
 .profile-status-options button, .profile-popover-actions button { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 8px; border-color: transparent; border-radius: 7px; color: var(--text-muted); background: transparent; text-align: left; font-size: 0.78rem; }
@@ -6482,23 +6483,24 @@ video.screen-video {
 .user-badge {
   position: relative;
   display: inline-grid;
-  width: 22px;
-  height: 22px;
+  width: 23px;
+  height: 23px;
   place-items: center;
-  flex: 0 0 22px;
-  border: 1px solid rgba(173, 151, 255, .65);
-  border-radius: 6px;
+  flex: 0 0 23px;
+  border: 1px solid rgba(173, 151, 255, .68);
+  border-radius: 7px;
   color: #8beaf1;
-  background: linear-gradient(145deg, rgba(102, 88, 255, .56), rgba(92, 226, 236, .32));
-  box-shadow: 0 0 7px rgba(102, 88, 255, .24), inset 0 0 0 1px rgba(255,255,255,.08);
+  background: linear-gradient(145deg, rgba(45, 31, 112, .95), rgba(80, 67, 190, .86) 58%, rgba(54, 154, 169, .56));
+  box-shadow: 0 0 6px rgba(102, 88, 255, .28), 0 0 10px rgba(92, 226, 236, .12), inset 0 0 0 1px rgba(255,255,255,.1);
   cursor: help;
-  transition: filter .15s ease, transform .15s ease, box-shadow .15s ease;
+  transition: filter .15s ease, transform .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
 
 .user-badge-mark {
   display: block;
   width: 18px;
   height: 18px;
+  filter: drop-shadow(0 0 2px rgba(92, 226, 236, .35));
   pointer-events: none;
 }
 
@@ -6519,27 +6521,31 @@ video.screen-video {
   z-index: 40;
   display: grid;
   gap: 3px;
-  width: max-content;
-  max-width: 230px;
-  padding: 8px 10px;
+  width: min(240px, calc(100vw - 16px));
+  min-width: min(180px, calc(100vw - 16px));
+  max-width: 240px;
+  box-sizing: border-box;
+  padding: 9px 11px;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 8px;
   color: var(--text-main, #f4f7fb);
   background: #11151b;
   box-shadow: 0 8px 24px rgba(0,0,0,.32);
-  font-size: .7rem;
-  line-height: 1.3;
+  font-size: .72rem;
+  line-height: 1.35;
   pointer-events: none;
 }
 
 .user-badge-tooltip strong {
   color: var(--text-main, #f4f7fb);
-  font-size: .7rem;
-  font-weight: 700;
+  font-size: .76rem;
+  font-weight: 650;
 }
 
 .user-badge-tooltip span {
   color: var(--text-muted, #9ba4b2);
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .profile-popover-identity .user-badge-tooltip,
@@ -6551,8 +6557,15 @@ video.screen-video {
 .user-badge:hover,
 .user-badge:focus-visible {
   filter: brightness(1.08);
-  transform: scale(1.03);
-  box-shadow: 0 0 9px rgba(102, 88, 255, .34), inset 0 0 0 1px rgba(255,255,255,.12);
+  transform: scale(1.045);
+  border-color: rgba(174, 231, 255, .78);
+  box-shadow: 0 0 8px rgba(102, 88, 255, .42), 0 0 14px rgba(92, 226, 236, .2), inset 0 0 0 1px rgba(255,255,255,.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-badge { transition: filter .01ms, border-color .01ms, box-shadow .01ms; }
+  .user-badge:hover,
+  .user-badge:focus-visible { transform: none; }
 }
 
 .user-badge-overflow {
@@ -6705,6 +6718,11 @@ video.screen-video {
   white-space: nowrap;
   color: var(--text-muted, #9ba4b2);
   font-size: .78rem;
+}
+
+.social-user-popover-username .user-badges {
+  flex: 0 0 auto;
+  margin-top: 0;
 }
 
 .social-user-popover-meta {

@@ -67,7 +67,7 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
         </div>
         <div className="social-user-popover-identity">
           <strong>{displayName}</strong>
-          <div className="social-user-popover-username"><span>@{username}</span><UserBadges badges={participant.badges} compact /></div>
+          <div className="social-user-popover-username"><span>@{username}</span><UserBadges badges={participant.badges} /></div>
         </div>
         <div className="social-user-popover-meta"><span className="visitor-badge">{isGuest ? "Visitante" : "Online"}</span></div>
         <p className="social-user-popover-presence"><i className="online-indicator" aria-hidden="true" />{participant.isSpeaking ? "Falando agora" : participant.isLocal ? "Voce" : "Online na sala"}</p>
