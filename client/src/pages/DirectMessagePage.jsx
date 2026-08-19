@@ -35,8 +35,9 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     setConversationReady(false);
     setLoadFailed(false);
     const handleMessage = (message) => {
-      if (message.conversationId !== conversationId) return;
-      setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
+      const incoming = normalizeMessage(message, conversationId);
+      if (!incoming) return;
+      setMessages((current) => appendUniqueMessage(current, incoming, conversationId));
       markRead(conversationId).catch(() => {});
     };
     const handleTyping = (payload) => {
@@ -54,11 +55,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       }
       loadMessages(conversationId).then((data) => {
         if (!active) return;
-        setMessages((current) => {
-          const merged = new Map((data.messages || []).map((message) => [message.id, message]));
-          current.forEach((message) => merged.set(message.id, message));
-          return Array.from(merged.values()).sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt));
-        });
+        setMessages((current) => mergeMessages(data.messages || [], current, conversationId));
         setHasMore(Boolean(data.hasMore));
         setLoading(false);
         setConversationReady(true);
@@ -104,6 +101,8 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     socket.emit("dm:message", { conversationId, content: cleanText }, (result) => {
       setSending(false);
       if (!result?.ok) { setError(result?.error || "Nao foi possivel enviar a mensagem."); return; }
+      const savedMessage = normalizeMessage(result.message, conversationId);
+      if (savedMessage) setMessages((current) => appendUniqueMessage(current, savedMessage, conversationId));
       setText("");
       socket.emit("dm:typing", { conversationId, typing: false });
     });
@@ -120,7 +119,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     const first = messages[0];
     if (!first || !hasMore) return;
     const data = await loadMessages(conversationId, first.createdAt);
-    setMessages((current) => [...(data.messages || []), ...current]);
+    setMessages((current) => mergeMessages(current, data.messages || [], conversationId));
     setHasMore(Boolean(data.hasMore));
   }
 
@@ -132,6 +131,34 @@ export default function DirectMessagePage({ conversationId, initialConversation,
 
 function Message({ message, mine, compact }) {
   return <article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={message.sender} size={32} />}</div><div><div className="dm-message-meta">{!compact && <strong>{message.sender.displayName || message.sender.username}</strong>}<small>{formatMessageTime(message.createdAt)}</small></div><p>{message.content}</p></div></article>;
+}
+
+function normalizeMessage(message, fallbackConversationId) {
+  if (!message || message.id == null) return null;
+  const messageConversationId = message.conversationId ?? message.conversation_id ?? fallbackConversationId;
+  if (messageConversationId == null) return null;
+  return {
+    ...message,
+    id: String(message.id),
+    conversationId: String(messageConversationId)
+  };
+}
+
+function mergeMessages(...sources) {
+  const conversationId = String(sources.pop() || "");
+  const merged = new Map();
+  sources.flat().forEach((message) => {
+    const normalized = normalizeMessage(message, conversationId);
+    if (normalized && normalized.conversationId === conversationId) merged.set(normalized.id, normalized);
+  });
+  return Array.from(merged.values()).sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt));
+}
+
+function appendUniqueMessage(current, incoming, conversationId) {
+  const normalized = normalizeMessage(incoming, conversationId);
+  if (!normalized || normalized.conversationId !== String(conversationId)) return current;
+  if (current.some((message) => String(message.id) === normalized.id)) return current;
+  return mergeMessages(current, [normalized], conversationId);
 }
 
 function formatMessageTime(value) {
