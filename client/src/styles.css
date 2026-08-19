@@ -5214,11 +5214,8 @@ video.screen-video {
 .dm-intro p { margin:0; color:var(--accent, #22d3ee); font-size:13px; }
 .dm-intro span { margin-top:7px; color:var(--text-muted, #8e9aaa); font-size:12px; }
 .dm-message { display:flex; align-items:flex-start; gap:10px; max-width:760px; margin:0 auto; padding:9px 0; }
-.dm-message.is-mine { flex-direction:row-reverse; }
 .dm-message > div:last-child { min-width:0; }
-.dm-message.is-mine > div:last-child { text-align:right; }
 .dm-message-meta { display:flex; align-items:baseline; gap:9px; margin-bottom:3px; }
-.dm-message.is-mine .dm-message-meta { justify-content:flex-end; }
 .dm-message-meta strong { font-size:12px; }
 .dm-message-meta small { color:var(--text-muted, #8e9aaa); font-size:10px; }
 .dm-message p { max-width:650px; margin:0; color:var(--text-secondary, #b5bfcc); font-size:13px; line-height:1.5; white-space:pre-wrap; overflow-wrap:anywhere; }
@@ -6150,5 +6147,68 @@ video.screen-video {
   .room-page .sidebar-call-button,
   .room-page .sidebar-call-toolbar .call-toolbar-button {
     padding-inline: 0;
+  }
+}
+
+/* DM hotfix: keep authorship semantic, but use one consistent left-aligned
+   conversation layout for both participants. */
+.dm-message,
+.dm-message.is-mine {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.dm-message > div:last-child,
+.dm-message.is-mine > div:last-child {
+  min-width: 0;
+  text-align: left;
+}
+
+.dm-message-meta,
+.dm-message.is-mine .dm-message-meta {
+  justify-content: flex-start;
+}
+
+.dm-message-avatar {
+  width: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  flex: 0 0 32px;
+}
+
+.dm-message.is-compact .dm-message-avatar {
+  min-height: 1px;
+}
+
+/* The sidebar clips its own contents for scrolling. Let this anchored menu
+   cross into the stage without changing the scrollable channel region. */
+.room-page .app-sidebar {
+  overflow: visible;
+}
+
+.room-page .sidebar-lower-region {
+  position: relative;
+  z-index: 3;
+}
+
+.room-page .sidebar-call-toolbar .screen-options-control {
+  position: relative;
+  z-index: 4;
+}
+
+.room-page .sidebar-call-toolbar .screen-preset-menu {
+  right: auto;
+  bottom: calc(100% + 8px);
+  left: calc(100% + 8px);
+  z-index: 40;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+
+@media (max-width: 720px) {
+  .room-page .sidebar-call-toolbar .screen-preset-menu {
+    right: 0;
+    bottom: calc(100% + 8px);
+    left: auto;
   }
 }
