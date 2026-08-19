@@ -19,6 +19,9 @@ async function socialRequest(path, options = {}) {
   } catch {
     throw new Error("Nao foi possivel conectar ao EchoLive.");
   }
+  if (import.meta.env.DEV && path.includes("/api/social/dms/") && path.includes("/messages")) {
+    console.debug("[DM:history:http]", { status: response.status });
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(data.error || "Nao foi possivel concluir a operacao.");

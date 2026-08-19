@@ -12,29 +12,95 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [historyStatus, setHistoryStatus] = useState("loading");
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState("");
+  const [realtimeStatus, setRealtimeStatus] = useState("idle");
+  const [realtimeError, setRealtimeError] = useState("");
   const [sending, setSending] = useState(false);
   const [conversationReady, setConversationReady] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
   const [retryVersion, setRetryVersion] = useState(0);
   const bottomRef = useRef(null);
   const composerRef = useRef(null);
   const typingTimerRef = useRef(null);
-  const conversation = conversations.find((item) => item.id === conversationId) || (initialConversation?.id === conversationId ? initialConversation : null);
+  const listedConversation = conversations.find((item) => item.id === conversationId) || null;
+  const [conversationSnapshot, setConversationSnapshot] = useState(() => initialConversation?.id === conversationId ? initialConversation : null);
+  useEffect(() => {
+    if (listedConversation) setConversationSnapshot(listedConversation);
+  }, [listedConversation]);
+  useEffect(() => {
+    if (initialConversation?.id === conversationId) setConversationSnapshot(initialConversation);
+  }, [conversationId, initialConversation]);
+  const conversation = listedConversation || (conversationSnapshot?.id === conversationId ? conversationSnapshot : null);
   const otherUser = conversation?.user;
   const isOfficial = Boolean(otherUser?.isOfficial);
   const isOnline = Boolean(otherUser && onlineUserIds.has(otherUser.id));
+  const conversationStatus = otherUser ? "ready" : socialStatus === "error" ? "error" : "loading";
 
   useEffect(() => {
-    if (!conversationId || !otherUser || !socket || !socialReady) return undefined;
+    if (!import.meta.env.DEV) return;
+    console.debug("[DM:init]", { conversationId, userId: user?.id || null });
+  }, [conversationId, user?.id]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.debug("[DM:conversation]", { found: Boolean(otherUser), id: conversation?.id || null });
+  }, [conversation?.id, otherUser]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.debug("[DM:render-state]", {
+      conversationStatus,
+      historyStatus,
+      realtimeStatus,
+      messageCount: messages.length
+    });
+  }, [conversationStatus, historyStatus, messages.length, realtimeStatus]);
+
+  useEffect(() => {
+    if (!conversationId || !user?.id) {
+      setHistoryStatus("idle");
+      return undefined;
+    }
     let active = true;
-    setLoading(true);
+    setHistoryStatus("loading");
     setError("");
     setMessages([]);
+    setHasMore(false);
+    if (import.meta.env.DEV) console.debug("[DM:history:start]");
+    loadMessages(conversationId).then((data) => {
+      if (!active) return;
+      const history = extractHistory(data);
+      setMessages(mergeMessages(history.messages, conversationId, user));
+      setHasMore(history.hasMore);
+      setHistoryStatus("ready");
+      if (import.meta.env.DEV) console.debug("[DM:history:success]", { count: history.messages.length });
+      markRead(conversationId).catch(() => {});
+    }).catch((requestError) => {
+      if (!active) return;
+      setError(requestError.message || "Nao foi possivel carregar esta conversa.");
+      setHistoryStatus("error");
+      if (import.meta.env.DEV) console.debug("[DM:history:error]", { error: requestError.message || "unknown" });
+    }).finally(() => {
+      if (import.meta.env.DEV) console.debug("[DM:history:finally]");
+    });
+    return () => { active = false; };
+  }, [conversationId, loadMessages, markRead, retryVersion, user?.id]);
+
+  useEffect(() => {
+    if (!conversationId || !otherUser || !socket || !socialReady) {
+      setConversationReady(false);
+      setRealtimeError("");
+      setRealtimeStatus(socket ? "connecting" : "idle");
+      return undefined;
+    }
+    let active = true;
+    let joined = false;
+    let joinTimer;
     setConversationReady(false);
-    setLoadFailed(false);
+    setRealtimeError("");
+    setRealtimeStatus("connecting");
+    if (import.meta.env.DEV) console.debug("[DM:socket]", { connected: Boolean(socket.connected) });
     const handleMessage = (message) => {
       const incoming = normalizeMessage(message, conversationId, user);
       if (!incoming) return;
@@ -46,34 +112,36 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     };
     socket.on("dm:new-message", handleMessage);
     socket.on("dm:typing", handleTyping);
+    if (import.meta.env.DEV) console.debug("[DM:join:start]");
+    joinTimer = window.setTimeout(() => {
+      if (!active) return;
+      setRealtimeStatus("error");
+      setRealtimeError("Tempo real indisponivel. Tentando reconectar...");
+    }, 8000);
     socket.emit("dm:join", { conversationId }, (result) => {
       if (!active) return;
+      window.clearTimeout(joinTimer);
+      if (import.meta.env.DEV) console.debug("[DM:join:ack]", { ok: Boolean(result?.ok) });
       if (!result?.ok) {
-        setError(result?.error || "Conversa indisponivel.");
-        setLoadFailed(true);
-        setLoading(false);
+        setRealtimeStatus("error");
+        setRealtimeError(result?.error || "Tempo real indisponivel. Tentando reconectar...");
         return;
       }
-      loadMessages(conversationId).then((data) => {
-        if (!active) return;
-        setMessages((current) => mergeMessages(data.messages || [], current, conversationId, user));
-        setHasMore(Boolean(data.hasMore));
-        setLoading(false);
-        setConversationReady(true);
-        markRead(conversationId).catch(() => {});
-      }).catch((requestError) => {
-        if (active) { setError(requestError.message); setLoadFailed(true); setLoading(false); }
-      });
+      joined = true;
+      setRealtimeStatus("ready");
+      setRealtimeError("");
+      setConversationReady(true);
     });
     return () => {
       active = false;
+      window.clearTimeout(joinTimer);
       window.clearTimeout(typingTimerRef.current);
-      socket.emit("dm:leave", { conversationId });
+      if (joined) socket.emit("dm:leave", { conversationId });
       setConversationReady(false);
       socket.off("dm:new-message", handleMessage);
       socket.off("dm:typing", handleTyping);
     };
-  }, [conversationId, loadMessages, markRead, otherUser?.id, retryVersion, socialReady, socket, user?.id]);
+  }, [conversationId, markRead, otherUser?.id, socialReady, socket, user?.id]);
 
   useEffect(() => {
     const textarea = composerRef.current;
@@ -126,10 +194,23 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     setHasMore(Boolean(data.hasMore));
   }
 
-  if (!otherUser && socialStatus !== "ready" && socialStatus !== "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
-  if (!otherUser) return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
+  if (conversationStatus === "loading") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
+  if (conversationStatus === "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
 
-  return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><header className={`dm-header ${isOfficial ? "is-official" : ""}`}><Avatar user={otherUser} size={38} /><div><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? "Online" : "Offline"}`}</small></div></header><div className="dm-messages">{hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}{loading ? <p className="dm-loading">Conectando a conversa...</p> : loadFailed ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId} />) : <div className="dm-intro"><Avatar user={otherUser} size={76} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p></div>}<div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div><div ref={bottomRef} /></div>{error && !loadFailed && <p className="social-feedback is-error dm-error">{error}</p>}{isOfficial ? <div className="dm-official-notice"><Icon name="lock" size={16} /><span>Esta é uma mensagem oficial do EchoLive. Este canal é somente leitura.</span></div> : <form className="dm-composer" onSubmit={sendMessage}><label className="sr-only" htmlFor="dm-message">Mensagem</label><textarea ref={composerRef} id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Conversar com ${otherUser.displayName || otherUser.username}`} disabled={!conversationReady} /><button type="submit" className="primary-button" disabled={!text.trim() || sending || !conversationReady} aria-label="Enviar mensagem"><Icon name="send" size={16} /></button></form>}</section></main>;
+  const historyLoading = historyStatus === "loading";
+  const historyError = historyStatus === "error";
+  return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar activeTab="friends" onTabChange={onNavigateFriends} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} activeConversationId={conversationId} /><section className="dm-content"><header className={`dm-header ${isOfficial ? "is-official" : ""}`}><Avatar user={otherUser} size={38} /><div><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? "Online" : "Offline"}`}</small></div></header><div className="dm-messages">{hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}{historyLoading && !messages.length ? <p className="dm-loading">Carregando conversa...</p> : historyError ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId} />) : <div className="dm-intro"><Avatar user={otherUser} size={76} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p></div>}<div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div><div ref={bottomRef} /></div>{error && !historyError && <p className="social-feedback is-error dm-error">{error}</p>}{!isOfficial && realtimeStatus !== "ready" && <p className={`dm-realtime-status ${realtimeStatus === "error" ? "is-error" : ""}`} role="status">{realtimeError || "Conectando ao tempo real..."}</p>}{isOfficial ? <div className="dm-official-notice"><Icon name="lock" size={16} /><span>Esta é uma mensagem oficial do EchoLive. Este canal é somente leitura.</span></div> : <form className="dm-composer" onSubmit={sendMessage}><label className="sr-only" htmlFor="dm-message">Mensagem</label><textarea ref={composerRef} id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Conversar com ${otherUser.displayName || otherUser.username}`} disabled={!conversationReady} /><button type="submit" className="primary-button" disabled={!text.trim() || sending || !conversationReady} aria-label="Enviar mensagem"><Icon name="send" size={16} /></button></form>}</section></main>;
+}
+
+function extractHistory(data) {
+  const messages = Array.isArray(data?.messages)
+    ? data.messages
+    : Array.isArray(data?.history)
+      ? data.history
+      : Array.isArray(data?.data?.messages)
+        ? data.data.messages
+        : [];
+  return { messages, hasMore: Boolean(data?.hasMore ?? data?.data?.hasMore) };
 }
 
 function Message({ message, mine, compact }) {
