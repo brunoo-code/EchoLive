@@ -173,8 +173,8 @@ export function registerSocialRoutes(app) {
     try {
       const relation = await acceptFriendRequest(request.params.id, request.user.id);
       if (!relation) return response.status(404).json({ error: "Pedido nao encontrado." });
-      emitToSocialUser(relation.requester_user_id, "social:friend-updated", { relationId: relation.id });
-      emitToSocialUser(relation.addressee_user_id, "social:friend-updated", { relationId: relation.id });
+      emitToSocialUser(relation.requester_user_id, "social:friend-updated", { relationId: relation.id, action: "accepted" });
+      emitToSocialUser(relation.addressee_user_id, "social:friend-updated", { relationId: relation.id, action: "accepted" });
       return response.json({ ok: true });
     } catch (error) {
       return handleSocialError(response, error);
@@ -219,6 +219,9 @@ export function registerSocialRoutes(app) {
   app.post("/api/social/dms/:conversationId/hide", optionalAuth, requireAuth, async (request, response) => {
     if (!isUuid(request.params.conversationId)) return response.status(400).json({ error: "Conversa invalida." });
     try {
+      const conversation = await getConversationForUser(request.params.conversationId, request.user.id);
+      if (!conversation) return response.status(404).json({ error: "Conversa nao encontrada." });
+      if (conversation.user?.isOfficial) return response.status(403).json({ error: "A conversa oficial nao pode ser fechada.", code: "OFFICIAL_DM_CANNOT_HIDE" });
       const hidden = await hideConversation(request.params.conversationId, request.user.id);
       if (!hidden) return response.status(404).json({ error: "Conversa nao encontrada." });
       return response.json({ ok: true });

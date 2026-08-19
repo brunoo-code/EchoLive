@@ -10,13 +10,23 @@ import { useAuth } from "../auth/AuthContext.jsx";
 import { useSocial } from "../social/SocialContext.jsx";
 import { SERVER_URL } from "../utils/webrtc.js";
 import { UPLOAD_MIME_TYPES, validateUploadFile } from "../utils/uploadLimits.js";
+import { linkifyMessage } from "../utils/linkifyMessage.js";
+import { playUiSound } from "../utils/uiSounds.js";
 
 const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
 const FILE_ACCEPT = "application/pdf,application/zip,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,.docx,.xlsx,.pptx";
 
+function uiSoundsEnabled() {
+  try {
+    return window.localStorage.getItem("echolive.uiSounds") !== "false";
+  } catch {
+    return true;
+  }
+}
+
 export default function DirectMessagePage({ conversationId, initialConversation, onNavigateHome, onNavigateFriends, onNavigateDm }) {
   const { user } = useAuth();
-  const { conversations, onlineUserIds, socket, socialReady, loadMessages, markRead, socialStatus, hideConversation } = useSocial();
+  const { conversations, onlineUserIds, socket, socialReady, loadMessages, markRead, socialStatus, hideConversation, notificationCount } = useSocial();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
@@ -211,6 +221,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       if (!result?.ok) { setError(result?.error || "Nao foi possivel enviar a mensagem."); return; }
       const savedMessage = normalizeMessage(result.message, conversationId, user);
       if (savedMessage) setMessages((current) => appendUniqueMessage(current, savedMessage, conversationId));
+      playUiSound("dmSent", uiSoundsEnabled());
       setText("");
       setSelectedFile(null);
       socket.emit("dm:typing", { conversationId, typing: false });
@@ -271,13 +282,13 @@ export default function DirectMessagePage({ conversationId, initialConversation,
 
   const openSidebarProfile = (profileUser, anchorRect) => setProfilePopover({ user: { ...profileUser, status: onlineUserIds.has(profileUser.id) ? "online" : "offline" }, anchorRect });
   const sidebarProps = { activeTab: "friends", onTabChange: onNavigateFriends, conversations, onlineUserIds, user, onHome: onNavigateHome, onOpenConversation: onNavigateDm, onHideConversation: async (id) => { await hideConversation(id); onNavigateFriends(); }, activeConversationId: conversationId };
-  if (conversationStatus === "loading") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
-  if (conversationStatus === "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
+  if (conversationStatus === "loading") return <main className="page social-page"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
+  if (conversationStatus === "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
 
   const historyLoading = historyStatus === "loading";
   const historyError = historyStatus === "error";
   return <main className="page social-page">
-    <SocialRail onHome={onNavigateHome} />
+    <SocialRail onHome={onNavigateHome} notificationCount={notificationCount} />
     <SocialSidebar {...sidebarProps} onOpenProfile={openSidebarProfile} />
     <section className="dm-content">
       <header className={`dm-header ${isOfficial ? "is-official" : ""}`}>
@@ -327,7 +338,7 @@ function extractHistory(data) {
 function Message({ message, mine, compact, showDate, onOpenImage }) {
   const sender = message.sender || {};
   const senderName = sender.displayName || sender.username || "Usuario";
-  return <>{showDate && <DateDivider value={message.createdAt} />}<article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={40} />}</div><div>{!compact && <div className="dm-message-meta"><strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong><small>{formatMessageTime(message.createdAt)}</small></div>}{message.content && <p>{message.content}</p>}{message.attachment && <Attachment attachment={message.attachment} onOpenImage={onOpenImage} />}</div></article></>;
+  return <>{showDate && <DateDivider value={message.createdAt} />}<article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={40} />}</div><div>{!compact && <div className="dm-message-meta"><strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong><small>{formatMessageTime(message.createdAt)}</small></div>}{message.content && <p>{linkifyMessage(message.content)}</p>}{message.attachment && <Attachment attachment={message.attachment} onOpenImage={onOpenImage} />}</div></article></>;
 }
 
 function DmSkeleton() { return <div className="dm-skeleton" aria-label="Carregando mensagens">{[1, 2, 3, 4].map((item) => <div key={item}><i /><span /><b /></div>)}</div>; }
@@ -355,7 +366,7 @@ function normalizeMessage(message, fallbackConversationId, fallbackUser) {
   if (!message || message.id == null) return null;
   const messageConversationId = message.conversationId ?? message.conversation_id ?? fallbackConversationId;
   if (messageConversationId == null) return null;
-  const senderUserId = normalizeIdentity(message.senderUserId ?? message.sender_id ?? message.userId ?? message.user_id ?? message.sender?.id ?? message.sender?.userId ?? fallbackUser?.id);
+  const senderUserId = normalizeIdentity(message.senderUserId ?? message.sender_user_id ?? message.sender_id ?? message.userId ?? message.user_id ?? message.sender?.id ?? message.sender?.userId ?? fallbackUser?.id);
   const sender = message.sender || (senderUserId && normalizeIdentity(fallbackUser?.id) === senderUserId ? fallbackUser : null);
   return {
     ...message,

@@ -345,12 +345,13 @@ export async function listConversations(userId) {
                       WHERE ub.user_id = other.id), '[]'::json) AS other_badges,
             latest.id AS last_message_id, latest.content AS last_message_content,
             latest.created_at AS last_message_created_at, latest.sender_user_id AS last_message_sender_id,
+            latest.attachment AS last_message_attachment,
             COALESCE(unread.unread_count, 0)::int AS unread_count
      FROM dm_participants p
      JOIN dm_conversations c ON c.id = p.conversation_id
      JOIN users other ON other.id = CASE WHEN c.user_one_id = $1 THEN c.user_two_id ELSE c.user_one_id END
      LEFT JOIN LATERAL (
-       SELECT m.id, m.content, m.created_at, m.sender_user_id
+        SELECT m.id, m.content, m.created_at, m.sender_user_id, m.attachment
        FROM dm_messages m
        WHERE m.conversation_id = c.id
        ORDER BY m.created_at DESC, m.id DESC
@@ -387,7 +388,8 @@ export async function listConversations(userId) {
       id: row.last_message_id,
       content: row.last_message_content,
       createdAt: row.last_message_created_at,
-      senderUserId: row.last_message_sender_id
+      senderUserId: row.last_message_sender_id,
+      attachment: row.last_message_attachment || null
     } : null
   }));
 }

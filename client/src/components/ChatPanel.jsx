@@ -4,6 +4,7 @@ import { playUiSound } from "../utils/uiSounds.js";
 import Icon from "./Icon.jsx";
 import EmojiPicker from "./EmojiPicker.jsx";
 import { validateUploadFile } from "../utils/uploadLimits.js";
+import { linkifyMessage } from "../utils/linkifyMessage.js";
 
 const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
 const FILE_ACCEPT = "application/pdf,application/zip,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,.docx,.xlsx,.pptx";
@@ -253,7 +254,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
                 <strong>{message.socketId === socketId ? (displayName || message.nickname) : message.nickname}</strong>
                 <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
               </div>}
-              {message.content && <p>{message.content}</p>}
+              {message.content && <p>{linkifyMessage(message.content)}</p>}
               {message.attachment && (
                 <div className="message-attachment">
                   {message.attachment.type === "image" ? (

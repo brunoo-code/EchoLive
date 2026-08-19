@@ -3,7 +3,12 @@ const PROFILES = {
   "mic-mute": [220, 150, 0.07], "mic-unmute": [420, 620, 0.08],
   "voice-join": [360, 560, 0.1], "voice-leave": [500, 280, 0.1],
   "screen-start": [300, 720, 0.09], "screen-stop": [620, 300, 0.09],
-  "message-send": [520, 680, 0.045]
+  "message-send": [520, 680, 0.045],
+  "dmReceived": [580, 760, 0.075],
+  "dmSent": [520, 690, 0.045],
+  "friendRequestReceived": [430, 650, 0.085],
+  "friendAccepted": [520, 820, 0.09],
+  "friendRequestSent": [390, 520, 0.055]
 };
 let contextRef = null;
 let activeSource = null;

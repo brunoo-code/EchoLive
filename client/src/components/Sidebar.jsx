@@ -66,7 +66,6 @@ export default function Sidebar({
       <section className="sidebar-section room-section">
         <div className="room-section-heading"><p className="section-label">Sala atual</p><button type="button" className="room-menu-trigger" onClick={() => setIsRoomMenuOpen((value) => !value)} title="Acoes da sala" aria-label="Acoes da sala"><Icon name="more" size={17} /></button></div>
         <div className="room-name-line" title={roomName || `Sala ${roomCode}`}>{roomName || `Sala ${roomCode}`}</div>
-        <div className="room-code-line"><span>Codigo</span><strong title={roomCode}>{roomCode}</strong></div>
         <p className="sidebar-count">
           Participantes: {participantCount}/{maxParticipants || "-"}
         </p>

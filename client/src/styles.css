@@ -5149,6 +5149,8 @@ video.screen-video {
 .social-conversation-copy strong, .social-person-copy strong { overflow:hidden; color:var(--text-primary, #f4f7fb); font-size:13px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
 .social-conversation-copy small, .social-person-copy small { overflow:hidden; color:var(--text-muted, #8e9aaa); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
 .social-unread-badge { min-width:19px; border-radius:10px; background:var(--danger, #f06d70); color:white; padding:2px 5px; font-size:10px; text-align:center; }
+.social-conversation-row.has-unread .social-conversation-copy strong { font-weight:700; }
+.social-conversation-row.has-unread .social-conversation-copy small { color:var(--text-secondary, #b5bfcc); }
 .social-sidebar-empty { margin:12px 10px; color:var(--text-muted, #8e9aaa); font-size:11px; line-height:1.5; }
 .social-sidebar-footer { display:flex; align-items:center; gap:9px; padding:12px 13px; border-top:1px solid var(--border, rgba(255,255,255,.08)); }
 .social-sidebar-footer > span { display:grid; min-width:0; flex:1; gap:2px; }
@@ -5247,6 +5249,8 @@ video.screen-video {
 .social-rail-brand, .social-rail-item { display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:12px; background:transparent; color:var(--text-muted, #8e9aaa); cursor:pointer; }
 .social-rail-brand:hover, .social-rail-brand:focus-visible, .social-rail-item:hover, .social-rail-item:focus-visible { color:var(--text-primary, #f4f7fb); background:rgba(255,255,255,.08); outline:none; }
 .social-rail-item.is-active { color:#071522; background:var(--accent, #22d3ee); box-shadow:0 0 0 3px var(--accent-soft, rgba(34,211,238,.12)); }
+.social-rail-item { position:relative; }
+.social-rail-badge { position:absolute; top:-4px; right:-5px; display:grid; place-items:center; min-width:17px; height:17px; border:2px solid #080b0f; border-radius:10px; background:#f06d70; color:#fff; padding:0 4px; font-size:9px; line-height:1; }
 .social-rail-divider { width:28px; height:1px; background:var(--border, rgba(255,255,255,.1)); margin:2px 0; }
 .social-topbar { flex-wrap:wrap; min-height:72px; padding:0 24px; }
 .social-topbar-title { flex:0 0 auto; }
@@ -5300,6 +5304,7 @@ video.screen-video {
 .social-conversation-main { flex:1; gap:9px; padding:8px 7px; }
 .social-conversation-main .social-conversation-copy { min-width:0; flex:1; }
 .social-conversation-close { flex:0 0 auto; margin-right:4px; opacity:0; }
+.social-conversation-close { width:28px; height:28px; }
 .social-conversation-row:hover .social-conversation-close, .social-conversation-row:focus-within .social-conversation-close { opacity:1; }
 .social-profile-modal-backdrop { position:fixed; inset:0; z-index:80; display:grid; place-items:center; background:rgba(3,5,8,.68); padding:24px; }
 .social-profile-modal { position:relative; display:grid; grid-template-columns:280px minmax(0,1fr); width:min(820px,92vw); max-height:84vh; overflow:hidden; border:1px solid rgba(255,255,255,.12); border-radius:16px; background:#11161d; box-shadow:0 24px 80px rgba(0,0,0,.45); }
@@ -5349,6 +5354,8 @@ video.screen-video {
 .dm-selected-file { display:flex; align-items:center; justify-content:space-between; gap:8px; color:#b8c3d1; padding:4px 8px; font-size:11px; }
 .dm-composer-row { position:relative; display:flex; align-items:center; gap:7px; width:100%; }
 .dm-emoji-popover { position:absolute; right:8px; bottom:48px; z-index:5; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:#161c24; box-shadow:0 16px 35px rgba(0,0,0,.35); }
+.dm-message p a, .room-page .message-body > p a { color:var(--echo-blue, #4dc8ff); text-decoration:underline; text-decoration-color:rgba(77,200,255,.45); text-underline-offset:2px; overflow-wrap:anywhere; }
+.dm-message p a:hover, .dm-message p a:focus-visible, .room-page .message-body > p a:hover, .room-page .message-body > p a:focus-visible { color:#9be7ff; text-decoration-color:currentColor; }
 @media (max-width:720px) { .social-profile-modal { display:flex; flex-direction:column; max-height:90vh; }.social-profile-identity { border-right:0; border-bottom:1px solid rgba(255,255,255,.08); padding:24px; }.social-profile-identity > .social-avatar { width:82px !important; height:82px !important; }.social-profile-actions { margin-top:0; }.social-profile-detail { padding:16px 20px 24px; }.social-profile-tabs { overflow:auto; }.social-profile-tabs button { white-space:nowrap; } }
 
 /* Etapa 5.1.1: keep the sidebar focused on navigation and direct conversations. */

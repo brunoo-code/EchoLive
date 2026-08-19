@@ -2,8 +2,23 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { io } from "socket.io-client";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { SERVER_URL } from "../utils/webrtc.js";
+import { playUiSound } from "../utils/uiSounds.js";
 
 const SocialContext = createContext(null);
+
+function notificationSoundsEnabled() {
+  try {
+    return window.localStorage.getItem("echolive.uiSounds") !== "false";
+  } catch {
+    return true;
+  }
+}
+
+function isVisibleActiveDm(conversationId) {
+  if (typeof window === "undefined" || document.visibilityState !== "visible" || !document.hasFocus()) return false;
+  const match = window.location.pathname.match(/^\/dm\/([0-9a-f-]{36})$/i);
+  return Boolean(match && String(match[1]).toLowerCase() === String(conversationId || "").toLowerCase());
+}
 
 async function socialRequest(path, options = {}) {
   let response;
@@ -45,6 +60,17 @@ export function SocialProvider({ children }) {
   const [sentRequests, setSentRequests] = useState([]);
   const [onlineUserIds, setOnlineUserIds] = useState(new Set());
   const [conversations, setConversations] = useState([]);
+  const playedSoundEventsRef = useRef(new Set());
+
+  function playSocialSoundOnce(eventKey, soundName) {
+    if (!eventKey || playedSoundEventsRef.current.has(eventKey)) return;
+    playedSoundEventsRef.current.add(eventKey);
+    if (playedSoundEventsRef.current.size > 400) {
+      const oldest = playedSoundEventsRef.current.values().next().value;
+      if (oldest) playedSoundEventsRef.current.delete(oldest);
+    }
+    playUiSound(soundName, notificationSoundsEnabled());
+  }
 
   const refreshFriends = useCallback(async () => {
     if (status !== "authenticated") return null;
@@ -125,6 +151,21 @@ export function SocialProvider({ children }) {
       refreshFriends().catch(() => {});
       refreshConversations().catch(() => {});
     };
+    const handleFriendRequest = (payload = {}) => {
+      playSocialSoundOnce(`friend-request:${payload.relationId || "unknown"}`, "friendRequestReceived");
+      refreshFromEvent();
+    };
+    const handleFriendUpdated = (payload = {}) => {
+      if (payload.action === "accepted") playSocialSoundOnce(`friend-accepted:${payload.relationId || "unknown"}`, "friendAccepted");
+      refreshFromEvent();
+    };
+    const handleConversationUpdated = (payload = {}) => {
+      const message = payload.message;
+      if (message && String(message.senderUserId || "") !== String(user.id) && !isVisibleActiveDm(payload.conversationId)) {
+        playSocialSoundOnce(`dm-received:${message.id}`, "dmReceived");
+      }
+      refreshConversations().catch(() => {});
+    };
     const handleConnect = () => {
       if (import.meta.env.DEV) console.debug("[SOCIAL:socket:connect]", { socketId: socialSocket.id, connected: socialSocket.connected });
       subscribe();
@@ -150,9 +191,9 @@ export function SocialProvider({ children }) {
         return next;
       });
     });
-    socialSocket.on("social:friend-request", refreshFromEvent);
-    socialSocket.on("social:friend-updated", refreshFromEvent);
-    socialSocket.on("social:conversation-updated", refreshConversations);
+    socialSocket.on("social:friend-request", handleFriendRequest);
+    socialSocket.on("social:friend-updated", handleFriendUpdated);
+    socialSocket.on("social:conversation-updated", handleConversationUpdated);
     socialSocket.on("connect_error", handleConnectError);
     socialSocket.on("disconnect", handleDisconnect);
 
@@ -160,9 +201,9 @@ export function SocialProvider({ children }) {
     return () => {
       socialSocket.off("connect", handleConnect);
       socialSocket.off("social:presence");
-      socialSocket.off("social:friend-request", refreshFromEvent);
-      socialSocket.off("social:friend-updated", refreshFromEvent);
-      socialSocket.off("social:conversation-updated", refreshConversations);
+      socialSocket.off("social:friend-request", handleFriendRequest);
+      socialSocket.off("social:friend-updated", handleFriendUpdated);
+      socialSocket.off("social:conversation-updated", handleConversationUpdated);
       socialSocket.off("connect_error", handleConnectError);
       socialSocket.off("disconnect", handleDisconnect);
       socialSocket.disconnect();
@@ -175,12 +216,14 @@ export function SocialProvider({ children }) {
 
   const sendFriendRequest = useCallback(async (username) => {
     const data = await socialRequest("/api/social/friend-requests", { method: "POST", body: JSON.stringify({ username }) });
+    playSocialSoundOnce(`friend-request-sent:${data.relation?.id || username}`, "friendRequestSent");
     await refreshFriends();
     return data;
   }, [refreshFriends]);
 
   const acceptFriendRequest = useCallback(async (relationId) => {
     await socialRequest(`/api/social/friend-requests/${relationId}/accept`, { method: "POST" });
+    playSocialSoundOnce(`friend-accepted:${relationId}`, "friendAccepted");
     await refreshFriends();
   }, [refreshFriends]);
 
@@ -222,6 +265,8 @@ export function SocialProvider({ children }) {
     socketRef.current?.emit("dm:read", { conversationId });
   }, []);
 
+  const notificationCount = useMemo(() => conversations.reduce((total, conversation) => total + Math.max(0, Number(conversation.unreadCount) || 0), 0) + receivedRequests.length, [conversations, receivedRequests.length]);
+
   const value = useMemo(() => ({
     acceptFriendRequest,
     conversations,
@@ -230,6 +275,7 @@ export function SocialProvider({ children }) {
     loadMessages,
     loadUserProfile,
     markRead,
+    notificationCount,
     onlineUserIds,
     receivedRequests,
     refreshSocial,
@@ -242,7 +288,7 @@ export function SocialProvider({ children }) {
     socialStatus,
     startConversation,
     user
-  }), [acceptFriendRequest, conversations, deleteFriendRequest, friends, hideConversation, loadMessages, loadUserProfile, markRead, onlineUserIds, receivedRequests, refreshSocial, removeFriend, sendFriendRequest, sentRequests, socket, socialReady, socialStatus, startConversation, user]);
+  }), [acceptFriendRequest, conversations, deleteFriendRequest, friends, hideConversation, loadMessages, loadUserProfile, markRead, notificationCount, onlineUserIds, receivedRequests, refreshSocial, removeFriend, sendFriendRequest, sentRequests, socket, socialReady, socialStatus, startConversation, user]);
 
   return <SocialContext.Provider value={value}>{children}</SocialContext.Provider>;
 }

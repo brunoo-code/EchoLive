@@ -18,7 +18,7 @@ export default function SocialPage({ onNavigateHome, onNavigateDm }) {
 }
 
 function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm }) {
-  const { friends, receivedRequests, sentRequests, onlineUserIds, conversations, acceptFriendRequest, deleteFriendRequest, removeFriend, sendFriendRequest, startConversation } = useSocial();
+  const { friends, receivedRequests, sentRequests, onlineUserIds, conversations, acceptFriendRequest, deleteFriendRequest, removeFriend, sendFriendRequest, startConversation, hideConversation, notificationCount } = useSocial();
   const [activeTab, setActiveTab] = useState("friends");
   const [friendQuery, setFriendQuery] = useState("");
   const [addUsername, setAddUsername] = useState("");
@@ -113,8 +113,8 @@ function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm }) {
 
   const pendingCount = receivedRequests.length + sentRequests.length;
   return <main className="page social-page">
-    <SocialRail onHome={onNavigateHome} />
-    <SocialSidebar activeTab={activeTab} onTabChange={changeTab} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} onOpenProfile={openProfilePopover} />
+    <SocialRail onHome={onNavigateHome} notificationCount={notificationCount} />
+    <SocialSidebar activeTab={activeTab} onTabChange={changeTab} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} onOpenProfile={openProfilePopover} onHideConversation={hideConversation} />
     <section className="social-content">
       <header className="social-topbar"><div className="social-topbar-title"><Icon name="account" size={18} /><strong>Amigos</strong></div><nav className="social-tabs" aria-label="Visoes de Amigos">{[["friends", "Amigos"], ["online", "Online"], ["all", "Todos"], ["pending", "Pendentes"]].map(([id, label]) => <button type="button" key={id} className={activeTab === id ? "is-active" : ""} onClick={() => changeTab(id)}>{label}{id === "pending" && pendingCount > 0 && <b className="social-tab-badge">{pendingCount > 9 ? "9+" : pendingCount}</b>}</button>)}<button type="button" className={`social-tab-add ${activeTab === "add" ? "is-active" : ""}`} onClick={() => changeTab("add")}><Icon name="plus" size={14} />Adicionar amigo</button></nav><span className="social-topbar-note">Sua rede no EchoLive</span></header>
       {activeTab === "add" ? <AddFriendView addUsername={addUsername} setAddUsername={setAddUsername} onSubmit={handleAddFriend} isSubmitting={isAdding} /> : activeTab === "pending" ? <PendingView received={receivedRequests} sent={sentRequests} onAccept={handleAcceptRequest} onDelete={handleDeleteRequest} /> : <FriendsView friends={visibleFriends} allFriends={friends} onlineFriends={onlineFriends} onlineUserIds={onlineUserIds} activeTab={activeTab} search={friendQuery} onSearch={setFriendQuery} onMessage={openDm} onOpenProfile={openProfilePopover} removeTarget={removeTarget} setRemoveTarget={setRemoveTarget} onRemove={confirmRemove} onAdd={() => changeTab("add")} />}
