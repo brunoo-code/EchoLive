@@ -8,10 +8,12 @@ import UserAvatar from "../components/UserAvatar.jsx";
 import { ChatComposerFrame, ChatComposerRow, ChatHeader, ChatViewport } from "../components/ChatFrame.jsx";
 import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
 import AudioParticipant from "../components/AudioParticipant.jsx";
+import ToastStack from "../components/ToastStack.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useServers } from "../servers/ServerContext.jsx";
 import { SERVER_URL } from "../utils/webrtc.js";
 import useServerVoiceCall from "../hooks/useServerVoiceCall.js";
+import useToasts from "../hooks/useToasts.js";
 
 async function request(path, options = {}) {
   const response = await fetch(`${SERVER_URL}${path}`, { ...options, credentials: "include", headers: { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) } });
@@ -27,7 +29,8 @@ async function request(path, options = {}) {
 
 export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial, onNavigateServer }) {
   const { user, isAuthenticated } = useAuth();
-  const { servers, createServer, refreshServers, status: serversStatus } = useServers();
+  const { servers, createServer, deleteServer, leaveServer, refreshServers, status: serversStatus, updateServer } = useServers();
+  const { toasts, notify } = useToasts();
   const [server, setServer] = useState(null);
   const [activeChannelId, setActiveChannelId] = useState("");
   const [voiceChannelId, setVoiceChannelId] = useState("");
@@ -43,6 +46,21 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createError, setCreateError] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsName, setSettingsName] = useState("");
+  const [settingsError, setSettingsError] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [inviteError, setInviteError] = useState("");
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteName, setDeleteName] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [channelOpen, setChannelOpen] = useState(false);
+  const [channelName, setChannelName] = useState("");
+  const [channelType, setChannelType] = useState("text");
+  const [channelError, setChannelError] = useState("");
+  const [serverActionBusy, setServerActionBusy] = useState(false);
   const socketRef = useRef(null);
   const [serverSocket, setServerSocket] = useState(null);
 
@@ -60,7 +78,9 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     rawUser: member
   })), [members, user?.id]);
   const voiceIdentity = user ? { id: user.id, userId: user.id, displayName: user.displayName || user.username, username: user.username, avatarUrl: user.avatarUrl || "", badges: user.badges || [] } : null;
-  const serverVoice = useServerVoiceCall({ socket: serverSocket, serverId, channelId: voiceChannelId, identity: voiceIdentity, enabled: Boolean(voiceChannelId), notify: setError });
+  const serverVoice = useServerVoiceCall({ socket: serverSocket, serverId, channelId: voiceChannelId, identity: voiceIdentity, enabled: Boolean(voiceChannelId), notify });
+  const canManageServer = ["owner", "admin"].includes(server?.role);
+  const canDeleteServer = server?.role === "owner";
 
   useEffect(() => {
     if (!isAuthenticated || !serverId) {
@@ -174,14 +194,141 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     }
   }
 
+  function openServerSettings() {
+    setSettingsName(server?.name || "");
+    setSettingsError("");
+    setSettingsOpen(true);
+  }
+
+  async function submitServerSettings(event) {
+    event.preventDefault();
+    const name = settingsName.trim();
+    if (name.length < 2 || name.length > 60) {
+      setSettingsError("Use um nome entre 2 e 60 caracteres.");
+      return;
+    }
+    setServerActionBusy(true);
+    setSettingsError("");
+    try {
+      const updated = await updateServer(serverId, { name });
+      setServer(updated);
+      setSettingsOpen(false);
+      notify("Servidor renomeado.");
+    } catch (requestError) {
+      setSettingsError(requestError.message);
+    } finally {
+      setServerActionBusy(false);
+    }
+  }
+
+  async function openServerInvite() {
+    setInviteLink("");
+    setInviteError("");
+    setInviteOpen(true);
+    try {
+      const data = await request(`/api/servers/${serverId}/invites`, { method: "POST", body: JSON.stringify({}) });
+      const code = data.invite?.code;
+      if (!code) throw new Error("Nao foi possivel criar o convite.");
+      setInviteLink(`${window.location.origin}/invite/${code}`);
+    } catch (requestError) {
+      setInviteError(requestError.message);
+    }
+  }
+
+  async function copyServerInvite() {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      notify("Convite copiado.");
+    } catch {
+      setInviteError("Nao foi possivel copiar o convite.");
+    }
+  }
+
+  function openLeaveServer() {
+    setLeaveOpen(true);
+  }
+
+  async function confirmLeaveServer() {
+    if (server?.role === "owner") return;
+    setServerActionBusy(true);
+    try {
+      await leaveServer(serverId);
+      setLeaveOpen(false);
+      notify("Voce saiu do servidor.");
+      onNavigateSocial?.();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setServerActionBusy(false);
+    }
+  }
+
+  function openDeleteServer() {
+    setDeleteName("");
+    setDeleteError("");
+    setDeleteOpen(true);
+  }
+
+  async function confirmDeleteServer() {
+    if (deleteName !== server?.name) return;
+    setServerActionBusy(true);
+    setDeleteError("");
+    try {
+      await deleteServer(serverId);
+      setDeleteOpen(false);
+      notify("Servidor excluido.");
+      onNavigateSocial?.();
+    } catch (requestError) {
+      setDeleteError(requestError.message);
+    } finally {
+      setServerActionBusy(false);
+    }
+  }
+
+  function openCreateChannel(type = "text") {
+    setChannelType(type);
+    setChannelName("");
+    setChannelError("");
+    setChannelOpen(true);
+  }
+
+  async function submitCreateChannel(event) {
+    event.preventDefault();
+    const name = channelName.trim();
+    if (!name || name.length > 40) {
+      setChannelError("Use um nome entre 1 e 40 caracteres.");
+      return;
+    }
+    setServerActionBusy(true);
+    setChannelError("");
+    try {
+      const data = await request(`/api/servers/${serverId}/channels`, { method: "POST", body: JSON.stringify({ name, type: channelType }) });
+      const created = data.channel;
+      setServer((current) => current ? { ...current, channels: [...(current.channels || []), created] } : current);
+      setChannelOpen(false);
+      notify("Canal criado.");
+    } catch (requestError) {
+      setChannelError(requestError.message);
+    } finally {
+      setServerActionBusy(false);
+    }
+  }
+
   useEffect(() => {
-    if (!createOpen) return undefined;
+    if (!createOpen && !settingsOpen && !inviteOpen && !leaveOpen && !deleteOpen && !channelOpen) return undefined;
     const handleKeyDown = (event) => {
-      if (event.key === "Escape" && !creating) setCreateOpen(false);
+      if (event.key !== "Escape" || creating || serverActionBusy) return;
+      setCreateOpen(false);
+      setSettingsOpen(false);
+      setInviteOpen(false);
+      setLeaveOpen(false);
+      setDeleteOpen(false);
+      setChannelOpen(false);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [createOpen, creating]);
+  }, [channelOpen, createOpen, creating, deleteOpen, inviteOpen, leaveOpen, serverActionBusy, settingsOpen]);
 
   function sendMessage(event) {
     event.preventDefault();
@@ -213,8 +360,6 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     setError("");
     setVoiceChannelId((current) => current === channelId ? "" : channelId);
   }
-
-  if (!isAuthenticated) return <main className="page server-page server-page-gate"><section className="social-guest-gate"><Icon name="lock" size={24} /><h1>Servidores ficam com a sua conta.</h1><p>Entre ou crie uma conta para manter seus servidores, canais e mensagens por aqui.</p><button type="button" className="primary-button" onClick={onNavigateHome}>Voltar para a Home</button></section></main>;
 
   const showServerLoading = Boolean(serverId && serverLoading);
   const showServerListLoading = !serverId && (serversStatus === "idle" || serversStatus === "loading");
@@ -253,11 +398,13 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     });
   }, [serverId, serverVoice.cameraEnabled, serverVoice.connected, serverVoice.isScreenSharing, serverVoice.micEnabled, serverVoice.participants.length, voiceChannelId]);
 
+  if (!isAuthenticated) return <main className="page server-page server-page-gate"><section className="social-guest-gate"><Icon name="lock" size={24} /><h1>Servidores ficam com a sua conta.</h1><p>Entre ou crie uma conta para manter seus servidores, canais e mensagens por aqui.</p><button type="button" className="primary-button" onClick={onNavigateHome}>Voltar para a Home</button></section></main>;
+
   const serverSidebarState = server ? null : showServerLoading || showServerListLoading ? <div className="server-empty server-loading-state"><span className="loading-sheen" /><strong>Carregando servidor...</strong><span>Buscando canais e participantes.</span></div> : <div className="server-empty"><Icon name={serverNotFound || showServerListError ? "alert" : "server"} size={24} /><strong>{serverNotFound ? "Servidor não encontrado" : showServerListError ? "Não foi possível carregar" : "Crie seu primeiro servidor"}</strong><span>{serverNotFound ? "Esse servidor não está disponível para sua conta." : showServerListError ? "Tente novamente para carregar seus servidores." : "Um espaço persistente para suas conversas."}</span>{showServerListError ? <button type="button" className="secondary-button" onClick={() => refreshServers().catch(() => {})}>Tentar novamente</button> : <button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button>}</div>;
 
   return <main className="page app-shell room-page server-page">
     <RoomRail roomCode="" roomName="" recentRooms={[]} onHome={onNavigateHome} onSocial={onNavigateSocial} onOpenSwitcher={handleCreateServer} servers={servers} activeServerId={serverId} onOpenServer={onNavigateServer} onCreateServer={handleCreateServer} />
-    <Sidebar variant="server" serverName={server?.name || "Seus servidores"} serverTextChannels={textChannels} serverVoiceChannels={voiceChannels} serverActiveChannelId={activeChannel?.id} serverVoiceChannelId={voiceChannelId} voiceChannelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || voiceChannels[0]?.name || "Geral"} onSelectServerChannel={setActiveChannelId} onToggleServerVoice={toggleVoice} serverVoiceParticipants={serverVoice.participants} serverNavigationState={serverSidebarState} nickname={user?.displayName || user?.username || "Conta"} status="online" avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} isInVoice={serverVoice.connected} connectionQuality="Boa" micEnabled={serverVoice.micEnabled} cameraEnabled={serverVoice.cameraEnabled} isScreenSharing={serverVoice.isScreenSharing} isDeafened={false} onProfileClick={() => setProfileUser(user)} onToggleMicrophone={serverVoice.toggleMicrophone} onToggleCamera={serverVoice.toggleCamera} onToggleScreenShare={serverVoice.toggleScreenShare} onLeaveVoice={serverVoice.leave} onJoinVoice={() => voiceChannels[0] && toggleVoice(voiceChannels[0].id)} onLeaveRoom={onNavigateHome} />
+    <Sidebar variant="server" serverName={server?.name || "Seus servidores"} serverTextChannels={textChannels} serverVoiceChannels={voiceChannels} serverActiveChannelId={activeChannel?.id} serverVoiceChannelId={voiceChannelId} voiceChannelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || voiceChannels[0]?.name || "Geral"} onSelectServerChannel={setActiveChannelId} onToggleServerVoice={toggleVoice} serverVoiceParticipants={serverVoice.participants} serverNavigationState={serverSidebarState} nickname={user?.displayName || user?.username || "Conta"} status="online" avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} isInVoice={serverVoice.connected} connectionQuality="Boa" micEnabled={serverVoice.micEnabled} cameraEnabled={serverVoice.cameraEnabled} isScreenSharing={serverVoice.isScreenSharing} isDeafened={false} onProfileClick={() => setProfileUser(user)} onToggleMicrophone={serverVoice.toggleMicrophone} onToggleCamera={serverVoice.toggleCamera} onToggleScreenShare={serverVoice.toggleScreenShare} onLeaveVoice={serverVoice.leave} onJoinVoice={() => voiceChannels[0] && toggleVoice(voiceChannels[0].id)} onLeaveRoom={onNavigateHome} onServerInvite={canManageServer ? openServerInvite : undefined} onServerSettings={canManageServer ? openServerSettings : undefined} onServerLeave={server ? openLeaveServer : undefined} onServerDelete={canDeleteServer ? openDeleteServer : undefined} canManageServer={canManageServer} canDeleteServer={canDeleteServer} onCreateServerChannel={canManageServer ? openCreateChannel : undefined} />
     <section className="central-stage chat-stage">
       <div className="chat-stage-inner">
       <ChatHeader title={activeChannel?.name || (showServerEmpty ? "Seus servidores" : "Selecione um canal")} subtitle={server ? `${server.memberCount} membro${server.memberCount === 1 ? "" : "s"}` : ""} type={activeChannel?.type === "voice" ? "voice" : "text"} />
@@ -267,10 +414,15 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       {activeChannel?.type === "text" && <ChatComposerFrame onSubmit={sendMessage}>{replyingTo && <div className="server-replying"><span>Respondendo a {replyingTo.sender.displayName || replyingTo.sender.username}</span><button type="button" className="icon-button" onClick={() => setReplyingTo(null)} aria-label="Cancelar resposta"><Icon name="close" size={13} /></button></div>}<ChatComposerRow><button type="button" className="icon-button" title="Anexos indisponíveis nesta primeira camada" aria-label="Anexos indisponíveis"><Icon name="plus" size={18} /></button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Conversar em #${activeChannel.name}`} maxLength={4000} /><button type="submit" className="icon-button is-send" title="Enviar mensagem" aria-label="Enviar mensagem"><Icon name="send" size={16} /></button></ChatComposerRow></ChatComposerFrame>}
       </div>
     </section>
-    <ParticipantsPanel participants={memberParticipants} showMedia={false} onProfileClick={() => setProfileUser(user)} onParticipantClick={(member) => setProfileUser(member.rawUser || member)} />
+    <ParticipantsPanel heading="Membros" participants={memberParticipants} showMedia={false} onProfileClick={() => setProfileUser(user)} onParticipantClick={(member) => setProfileUser(member.rawUser || member)} />
     {profileUser && <SocialUserProfileModal userId={profileUser.id} initialUser={{ ...profileUser, status: "online" }} onClose={() => setProfileUser(null)} />}
-    {error && null}
+    {settingsOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setSettingsOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-settings-title"><header><div><span className="section-label">SERVIDOR</span><h2 id="server-settings-title">Configurações do servidor</h2></div><button type="button" className="icon-button" onClick={() => setSettingsOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><form id="server-settings-form" onSubmit={submitServerSettings}><label className="field-label" htmlFor="server-settings-name">Nome do servidor</label><input id="server-settings-name" className="text-input" value={settingsName} onChange={(event) => { setSettingsName(event.target.value); setSettingsError(""); }} minLength={2} maxLength={60} autoFocus aria-invalid={Boolean(settingsError)} />{settingsError && <small className="field-error">{settingsError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setSettingsOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-settings-form" className="primary-button" disabled={serverActionBusy || settingsName.trim().length < 2}>{serverActionBusy ? "Salvando..." : "Salvar"}</button></footer></section></div>}
+    {inviteOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setInviteOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-invite-title"><header><div><span className="section-label">CONVITE</span><h2 id="server-invite-title">Convidar para {server?.name}</h2></div><button type="button" className="icon-button" onClick={() => setInviteOpen(false)} aria-label="Fechar"><Icon name="close" size={16} /></button></header>{inviteError ? <p className="field-error">{inviteError}</p> : inviteLink ? <><label className="field-label" htmlFor="server-invite-link">Link de convite</label><input id="server-invite-link" className="text-input" value={inviteLink} readOnly onFocus={(event) => event.target.select()} /><footer><button type="button" className="secondary-button" onClick={() => setInviteOpen(false)}>Fechar</button><button type="button" className="primary-button" onClick={copyServerInvite}>Copiar convite</button></footer></> : <p>Gerando um convite...</p>}</section></div>}
+    {leaveOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setLeaveOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-leave-title"><header><div><span className="section-label">MEMBRESIA</span><h2 id="server-leave-title">Sair do servidor</h2></div><button type="button" className="icon-button" onClick={() => setLeaveOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header>{server?.role === "owner" ? <p>Transfira a propriedade ou exclua o servidor antes de sair.</p> : <p>Sair de <strong>{server?.name}</strong>? Você poderá voltar usando um convite.</p>}<footer><button type="button" className="secondary-button" onClick={() => setLeaveOpen(false)} disabled={serverActionBusy}>Cancelar</button>{server?.role !== "owner" && <button type="button" className="primary-button" onClick={confirmLeaveServer} disabled={serverActionBusy}>{serverActionBusy ? "Saindo..." : "Sair do servidor"}</button>}</footer></section></div>}
+    {deleteOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setDeleteOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-delete-title"><header><div><span className="section-label">AÇÃO PERMANENTE</span><h2 id="server-delete-title">Excluir servidor?</h2></div><button type="button" className="icon-button" onClick={() => setDeleteOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><p>Você está prestes a excluir permanentemente: <strong>{server?.name}</strong>. Canais, mensagens, membros, convites e configurações serão removidos. Esta ação não pode ser desfeita.</p><form id="server-delete-form" onSubmit={(event) => { event.preventDefault(); confirmDeleteServer(); }}><label className="field-label" htmlFor="server-delete-name">Digite o nome do servidor para confirmar:</label><input id="server-delete-name" className="text-input" value={deleteName} onChange={(event) => { setDeleteName(event.target.value); setDeleteError(""); }} autoFocus aria-invalid={Boolean(deleteError)} />{deleteError && <small className="field-error">{deleteError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setDeleteOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-delete-form" className="primary-button danger-action-button" disabled={serverActionBusy || deleteName !== server?.name}>{serverActionBusy ? "Excluindo..." : "Excluir servidor"}</button></footer></section></div>}
+    {channelOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setChannelOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-channel-title"><header><div><span className="section-label">CANAIS</span><h2 id="server-channel-title">Criar canal</h2></div><button type="button" className="icon-button" onClick={() => setChannelOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><form id="server-channel-form" onSubmit={submitCreateChannel}><label className="field-label" htmlFor="server-channel-name">Nome</label><input id="server-channel-name" className="text-input" value={channelName} onChange={(event) => { setChannelName(event.target.value); setChannelError(""); }} maxLength={40} autoFocus aria-invalid={Boolean(channelError)} /><label className="field-label" htmlFor="server-channel-type">Tipo</label><select id="server-channel-type" className="text-input" value={channelType} onChange={(event) => setChannelType(event.target.value)}><option value="text">Texto</option><option value="voice">Voz</option></select>{channelError && <small className="field-error">{channelError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setChannelOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-channel-form" className="primary-button" disabled={serverActionBusy || !channelName.trim()}>{serverActionBusy ? "Criando..." : "Criar"}</button></footer></section></div>}
     {createOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-create-title"><header><div><span className="section-label">NOVO ESPAÇO</span><h2 id="server-create-title">Criar servidor</h2></div><button type="button" className="icon-button" onClick={() => setCreateOpen(false)} disabled={creating} aria-label="Fechar"><Icon name="close" size={16} /></button></header><p>Crie um espaço persistente para reunir suas conversas.</p><form id="server-create-form" onSubmit={submitCreateServer}><label className="field-label" htmlFor="server-create-name">Nome do servidor</label><input id="server-create-name" className="text-input" value={createName} onChange={(event) => { setCreateName(event.target.value); if (createError) setCreateError(""); }} placeholder="Ex.: Estudos" minLength={2} maxLength={60} autoFocus aria-invalid={Boolean(createError)} />{createError && <small className="field-error">{createError}</small>}<div className="server-create-note"><Icon name="info" size={15} /><span>A imagem do servidor poderá ser adicionada quando estiver persistida na conta.</span></div></form><footer><button type="button" className="secondary-button" onClick={() => setCreateOpen(false)} disabled={creating}>Cancelar</button><button type="submit" form="server-create-form" className="primary-button" disabled={creating || createName.trim().length < 2}>{creating ? "Criando..." : "Criar servidor"}</button></footer></section></div>}
+    <ToastStack toasts={toasts} />
   </main>;
 }
 

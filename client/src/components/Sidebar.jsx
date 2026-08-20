@@ -50,9 +50,17 @@ export default function Sidebar({
   onSelectServerChannel,
   onToggleServerVoice,
   serverVoiceParticipants = [],
-  serverNavigationState = null
+  serverNavigationState = null,
+  onServerInvite,
+  onServerSettings,
+  onServerLeave,
+  onServerDelete,
+  canManageServer = false,
+  canDeleteServer = false,
+  onCreateServerChannel
 }) {
   const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
+  const [isServerMenuOpen, setIsServerMenuOpen] = useState(false);
   const isServer = variant === "server";
 
   async function copyRoomCode() {
@@ -73,7 +81,15 @@ export default function Sidebar({
           <strong>{isServer ? serverName || "Seus servidores" : "EchoLive"}</strong>
           <span>{isServer ? "Servidor permanente" : "Sua call privada"}</span>
         </div>
+        {isServer && <button type="button" className="server-menu-trigger" onClick={() => setIsServerMenuOpen((value) => !value)} title="Menu do servidor" aria-label="Menu do servidor" aria-expanded={isServerMenuOpen}><Icon name="chevron" size={15} /></button>}
       </div>
+      {isServer && isServerMenuOpen && <div className="server-context-menu" role="menu">
+        {onServerInvite && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerInvite(); }}><Icon name="account" size={15} />Convidar pessoas</button>}
+        {canManageServer && onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings(); }}><Icon name="settings" size={15} />Configurações do servidor</button>}
+        {(onServerInvite || canManageServer) && <div className="server-menu-divider" />}
+        {onServerLeave && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerLeave(); }}><Icon name="leave" size={15} />Sair do servidor</button>}
+        {canDeleteServer && onServerDelete && <button type="button" role="menuitem" className="danger-menu-item" onClick={() => { setIsServerMenuOpen(false); onServerDelete(); }}><Icon name="trash" size={15} />Excluir servidor</button>}
+      </div>}
 
       {!isServer && <section className="sidebar-section room-section">
         <div className="room-section-heading"><p className="section-label">Sala atual</p><button type="button" className="room-menu-trigger" onClick={() => setIsRoomMenuOpen((value) => !value)} title="Acoes da sala" aria-label="Acoes da sala"><Icon name="more" size={17} /></button></div>
@@ -126,7 +142,7 @@ export default function Sidebar({
           ))}
         </div>
       </section> : <section className="sidebar-section channel-section server-channel-section">
-        {serverNavigationState || <ServerChannelNavigation channels={serverTextChannels} voiceChannels={serverVoiceChannels} activeChannelId={serverActiveChannelId} voiceChannelId={serverVoiceChannelId} onSelectChannel={onSelectServerChannel} onToggleVoice={onToggleServerVoice} participants={serverVoiceParticipants} />}
+         {serverNavigationState || <ServerChannelNavigation channels={serverTextChannels} voiceChannels={serverVoiceChannels} activeChannelId={serverActiveChannelId} voiceChannelId={serverVoiceChannelId} onSelectChannel={onSelectServerChannel} onToggleVoice={onToggleServerVoice} participants={serverVoiceParticipants} canManageServer={canManageServer} onCreateChannel={onCreateServerChannel} />}
       </section>}
 
       <div className="sidebar-lower-region">
@@ -170,16 +186,16 @@ export default function Sidebar({
   );
 }
 
-function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voiceChannelId, onSelectChannel, onToggleVoice, participants }) {
+function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voiceChannelId, onSelectChannel, onToggleVoice, participants, canManageServer, onCreateChannel }) {
   return <>
-    <p className="section-label">Canais de texto</p>
+    <div className="server-channel-heading"><p className="section-label">Canais de texto</p>{canManageServer && <button type="button" className="server-channel-add" onClick={() => onCreateChannel?.("text")} title="Criar canal de texto" aria-label="Criar canal de texto"><Icon name="plus" size={14} /></button>}</div>
     {channels.map((channel) => (
       <button type="button" className={`channel-button ${channel.id === activeChannelId ? "is-selected" : ""}`} key={channel.id} onClick={() => onSelectChannel?.(channel.id)}>
         <span className="channel-icon channel-hash" aria-hidden="true">#</span>
         <strong>{channel.name}</strong>
       </button>
     ))}
-    <p className="section-label voice-label">Canais de voz</p>
+    <div className="server-channel-heading voice-label"><p className="section-label">Canais de voz</p>{canManageServer && <button type="button" className="server-channel-add" onClick={() => onCreateChannel?.("voice")} title="Criar canal de voz" aria-label="Criar canal de voz"><Icon name="plus" size={14} /></button>}</div>
     {voiceChannels.map((channel) => (
       <div key={channel.id}>
         <button type="button" className={`channel-button ${channel.id === voiceChannelId ? "is-selected" : ""}`} onClick={() => onToggleVoice?.(channel.id)}>

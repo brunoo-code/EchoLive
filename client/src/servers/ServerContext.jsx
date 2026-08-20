@@ -55,7 +55,23 @@ export function ServerProvider({ children }) {
     return data.server;
   }, []);
 
-  const value = useMemo(() => ({ createServer, loading, refreshServers, servers, status }), [createServer, loading, refreshServers, servers, status]);
+  const updateServer = useCallback(async (serverId, input) => {
+    const data = await request(`/api/servers/${serverId}`, { method: "PATCH", body: JSON.stringify(input) });
+    setServers((current) => current.map((server) => server.id === serverId ? data.server : server));
+    return data.server;
+  }, []);
+
+  const deleteServer = useCallback(async (serverId) => {
+    await request(`/api/servers/${serverId}`, { method: "DELETE" });
+    setServers((current) => current.filter((server) => server.id !== serverId));
+  }, []);
+
+  const leaveServer = useCallback(async (serverId) => {
+    await request(`/api/servers/${serverId}/leave`, { method: "POST" });
+    setServers((current) => current.filter((server) => server.id !== serverId));
+  }, []);
+
+  const value = useMemo(() => ({ createServer, deleteServer, leaveServer, loading, refreshServers, servers, status, updateServer }), [createServer, deleteServer, leaveServer, loading, refreshServers, servers, status, updateServer]);
   return <ServerContext.Provider value={value}>{children}</ServerContext.Provider>;
 }
 

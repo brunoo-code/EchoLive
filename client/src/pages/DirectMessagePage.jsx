@@ -127,6 +127,12 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       setHistoryStatus("ready");
       if (import.meta.env.DEV) {
         console.debug("[DM:history:success]", { count: history.messages.length });
+        console.debug("[OFFICIAL:page:messages]", {
+          conversationId,
+          apiCount: history.messages.length,
+          pageCount: nextMessages.length,
+          officialCount: nextMessages.filter((message) => message.messageType === "official").length
+        });
         if (otherUser?.isOfficial) {
           console.debug("[OFFICIAL:messages-api]", {
             conversationId,

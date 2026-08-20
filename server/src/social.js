@@ -250,6 +250,14 @@ export function registerSocialRoutes(app) {
         before: String(request.query.before || ""),
         limit: request.query.limit
       });
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[OFFICIAL:api:messages]", {
+          conversationId: request.params.conversationId,
+          userId: request.user.id,
+          count: result.messages?.length || 0,
+          officialCount: result.messages?.filter((message) => message.messageType === "official").length || 0
+        });
+      }
       return response.json(result);
     } catch (error) {
       return handleSocialError(response, error);

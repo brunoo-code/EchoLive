@@ -263,11 +263,11 @@ async function grantBetaBadge(userId) {
 
 async function seedOfficialMessages(conversationId, displayName) {
   const messages = [
-    ["welcome", `Oi, ${displayName || "por aqui"}! Eu sou o Eko, a presença do EchoLive por aqui.\n\nPor aqui você pode conversar, criar salas e manter seus amigos por perto.`],
-    ["quick_room", "Quer conversar agora? Crie uma Sala Rápida, compartilhe o convite e comece na hora. Ela é temporária e não exige conta para quem entrar."],
-    ["servers", "Quer criar um espaço que fica? Servidores são permanentes: seus canais, membros e mensagens continuam aqui mesmo depois que todo mundo sai."],
-    ["friends", "Encontre seus amigos. Adicione pessoas, converse por DM e veja quando elas estiverem online."],
-    ["ready", "Pronto. Esse espaço é seu. ✨\n\nQuando quiser, comece por uma Sala Rápida ou crie seu primeiro servidor."]
+    ["welcome", `Oi, ${displayName || "por aqui"}! 👋\nEu sou o Eko. Bem-vindo ao EchoLive.`],
+    ["quick_room", "Quer conversar agora?\nCrie uma Sala Rápida e compartilhe o convite."],
+    ["servers", "Quer um espaço permanente?\nServidores mantêm canais, membros e mensagens."],
+    ["friends", "Encontre seus amigos.\nAdicione pessoas, converse por DM e veja quem está online."],
+    ["ready", "Pronto. Esse espaço é seu. ✨\nUse Sala Rápida para algo imediato ou Servidor para ficar."]
   ];
   await query(
     `DELETE FROM dm_messages legacy
@@ -306,6 +306,21 @@ async function seedOfficialMessages(conversationId, displayName) {
       [conversationId, content, officialKey]
     );
   }
+}
+
+async function ensureOfficialConversationBootstrap(conversationId, userId) {
+  const result = await query(
+    `SELECT c.id
+     FROM dm_conversations c
+     JOIN dm_participants p ON p.conversation_id = c.id AND p.user_id = $2
+     JOIN users other ON other.id = CASE WHEN c.user_one_id = $2 THEN c.user_two_id ELSE c.user_one_id END
+     WHERE c.id = $1 AND other.account_type = 'system'
+     LIMIT 1`,
+    [conversationId, userId]
+  );
+  if (!result.rows[0]) return false;
+  await ensureAccountSocialBootstrap(userId);
+  return true;
 }
 
 export async function ensureAccountSocialBootstrap(userId) {
@@ -444,6 +459,9 @@ export async function listConversations(userId) {
 }
 
 export async function listMessages(conversationId, userId, { before = "", limit = 50 } = {}) {
+  await ensureOfficialConversationBootstrap(conversationId, userId).catch((error) => {
+    console.error("[OFFICIAL:repair] bootstrap before messages failed:", error.message);
+  });
   const safeLimit = Math.min(50, Math.max(1, Number(limit) || 50));
   const params = [conversationId, userId];
   const beforeClause = before ? "AND m.created_at < $3" : "";
@@ -462,8 +480,7 @@ export async function listMessages(conversationId, userId, { before = "", limit 
      LIMIT $${limitIndex}`,
     params
   );
-  return {
-    messages: result.rows.reverse().map((row) => ({
+  const messages = result.rows.reverse().map((row) => ({
       id: row.id,
       conversationId: row.conversation_id,
       senderUserId: row.sender_user_id,
@@ -480,7 +497,17 @@ export async function listMessages(conversationId, userId, { before = "", limit 
         accountType: row.account_type || "user",
         isOfficial: row.account_type === "system"
       }
-    })),
+    }));
+  if (process.env.NODE_ENV !== "production") {
+    console.debug("[OFFICIAL:db:messages]", {
+      conversationId,
+      userId,
+      count: messages.length,
+      officialCount: messages.filter((message) => message.messageType === "official").length
+    });
+  }
+  return {
+    messages,
     hasMore: result.rows.length === safeLimit
   };
 }

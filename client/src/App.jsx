@@ -4,6 +4,7 @@ import RoomPage from "./pages/RoomPage.jsx";
 import SocialPage from "./pages/SocialPage.jsx";
 import DirectMessagePage from "./pages/DirectMessagePage.jsx";
 import ServerPage from "./pages/ServerPage.jsx";
+import ServerInvitePage from "./pages/ServerInvitePage.jsx";
 import { AuthProvider } from "./auth/AuthContext.jsx";
 import { SocialProvider } from "./social/SocialContext.jsx";
 import { ServerProvider } from "./servers/ServerContext.jsx";
@@ -18,6 +19,8 @@ function getRoute() {
   if (dmMatch) return { name: "dm", conversationId: dmMatch[1] };
   const serverMatch = pathname.match(/^\/server\/([0-9a-f-]{36})$/i);
   if (serverMatch) return { name: "server", serverId: serverMatch[1] };
+  const inviteMatch = pathname.match(/^\/invite\/([A-Z0-9]{4,16})$/i);
+  if (inviteMatch) return { name: "invite", code: inviteMatch[1].toUpperCase() };
   if (pathname === "/servers") return { name: "servers" };
   if (pathname === "/friends") return { name: "social" };
   return { name: "home" };
@@ -91,6 +94,7 @@ function AppContent() {
     return <RoomPage roomCode={route.roomCode} onBack={navigateToHome} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateDm={navigateToDm} onNavigateServer={navigateToServer} />;
   }
   if (route.name === "server" || route.name === "servers") return <ServerPage serverId={route.serverId || ""} onNavigateHome={navigateToHome} onNavigateSocial={navigateToSocial} onNavigateServer={navigateToServer} />;
+  if (route.name === "invite") return <ServerInvitePage code={route.code} onNavigateHome={navigateToHome} onNavigateServer={navigateToServer} />;
   if (route.name === "social") return <SocialPage onNavigateHome={navigateToHome} onNavigateDm={navigateToDm} />;
   if (route.name === "dm") return <DirectMessagePage conversationId={route.conversationId} initialConversation={route.initialConversation} onNavigateHome={navigateToHome} onNavigateFriends={navigateToSocial} onNavigateDm={navigateToDm} />;
 

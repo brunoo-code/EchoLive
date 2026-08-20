@@ -265,7 +265,15 @@ export function SocialProvider({ children }) {
 
   const loadMessages = useCallback(async (conversationId, before = "") => {
     const query = before ? `?before=${encodeURIComponent(before)}&limit=50` : "?limit=50";
-    return socialRequest(`/api/social/dms/${conversationId}/messages${query}`);
+    const data = await socialRequest(`/api/social/dms/${conversationId}/messages${query}`);
+    if (import.meta.env.DEV) {
+      console.debug("[OFFICIAL:context:messages]", {
+        conversationId,
+        count: data.messages?.length || 0,
+        officialCount: data.messages?.filter((message) => message.messageType === "official" || message.message_type === "official").length || 0
+      });
+    }
+    return data;
   }, []);
 
   const markRead = useCallback(async (conversationId) => {
