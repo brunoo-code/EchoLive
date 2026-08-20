@@ -1,12 +1,13 @@
 import Icon from "./Icon.jsx";
 
-export function ChatHeader({ title, subtitle = "", type = "text", meta = "" }) {
+export function ChatHeader({ title, subtitle = "", type = "text", meta = "", searchValue, onSearchChange, searchPlaceholder = "Buscar mensagens" }) {
   return <header className="chat-header">
     <div>
       <p className="channel-title"><span className="channel-kind" aria-hidden="true">{type === "voice" ? <Icon name="voice" size={17} /> : "#"}</span>{title}</p>
       {subtitle && <p className="channel-subtitle">{subtitle}</p>}
     </div>
     {meta && <span className="chat-header-meta">{meta}</span>}
+    {typeof onSearchChange === "function" && <label className="chat-header-search"><Icon name="search" size={14} /><span className="sr-only">Buscar mensagens</span><input value={searchValue || ""} onChange={(event) => onSearchChange(event.target.value)} placeholder={searchPlaceholder} /></label>}
   </header>;
 }
 

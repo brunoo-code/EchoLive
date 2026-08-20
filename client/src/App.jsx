@@ -8,6 +8,9 @@ import ServerInvitePage from "./pages/ServerInvitePage.jsx";
 import { AuthProvider } from "./auth/AuthContext.jsx";
 import { SocialProvider } from "./social/SocialContext.jsx";
 import { ServerProvider } from "./servers/ServerContext.jsx";
+import { useSocial } from "./social/SocialContext.jsx";
+import { useServers } from "./servers/ServerContext.jsx";
+import QuickSwitcher from "./components/QuickSwitcher.jsx";
 
 const BUILD_ID = import.meta.env.VITE_BUILD_ID || "8.0.3";
 
@@ -32,6 +35,9 @@ export default function App() {
 
 function AppContent() {
   const [route, setRoute] = useState(getRoute);
+  const [isQuickSwitcherOpen, setIsQuickSwitcherOpen] = useState(false);
+  const { servers } = useServers();
+  const { conversations, friends } = useSocial();
 
   useEffect(() => {
     document.documentElement.dataset.echoliveBuild = BUILD_ID;
@@ -45,6 +51,17 @@ function AppContent() {
     const handlePopState = () => setRoute(getRoute());
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    function handleQuickSwitcherShortcut(event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsQuickSwitcherOpen((current) => !current);
+      }
+    }
+    window.addEventListener("keydown", handleQuickSwitcherShortcut);
+    return () => window.removeEventListener("keydown", handleQuickSwitcherShortcut);
   }, []);
 
   function navigateToHome() {
@@ -90,13 +107,23 @@ function AppContent() {
     setRoute({ name: "dm", conversationId, initialConversation });
   }
 
+  let content;
   if (route.name === "room") {
-    return <RoomPage roomCode={route.roomCode} onBack={navigateToHome} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateDm={navigateToDm} onNavigateServer={navigateToServer} />;
+    content = <RoomPage roomCode={route.roomCode} onBack={navigateToHome} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateDm={navigateToDm} onNavigateServer={navigateToServer} />;
+  } else if (route.name === "server" || route.name === "servers") {
+    content = <ServerPage serverId={route.serverId || ""} onNavigateHome={navigateToHome} onNavigateSocial={navigateToSocial} onNavigateServer={navigateToServer} />;
+  } else if (route.name === "invite") {
+    content = <ServerInvitePage code={route.code} onNavigateHome={navigateToHome} onNavigateServer={navigateToServer} />;
+  } else if (route.name === "social") {
+    content = <SocialPage onNavigateHome={navigateToHome} onNavigateDm={navigateToDm} />;
+  } else if (route.name === "dm") {
+    content = <DirectMessagePage conversationId={route.conversationId} initialConversation={route.initialConversation} onNavigateHome={navigateToHome} onNavigateFriends={navigateToSocial} onNavigateDm={navigateToDm} />;
+  } else {
+    content = <HomePage onRoomCreated={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateServers={navigateToServers} />;
   }
-  if (route.name === "server" || route.name === "servers") return <ServerPage serverId={route.serverId || ""} onNavigateHome={navigateToHome} onNavigateSocial={navigateToSocial} onNavigateServer={navigateToServer} />;
-  if (route.name === "invite") return <ServerInvitePage code={route.code} onNavigateHome={navigateToHome} onNavigateServer={navigateToServer} />;
-  if (route.name === "social") return <SocialPage onNavigateHome={navigateToHome} onNavigateDm={navigateToDm} />;
-  if (route.name === "dm") return <DirectMessagePage conversationId={route.conversationId} initialConversation={route.initialConversation} onNavigateHome={navigateToHome} onNavigateFriends={navigateToSocial} onNavigateDm={navigateToDm} />;
 
-  return <HomePage onRoomCreated={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateServers={navigateToServers} />;
+  return <>
+    {content}
+    <QuickSwitcher open={isQuickSwitcherOpen} onClose={() => setIsQuickSwitcherOpen(false)} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateServers={navigateToServers} onNavigateServer={navigateToServer} onNavigateDm={navigateToDm} servers={servers} friends={friends} conversations={conversations} />
+  </>;
 }

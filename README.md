@@ -162,6 +162,7 @@ Essa reducao usa recursos nativos do navegador e pode reduzir ruido de teclado, 
 
 ## Chat e uploads temporarios
 
+- Salas Rapidas permanecem reentraveis por 5 horas; depois desse prazo o backend expira a sala e novos acessos sao recusados.
 - `# geral` e o canal de texto padrao da sala.
 - Mensagens sao transmitidas por Socket.IO e ficam somente em memoria.
 - Cada sala mantem no maximo 200 mensagens; ao ficar vazia, o historico e apagado.

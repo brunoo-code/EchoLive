@@ -73,6 +73,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [activeChannelId, setActiveChannelId] = useState("");
   const [voiceChannelId, setVoiceChannelId] = useState("");
   const [messages, setMessages] = useState([]);
+  const [messageQuery, setMessageQuery] = useState("");
   const [members, setMembers] = useState([]);
   const [draft, setDraft] = useState("");
   const [typingUsers, setTypingUsers] = useState([]);
@@ -122,6 +123,14 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [serverSocket, setServerSocket] = useState(null);
 
   const activeChannel = useMemo(() => server?.channels?.find((channel) => channel.id === activeChannelId) || server?.channels?.find((channel) => channel.type === "text") || null, [activeChannelId, server]);
+  const visibleMessages = useMemo(() => {
+    const query = messageQuery.trim().toLowerCase();
+    if (!query) return messages;
+    return messages.filter((message) => {
+      const haystack = [message.content, message.sender?.displayName, message.sender?.username, message.attachment?.name].filter(Boolean).join(" ").toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [messageQuery, messages]);
   const textChannels = server?.channels?.filter((channel) => channel.type === "text") || [];
   const voiceChannels = server?.channels?.filter((channel) => channel.type === "voice") || [];
   const memberParticipants = useMemo(() => members.map((member) => ({
@@ -606,6 +615,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
 
   function selectServerChannel(channelId) {
     const channel = server?.channels?.find((item) => item.id === channelId);
+    setMessageQuery("");
     setActiveChannelId(channelId);
     if (channel?.type === "text") setActiveContentView("text");
   }
@@ -648,7 +658,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   }, [serverId, serverVoice.cameraEnabled, serverVoice.connected, serverVoice.isScreenSharing, serverVoice.micEnabled, serverVoice.participants.length, voiceChannelId]);
 
   function renderServerMessage(message, index) {
-    const previousMessage = messages[index - 1];
+    const previousMessage = visibleMessages[index - 1];
     const isGrouped = isGroupedServerMessage(previousMessage, message);
     const replyTarget = message.replyToMessageId ? messages.find((item) => item.id === message.replyToMessageId) : null;
     const attachment = message.attachment;
@@ -683,10 +693,10 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     <section className="central-stage">
       {activeContentView === "media" ? <CallMediaView participants={serverVoice.participants} channelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || "Geral"} participantCount={serverVoice.participants.length} isInVoice={serverVoice.connected} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} volumeById={remoteVolumes} onVolumeChange={changeRemoteVolume} screenShareLabel={streamPreset.replace("p", "p · ").replace("30", "30 FPS").replace("60", "60 FPS")} notify={notify} /> : <section className="chat-stage channel-view">
       <div className="chat-stage-inner">
-      <ChatHeader title={activeChannel?.name || (showServerEmpty ? "Seus servidores" : "Selecione um canal")} subtitle={server ? `${server.memberCount} membro${server.memberCount === 1 ? "" : "s"}` : ""} type={activeChannel?.type === "voice" ? "voice" : "text"} />
+      <ChatHeader title={activeChannel?.name || (showServerEmpty ? "Seus servidores" : "Selecione um canal")} subtitle={server ? `${server.memberCount} membro${server.memberCount === 1 ? "" : "s"}` : ""} type={activeChannel?.type === "voice" ? "voice" : "text"} searchValue={messageQuery} onSearchChange={setMessageQuery} />
       {serverVoice.connected && serverVoice.participants.length > 0 && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name={hasServerScreenShare ? "screenShare" : "voice"} size={15} /><span>{hasServerScreenShare ? "Transmissao ativa" : "Chamada ativa"}</span><strong>Ver chamada</strong></button>}
       {error && <div className="server-error" role="alert">{error}<button type="button" className="icon-button" onClick={() => setError("")} aria-label="Fechar aviso"><Icon name="close" size={14} /></button></div>}
-      <ChatViewport>{showServerLoading || showServerListLoading ? <ServerLoadingState /> : serverNotFound ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Servidor indisponível</h2><p>Verifique o endereço ou volte para a lista de servidores.</p><button type="button" className="secondary-button" onClick={() => onNavigateServer?.("")}>Voltar aos servidores</button></div> : showServerListError ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Não foi possível carregar</h2><p>O shell está pronto, mas a lista de servidores não respondeu.</p><button type="button" className="secondary-button" onClick={() => refreshServers().catch(() => {})}>Tentar novamente</button></div> : showServerEmpty ? <div className="server-welcome server-state-message"><Icon name="server" size={30} /><h2>Crie seu primeiro servidor</h2><p>Um espaço persistente para conversar com as pessoas que importam.</p><button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button></div> : messages.length ? messages.map(renderServerMessage) : <div className="server-welcome"><Icon name="hash" size={30} /><h2>Comece em #{activeChannel?.name || "geral"}</h2><p>Este é o início do histórico persistente deste canal.</p></div>}</ChatViewport>
+      <ChatViewport>{showServerLoading || showServerListLoading ? <ServerLoadingState /> : serverNotFound ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Servidor indisponível</h2><p>Verifique o endereço ou volte para a lista de servidores.</p><button type="button" className="secondary-button" onClick={() => onNavigateServer?.("")}>Voltar aos servidores</button></div> : showServerListError ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Não foi possível carregar</h2><p>O shell está pronto, mas a lista de servidores não respondeu.</p><button type="button" className="secondary-button" onClick={() => refreshServers().catch(() => {})}>Tentar novamente</button></div> : showServerEmpty ? <div className="server-welcome server-state-message"><Icon name="server" size={30} /><h2>Crie seu primeiro servidor</h2><p>Um espaço persistente para conversar com as pessoas que importam.</p><button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button></div> : visibleMessages.length ? visibleMessages.map(renderServerMessage) : messageQuery.trim() ? <div className="server-welcome server-state-message"><Icon name="search" size={30} /><h2>Nenhuma mensagem encontrada</h2><p>Tente outra palavra ou limpe a busca para voltar ao histórico.</p><button type="button" className="secondary-button" onClick={() => setMessageQuery("")}>Limpar busca</button></div> : <div className="server-welcome"><Icon name="hash" size={30} /><h2>Comece em #{activeChannel?.name || "geral"}</h2><p>Este é o início do histórico persistente deste canal.</p></div>}</ChatViewport>
       <div className="server-voice-audio-sinks" aria-hidden="true">{serverVoice.participants.filter((participant) => !participant.isLocal && !serverCallParticipants.some((visual) => visual.socketId === participant.socketId)).map((participant) => <AudioParticipant key={participant.socketId} peerSocketId={participant.socketId} stream={participant.stream || serverVoice.remoteStreams[participant.socketId]} volume={remoteVolumes[participant.socketId] ?? 100} isDeafened={isDeafened} />)}</div>
       {activeChannel?.type === "text" && <ChatComposerFrame onSubmit={sendMessage}>
         {replyingTo && <div className="server-replying"><span>Respondendo a {replyingTo.sender?.displayName || replyingTo.sender?.username || "mensagem"}</span><button type="button" className="icon-button" onClick={() => setReplyingTo(null)} aria-label="Cancelar resposta"><Icon name="close" size={13} /></button></div>}

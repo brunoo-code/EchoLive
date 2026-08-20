@@ -15,8 +15,8 @@ const roomMessages = new Map();
 const roomDetails = new Map();
 const roomExpiryTimers = new Map();
 const expiredRoomCodes = new Set();
-// Quick Rooms stay temporary, but remain re-enterable for one day.
-const DEFAULT_TEMPORARY_ROOM_TTL_MS = 24 * 60 * 60 * 1000;
+// Quick Rooms stay temporary, but remain re-enterable for five hours.
+const DEFAULT_TEMPORARY_ROOM_TTL_MS = 5 * 60 * 60 * 1000;
 const configuredRoomTtl = Number(process.env.QUICK_ROOM_TTL_MS);
 const TEMPORARY_ROOM_TTL_MS = Number.isFinite(configuredRoomTtl) && configuredRoomTtl > 0
   ? configuredRoomTtl
