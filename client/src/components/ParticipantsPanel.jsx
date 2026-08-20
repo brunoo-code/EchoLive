@@ -2,11 +2,11 @@ import UserStatusBadge from "./UserStatusBadge.jsx";
 import Icon from "./Icon.jsx";
 import UserAvatar from "./UserAvatar.jsx";
 
-export default function ParticipantsPanel({ participants, onProfileClick, onParticipantClick, showMedia = true, heading = "Online" }) {
+export default function ParticipantsPanel({ participants, onProfileClick, onParticipantClick, showMedia = true, heading = "Online", showPresenceIndicator = true }) {
   return (
-    <aside className="participants-panel" aria-label="Participantes online">
+    <aside className="participants-panel" aria-label={heading}>
       <div className="panel-heading">
-          <span><i className="online-indicator" aria-hidden="true" />{heading} <b className="panel-count">— {participants.length}</b></span>
+          <span>{showPresenceIndicator && <i className="online-indicator" aria-hidden="true" />}{heading} <b className="panel-count">— {participants.length}</b></span>
       </div>
 
       <div className="online-list">

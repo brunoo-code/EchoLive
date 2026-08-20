@@ -20,7 +20,8 @@ export default function CallMediaView({
   notify
 }) {
   const callParticipants = participants
-    .filter((participant) => participant.isScreenSharing || (participant.cameraEnabled && participant.stream))
+    .filter((participant) => participant && participant.inRoom !== false)
+    .slice()
     .sort((left, right) => Number(right.isScreenSharing) - Number(left.isScreenSharing));
   const focusedParticipant = callParticipants.find((participant) => participant.socketId === focusedMediaId) || callParticipants[0];
   const countLabel = Number.isFinite(maxParticipants) ? `${participantCount}/${maxParticipants}` : participantCount;
@@ -82,7 +83,10 @@ export default function CallMediaView({
           </section>
         )
       ) : (
-        <section className="voice-empty-surface" aria-label="Canal de voz vazio" />
+        <section className="voice-empty-state" aria-label="Chamada sem participantes">
+          <strong>Você está na voz</strong>
+          <span>Ative a câmera ou aguarde alguém entrar.</span>
+        </section>
       )}
     </section>
   );

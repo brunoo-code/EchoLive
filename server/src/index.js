@@ -20,6 +20,7 @@ import {
 import { areSocketsInSameServerVoice, attachServerSocket, getServerVoiceRoom, registerServerRoutes } from "./serverRoutes.js";
 import { checkDatabase, getDatabaseError, isDatabaseConfigured } from "./db/pool.js";
 import { getConversationForUser } from "./db/social.js";
+import { getServerForUser, isUuid } from "./db/servers.js";
 import { markRoomActivityLeft, recordRoomActivity } from "./db/roomActivity.js";
 import {
   areSocketsInSameRoom,
@@ -176,6 +177,41 @@ app.post("/api/social/dms/:conversationId/upload", optionalAuth, requireAuth, (r
       await unlink(file.path).catch(() => {});
       return response.status(413).json({ error: "Este arquivo ultrapassa o limite permitido." });
     }
+    const type = file.mimetype.startsWith("image/") ? "image" : file.mimetype.startsWith("video/") ? "video" : "file";
+    return response.json({ attachment: {
+      type,
+      url: `/uploads/${file.filename}`,
+      name: file.originalname.replace(/[\\/\0]/g, "").slice(0, 120),
+      size: file.size,
+      mimeType: file.mimetype
+    } });
+  });
+});
+
+app.post("/api/servers/:serverId/channels/:channelId/upload", optionalAuth, requireAuth, (request, response) => {
+  upload.single("file")(request, response, async (error) => {
+    if (error) {
+      const status = error.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+      response.status(status).json({ error: error.code === "LIMIT_FILE_SIZE" ? "Este arquivo ultrapassa o limite permitido." : "Arquivo invalido." });
+      return;
+    }
+
+    const { serverId, channelId } = request.params;
+    const file = request.file;
+    const server = isUuid(serverId) && isUuid(channelId) ? await getServerForUser(serverId, request.user.id).catch(() => null) : null;
+    const channel = server?.channels?.find((item) => item.id === channelId && item.type === "text");
+    const extension = file ? path.extname(file.originalname).toLowerCase() : "";
+    const expectedExtensions = file ? ALLOWED_UPLOADS.get(file.mimetype) : null;
+
+    if (!server || !channel || !file || !expectedExtensions?.includes(extension)) {
+      if (file) await unlink(file.path).catch(() => {});
+      return response.status(server && !channel ? 400 : 403).json({ error: !server ? "Servidor indisponivel." : !channel ? "Canal de texto indisponivel." : "Tipo de arquivo nao permitido." });
+    }
+    if (file.size > uploadLimitFor(file.mimetype)) {
+      await unlink(file.path).catch(() => {});
+      return response.status(413).json({ error: "Este arquivo ultrapassa o limite permitido." });
+    }
+
     const type = file.mimetype.startsWith("image/") ? "image" : file.mimetype.startsWith("video/") ? "video" : "file";
     return response.json({ attachment: {
       type,

@@ -30,12 +30,13 @@ export default function ParticipantCard({
 }) {
   const cardRef = useRef(null);
   const videoRef = useRef(null);
+  const hasVideo = Boolean(stream && (isScreenSharing || cameraEnabled));
 
   useEffect(() => {
-    if (videoRef.current && videoRef.current.srcObject !== stream) {
-      videoRef.current.srcObject = stream || null;
+    if (videoRef.current && videoRef.current.srcObject !== (hasVideo ? stream : null)) {
+      videoRef.current.srcObject = hasVideo ? stream : null;
     }
-  }, [stream]);
+  }, [hasVideo, stream]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -104,12 +105,12 @@ export default function ParticipantCard({
       </div>
 
       <div className="video-frame">
-        {stream ? (
+        {hasVideo ? (
           <video className={isScreenSharing ? "screen-video" : "camera-video"} data-video-peer={socketId} ref={videoRef} autoPlay playsInline muted={isLocal} onVolumeChange={handleNativeVolumeChange} />
         ) : (
           <div className="video-placeholder">
             <div className="placeholder-avatar" aria-hidden="true"><UserAvatar user={{ nickname, avatarUrl, avatarVariant, isGuest }} size={40} /></div>
-            <span>Sem video</span>
+            <span>{isScreenSharing ? "Tela indisponível" : "Sem câmera"}</span>
           </div>
         )}
         {isScreenSharing && <div className="screen-badge">{isLocal && screenShareLabel ? screenShareLabel : "Tela compartilhada"}</div>}

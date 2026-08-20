@@ -7,14 +7,46 @@ import ParticipantsPanel from "../components/ParticipantsPanel.jsx";
 import CallMediaView from "../components/CallMediaView.jsx";
 import UserAvatar from "../components/UserAvatar.jsx";
 import { ChatComposerFrame, ChatComposerRow, ChatHeader, ChatViewport } from "../components/ChatFrame.jsx";
+import EmojiPicker from "../components/EmojiPicker.jsx";
 import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
 import AudioParticipant from "../components/AudioParticipant.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useServers } from "../servers/ServerContext.jsx";
 import { SERVER_URL } from "../utils/webrtc.js";
+import { validateUploadFile } from "../utils/uploadLimits.js";
+import { linkifyMessage } from "../utils/linkifyMessage.js";
 import useServerVoiceCall from "../hooks/useServerVoiceCall.js";
 import useToasts from "../hooks/useToasts.js";
+
+const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
+const FILE_ACCEPT = "application/pdf,application/zip,application/x-zip-compressed,audio/mpeg,audio/wav,audio/ogg,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,.docx,.xlsx,.pptx";
+const ALL_ACCEPT = `${MEDIA_ACCEPT},${FILE_ACCEPT}`;
+
+function formatServerTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+function formatServerDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Data indisponível";
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
+function formatServerFileSize(bytes) {
+  if (!Number.isFinite(Number(bytes))) return "";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isGroupedServerMessage(previous, current) {
+  if (!previous || !current || previous.sender?.id !== current.sender?.id) return false;
+  const previousTime = new Date(previous.createdAt).getTime();
+  const currentTime = new Date(current.createdAt).getTime();
+  return Number.isFinite(previousTime) && Number.isFinite(currentTime) && currentTime - previousTime < 5 * 60 * 1000;
+}
 
 async function request(path, options = {}) {
   const response = await fetch(`${SERVER_URL}${path}`, { ...options, credentials: "include", headers: { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) } });
@@ -38,6 +70,12 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
   const [draft, setDraft] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileAccept, setFileAccept] = useState(ALL_ACCEPT);
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
   const [error, setError] = useState("");
@@ -69,6 +107,8 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [focusedMediaId, setFocusedMediaId] = useState("");
   const [remoteVolumes, setRemoteVolumes] = useState({});
   const socketRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const messageInputRef = useRef(null);
   const [serverSocket, setServerSocket] = useState(null);
 
   const activeChannel = useMemo(() => server?.channels?.find((channel) => channel.id === activeChannelId) || server?.channels?.find((channel) => channel.type === "text") || null, [activeChannelId, server]);
@@ -79,7 +119,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     socketId: `server-member-${member.id}`,
     nickname: member.displayName || member.username,
     displayName: member.displayName || member.username,
-    status: member.status || "online",
+    status: member.id === user?.id ? "online" : member.status || "offline",
     isLocal: member.id === user?.id,
     secondaryText: member.role === "owner" ? "Proprietário" : member.role === "admin" ? "Administrador" : "Membro",
     rawUser: member
@@ -104,6 +144,15 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   }
 
   useEffect(() => {
+    setServer(null);
+    setMembers([]);
+    setMessages([]);
+    setActiveChannelId("");
+    setVoiceChannelId("");
+    setDraft("");
+    setSelectedFile(null);
+    setReplyingTo(null);
+    setError("");
     setActiveContentView("text");
     setViewMode("grid");
     setFocusedMediaId("");
@@ -358,21 +407,91 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [channelOpen, createOpen, creating, deleteOpen, inviteOpen, leaveOpen, serverActionBusy, settingsOpen]);
 
-  function sendMessage(event) {
+  function validateServerFile(file) {
+    if (!file) return false;
+    const result = validateUploadFile(file);
+    if (!result.ok) {
+      notify(result.error);
+      return false;
+    }
+    return true;
+  }
+
+  function handleServerFileChange(event) {
+    const file = event.target.files?.[0] || null;
+    setSelectedFile(validateServerFile(file) ? file : null);
+    event.target.value = "";
+    setIsAttachMenuOpen(false);
+  }
+
+  function openServerFilePicker(accept) {
+    setFileAccept(accept);
+    setIsAttachMenuOpen(false);
+    setIsEmojiPickerOpen(false);
+    window.requestAnimationFrame(() => fileInputRef.current?.click());
+  }
+
+  function insertServerEmoji(emoji) {
+    const input = messageInputRef.current;
+    const start = input?.selectionStart ?? draft.length;
+    const end = input?.selectionEnd ?? draft.length;
+    const nextDraft = `${draft.slice(0, start)}${emoji}${draft.slice(end)}`.slice(0, 4000);
+    setDraft(nextDraft);
+    setIsEmojiPickerOpen(false);
+    window.requestAnimationFrame(() => {
+      input?.focus();
+      const nextCursor = Math.min(start + emoji.length, 4000);
+      input?.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
+
+  async function uploadServerFile(file) {
+    const body = new FormData();
+    body.append("file", file);
+    const response = await fetch(`${SERVER_URL}/api/servers/${encodeURIComponent(serverId)}/channels/${encodeURIComponent(activeChannel.id)}/upload`, { method: "POST", body, credentials: "include" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Falha ao enviar o arquivo.");
+    return result.attachment;
+  }
+
+  async function sendMessage(event) {
     event.preventDefault();
     const content = draft.trim();
-    if (!content || !serverId || !activeChannel?.id) return;
-    const socket = socketRef.current;
-    if (socket?.connected) {
-      socket.emit("server:message", { serverId, channelId: activeChannel.id, content, replyToMessageId: replyingTo?.id }, (result) => { if (!result?.ok) setError(result?.error || "Nao foi possivel enviar a mensagem."); });
-    } else {
-      request(`/api/servers/${serverId}/channels/${activeChannel.id}/messages`, {
-        method: "POST",
-        body: JSON.stringify({ content, replyToMessageId: replyingTo?.id })
-      }).then((data) => setMessages((current) => current.some((item) => item.id === data.message.id) ? current : [...current, data.message])).catch((requestError) => setError(requestError.message));
+    if (!serverId || !activeChannel?.id || (!content && !selectedFile)) {
+      if (!content && !selectedFile) notify("Digite uma mensagem ou anexe um arquivo.");
+      return;
     }
-    setDraft("");
-    setReplyingTo(null);
+    if (content.length > 4000) {
+      notify("Esta mensagem excede o limite de 4.000 caracteres.");
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const attachment = selectedFile ? await uploadServerFile(selectedFile) : null;
+      const payload = { serverId, channelId: activeChannel.id, content, attachment, replyToMessageId: replyingTo?.id || null };
+      const socket = socketRef.current;
+      if (socket?.connected) {
+        const result = await new Promise((resolve) => socket.emit("server:message", payload, resolve));
+        if (!result?.ok) throw new Error(result?.error || "Nao foi possivel enviar a mensagem.");
+      } else {
+        const data = await request(`/api/servers/${serverId}/channels/${activeChannel.id}/messages`, { method: "POST", body: JSON.stringify({ content, attachment, replyToMessageId: replyingTo?.id || null }) });
+        setMessages((current) => current.some((item) => item.id === data.message.id) ? current : [...current, data.message]);
+      }
+      setDraft("");
+      setSelectedFile(null);
+      setReplyingTo(null);
+    } catch (requestError) {
+      setError(requestError.message || "Nao foi possivel enviar a mensagem.");
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  function handleMessageKeyDown(event) {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
   }
 
   function toggleReaction(messageId, emoji) {
@@ -435,6 +554,33 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     });
   }, [serverId, serverVoice.cameraEnabled, serverVoice.connected, serverVoice.isScreenSharing, serverVoice.micEnabled, serverVoice.participants.length, voiceChannelId]);
 
+  function renderServerMessage(message, index) {
+    const previousMessage = messages[index - 1];
+    const isGrouped = isGroupedServerMessage(previousMessage, message);
+    const replyTarget = message.replyToMessageId ? messages.find((item) => item.id === message.replyToMessageId) : null;
+    const attachment = message.attachment;
+    const attachmentSource = attachment?.url ? `${SERVER_URL}${attachment.url}` : "";
+    const senderName = message.sender?.displayName || message.sender?.username || "Usuário";
+
+    return (
+      <article id={`server-message-${message.id}`} className={`chat-message server-chat-message${isGrouped ? " is-grouped" : ""}`} key={message.id}>
+        {isGrouped ? <div className="message-avatar-placeholder server-message-time" aria-hidden="true"><time dateTime={message.createdAt}>{formatServerTime(message.createdAt)}</time></div> : <button type="button" className="message-avatar server-message-avatar" onClick={() => setProfileUser(message.sender)} aria-label={`Ver perfil de ${senderName}`}><UserAvatar user={message.sender} size={30} /></button>}
+        <div className="message-body">
+          {!isGrouped && <div className="message-meta"><strong>{senderName}</strong><time dateTime={message.createdAt} title={formatServerDateTime(message.createdAt)}>{formatServerTime(message.createdAt)}</time></div>}
+          {isGrouped && <time className="server-grouped-time" dateTime={message.createdAt}>{formatServerTime(message.createdAt)}</time>}
+          {replyTarget && <button type="button" className="server-reply-ref" onClick={() => document.getElementById(`server-message-${replyTarget.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}>Respondendo a <strong>{replyTarget.sender?.displayName || replyTarget.sender?.username || "uma mensagem"}</strong>{replyTarget.content ? `: ${replyTarget.content.slice(0, 100)}` : ""}</button>}
+          {message.deletedAt ? <p className="server-message-deleted">Mensagem removida.</p> : message.content ? <p>{linkifyMessage(message.content)}</p> : null}
+          {attachment && attachmentSource && <div className="message-attachment server-message-attachment">
+            {attachment.type === "image" ? <button type="button" className="server-image-button" onClick={() => setLightboxImage({ source: attachmentSource, alt: attachment.name || "Imagem anexada" })}><img src={attachmentSource} alt={attachment.name || "Imagem anexada"} /></button> : attachment.type === "video" ? <video controls preload="metadata" src={attachmentSource} /> : <a className="file-attachment" href={attachmentSource} target="_blank" rel="noreferrer" download>{attachment.name || "Arquivo"}</a>}
+            <span>{attachment.name || "Arquivo"}{attachment.size ? ` · ${formatServerFileSize(attachment.size)}` : ""}</span>
+          </div>}
+          {!message.deletedAt && (message.reactions || []).length > 0 && <div className="server-message-reactions">{message.reactions.map((reaction) => <button type="button" key={reaction.emoji} className={reaction.reacted ? "is-active" : ""} onClick={() => toggleReaction(message.id, reaction.emoji)}>{reaction.emoji} <small>{reaction.count}</small></button>)}</div>}
+          {!message.deletedAt && <div className="server-message-hover-toolbar" aria-label="Ações da mensagem"><button type="button" onClick={() => setReplyingTo(message)} title="Responder" aria-label="Responder"><Icon name="reply" size={13} /></button><button type="button" onClick={() => toggleReaction(message.id, "👍")} title="Adicionar reação" aria-label="Adicionar reação">😊</button></div>}
+        </div>
+      </article>
+    );
+  }
+
   if (!isAuthenticated) return <main className="page server-page server-page-gate"><section className="social-guest-gate"><Icon name="lock" size={24} /><h1>Servidores ficam com a sua conta.</h1><p>Entre ou crie uma conta para manter seus servidores, canais e mensagens por aqui.</p><button type="button" className="primary-button" onClick={onNavigateHome}>Voltar para a Home</button></section></main>;
 
   const serverSidebarState = server ? null : showServerLoading || showServerListLoading ? <div className="server-empty server-loading-state"><span className="loading-sheen" /><strong>Carregando servidor...</strong><span>Buscando canais e participantes.</span></div> : <div className="server-empty"><Icon name={serverNotFound || showServerListError ? "alert" : "server"} size={24} /><strong>{serverNotFound ? "Servidor não encontrado" : showServerListError ? "Não foi possível carregar" : "Crie seu primeiro servidor"}</strong><span>{serverNotFound ? "Esse servidor não está disponível para sua conta." : showServerListError ? "Tente novamente para carregar seus servidores." : "Um espaço persistente para suas conversas."}</span>{showServerListError ? <button type="button" className="secondary-button" onClick={() => refreshServers().catch(() => {})}>Tentar novamente</button> : <button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button>}</div>;
@@ -446,15 +592,26 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       {activeContentView === "media" ? <CallMediaView participants={serverVoice.participants} channelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || "Geral"} participantCount={serverVoice.participants.length} isInVoice={serverVoice.connected} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} volumeById={remoteVolumes} onVolumeChange={changeRemoteVolume} screenShareLabel={streamPreset.replace("p", "p · ").replace("30", "30 FPS").replace("60", "60 FPS")} notify={notify} /> : <section className="chat-stage channel-view">
       <div className="chat-stage-inner">
       <ChatHeader title={activeChannel?.name || (showServerEmpty ? "Seus servidores" : "Selecione um canal")} subtitle={server ? `${server.memberCount} membro${server.memberCount === 1 ? "" : "s"}` : ""} type={activeChannel?.type === "voice" ? "voice" : "text"} />
-      {serverCallParticipants.length > 0 && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name={hasServerScreenShare ? "screenShare" : "voice"} size={15} /><span>{hasServerScreenShare ? "Transmissao ativa" : "Chamada ativa"}</span><strong>Ver chamada</strong></button>}
+      {serverVoice.connected && serverVoice.participants.length > 0 && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name={hasServerScreenShare ? "screenShare" : "voice"} size={15} /><span>{hasServerScreenShare ? "Transmissao ativa" : "Chamada ativa"}</span><strong>Ver chamada</strong></button>}
       {error && <div className="server-error" role="alert">{error}<button type="button" className="icon-button" onClick={() => setError("")} aria-label="Fechar aviso"><Icon name="close" size={14} /></button></div>}
-       <ChatViewport>{showServerLoading || showServerListLoading ? <ServerLoadingState /> : serverNotFound ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Servidor indisponível</h2><p>Verifique o endereço ou volte para a lista de servidores.</p><button type="button" className="secondary-button" onClick={() => onNavigateServer?.("")}>Voltar aos servidores</button></div> : showServerListError ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Não foi possível carregar</h2><p>O shell está pronto, mas a lista de servidores não respondeu.</p><button type="button" className="secondary-button" onClick={() => refreshServers().catch(() => {})}>Tentar novamente</button></div> : showServerEmpty ? <div className="server-welcome server-state-message"><Icon name="server" size={30} /><h2>Crie seu primeiro servidor</h2><p>Um espaço persistente para conversar com as pessoas que importam.</p><button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button></div> : messages.length ? messages.map((message) => <article className="chat-message" key={message.id}><button type="button" className="message-avatar server-message-avatar" onClick={() => setProfileUser(message.sender)} aria-label={`Ver perfil de ${message.sender.displayName || message.sender.username}`}><UserAvatar user={message.sender} size={30} /></button><div className="message-body"><div className="message-meta"><strong>{message.sender.displayName || message.sender.username}</strong><time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("pt-BR")}</time><button type="button" className="server-reply-button" onClick={() => setReplyingTo(message)} title="Responder" aria-label="Responder"><Icon name="reply" size={13} /></button></div>{message.replyToMessageId && <small className="server-reply-ref">Respondendo a uma mensagem</small>}{message.deletedAt ? <p className="server-message-deleted">Mensagem removida.</p> : <p>{message.content}</p>}{!message.deletedAt && <div className="server-message-reactions">{(message.reactions || []).map((reaction) => <button type="button" key={reaction.emoji} className={reaction.reacted ? "is-active" : ""} onClick={() => toggleReaction(message.id, reaction.emoji)}>{reaction.emoji} <small>{reaction.count}</small></button>)}<button type="button" onClick={() => toggleReaction(message.id, "👍")} title="Adicionar reação" aria-label="Adicionar reação">+</button></div>}</div></article>) : <div className="server-welcome"><Icon name="hash" size={30} /><h2>Comece em #{activeChannel?.name || "geral"}</h2><p>Este é o início do histórico persistente deste canal.</p></div>}</ChatViewport>
+      <ChatViewport>{showServerLoading || showServerListLoading ? <ServerLoadingState /> : serverNotFound ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Servidor indisponível</h2><p>Verifique o endereço ou volte para a lista de servidores.</p><button type="button" className="secondary-button" onClick={() => onNavigateServer?.("")}>Voltar aos servidores</button></div> : showServerListError ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Não foi possível carregar</h2><p>O shell está pronto, mas a lista de servidores não respondeu.</p><button type="button" className="secondary-button" onClick={() => refreshServers().catch(() => {})}>Tentar novamente</button></div> : showServerEmpty ? <div className="server-welcome server-state-message"><Icon name="server" size={30} /><h2>Crie seu primeiro servidor</h2><p>Um espaço persistente para conversar com as pessoas que importam.</p><button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button></div> : messages.length ? messages.map(renderServerMessage) : <div className="server-welcome"><Icon name="hash" size={30} /><h2>Comece em #{activeChannel?.name || "geral"}</h2><p>Este é o início do histórico persistente deste canal.</p></div>}</ChatViewport>
       <div className="server-voice-audio-sinks" aria-hidden="true">{serverVoice.participants.filter((participant) => !participant.isLocal && !serverCallParticipants.some((visual) => visual.socketId === participant.socketId)).map((participant) => <AudioParticipant key={participant.socketId} peerSocketId={participant.socketId} stream={participant.stream || serverVoice.remoteStreams[participant.socketId]} volume={remoteVolumes[participant.socketId] ?? 100} isDeafened={isDeafened} />)}</div>
-      {activeChannel?.type === "text" && <ChatComposerFrame onSubmit={sendMessage}>{replyingTo && <div className="server-replying"><span>Respondendo a {replyingTo.sender.displayName || replyingTo.sender.username}</span><button type="button" className="icon-button" onClick={() => setReplyingTo(null)} aria-label="Cancelar resposta"><Icon name="close" size={13} /></button></div>}<ChatComposerRow><button type="button" className="icon-button" title="Anexos indisponíveis nesta primeira camada" aria-label="Anexos indisponíveis"><Icon name="plus" size={18} /></button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`Conversar em #${activeChannel.name}`} maxLength={4000} /><button type="submit" className="icon-button is-send" title="Enviar mensagem" aria-label="Enviar mensagem"><Icon name="send" size={16} /></button></ChatComposerRow></ChatComposerFrame>}
+      {activeChannel?.type === "text" && <ChatComposerFrame onSubmit={sendMessage}>
+        {replyingTo && <div className="server-replying"><span>Respondendo a {replyingTo.sender?.displayName || replyingTo.sender?.username || "mensagem"}</span><button type="button" className="icon-button" onClick={() => setReplyingTo(null)} aria-label="Cancelar resposta"><Icon name="close" size={13} /></button></div>}
+        {selectedFile && <div className="selected-file"><span>{selectedFile.name} ({formatServerFileSize(selectedFile.size)})</span><button type="button" onClick={() => setSelectedFile(null)} aria-label="Remover anexo" title="Remover anexo"><Icon name="close" size={14} /></button></div>}
+        <ChatComposerRow>
+          <button type="button" className="attach-button" onClick={() => { setIsAttachMenuOpen((current) => !current); setIsEmojiPickerOpen(false); }} disabled={isSending} title="Adicionar anexo" aria-label="Adicionar anexo" aria-haspopup="menu" aria-expanded={isAttachMenuOpen}><Icon name="plus" size={17} /></button>
+          {isAttachMenuOpen && <div className="composer-popover attach-menu" role="menu" aria-label="Adicionar anexo"><button type="button" role="menuitem" onClick={() => openServerFilePicker(MEDIA_ACCEPT)}><Icon name="image" size={15} /><span>Enviar imagem ou vídeo</span></button><button type="button" role="menuitem" onClick={() => openServerFilePicker(FILE_ACCEPT)}><Icon name="file" size={15} /><span>Enviar arquivo</span></button></div>}
+          <input ref={fileInputRef} className="visually-hidden" type="file" accept={fileAccept} onChange={handleServerFileChange} />
+          <textarea ref={messageInputRef} className="message-input" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleMessageKeyDown} placeholder={`Conversar em #${activeChannel.name}`} maxLength={4000} rows={1} disabled={isSending} aria-label={`Mensagem para #${activeChannel.name}`} />
+          <div className="composer-actions"><button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}>😊</button><button type="submit" className="send-button" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}>{isSending ? "Enviando" : "Enviar"}</button></div>
+          {isEmojiPickerOpen && <div className="composer-popover"><EmojiPicker onSelect={insertServerEmoji} /></div>}
+        </ChatComposerRow>
+      </ChatComposerFrame>}
       </div>
     </section>}
     </section>
-    <ParticipantsPanel heading="Membros" participants={memberParticipants} showMedia={false} onProfileClick={() => setProfileUser(user)} onParticipantClick={(member) => setProfileUser(member.rawUser || member)} />
+    <ParticipantsPanel heading="Membros" participants={memberParticipants} showMedia={false} showPresenceIndicator={false} onProfileClick={() => setProfileUser(user)} onParticipantClick={(member) => setProfileUser(member.rawUser || member)} />
     {profileUser && <SocialUserProfileModal userId={profileUser.id} initialUser={{ ...profileUser, status: "online" }} onClose={() => setProfileUser(null)} />}
     {settingsOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setSettingsOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-settings-title"><header><div><span className="section-label">SERVIDOR</span><h2 id="server-settings-title">Configurações do servidor</h2></div><button type="button" className="icon-button" onClick={() => setSettingsOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><form id="server-settings-form" onSubmit={submitServerSettings}><label className="field-label" htmlFor="server-settings-name">Nome do servidor</label><input id="server-settings-name" className="text-input" value={settingsName} onChange={(event) => { setSettingsName(event.target.value); setSettingsError(""); }} minLength={2} maxLength={60} autoFocus aria-invalid={Boolean(settingsError)} />{settingsError && <small className="field-error">{settingsError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setSettingsOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-settings-form" className="primary-button" disabled={serverActionBusy || settingsName.trim().length < 2}>{serverActionBusy ? "Salvando..." : "Salvar"}</button></footer></section></div>}
     {inviteOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setInviteOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-invite-title"><header><div><span className="section-label">CONVITE</span><h2 id="server-invite-title">Convidar para {server?.name}</h2></div><button type="button" className="icon-button" onClick={() => setInviteOpen(false)} aria-label="Fechar"><Icon name="close" size={16} /></button></header>{inviteError ? <p className="field-error">{inviteError}</p> : inviteLink ? <><label className="field-label" htmlFor="server-invite-link">Link de convite</label><input id="server-invite-link" className="text-input" value={inviteLink} readOnly onFocus={(event) => event.target.select()} /><footer><button type="button" className="secondary-button" onClick={() => setInviteOpen(false)}>Fechar</button><button type="button" className="primary-button" onClick={copyServerInvite}>Copiar convite</button></footer></> : <p>Gerando um convite...</p>}</section></div>}
@@ -462,6 +619,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     {deleteOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setDeleteOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-delete-title"><header><div><span className="section-label">AÇÃO PERMANENTE</span><h2 id="server-delete-title">Excluir servidor?</h2></div><button type="button" className="icon-button" onClick={() => setDeleteOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><p>Você está prestes a excluir permanentemente: <strong>{server?.name}</strong>. Canais, mensagens, membros, convites e configurações serão removidos. Esta ação não pode ser desfeita.</p><form id="server-delete-form" onSubmit={(event) => { event.preventDefault(); confirmDeleteServer(); }}><label className="field-label" htmlFor="server-delete-name">Digite o nome do servidor para confirmar:</label><input id="server-delete-name" className="text-input" value={deleteName} onChange={(event) => { setDeleteName(event.target.value); setDeleteError(""); }} autoFocus aria-invalid={Boolean(deleteError)} />{deleteError && <small className="field-error">{deleteError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setDeleteOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-delete-form" className="primary-button danger-action-button" disabled={serverActionBusy || deleteName !== server?.name}>{serverActionBusy ? "Excluindo..." : "Excluir servidor"}</button></footer></section></div>}
     {channelOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setChannelOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-channel-title"><header><div><span className="section-label">CANAIS</span><h2 id="server-channel-title">Criar canal</h2></div><button type="button" className="icon-button" onClick={() => setChannelOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><form id="server-channel-form" onSubmit={submitCreateChannel}><label className="field-label" htmlFor="server-channel-name">Nome</label><input id="server-channel-name" className="text-input" value={channelName} onChange={(event) => { setChannelName(event.target.value); setChannelError(""); }} maxLength={40} autoFocus aria-invalid={Boolean(channelError)} /><label className="field-label" htmlFor="server-channel-type">Tipo</label><select id="server-channel-type" className="text-input" value={channelType} onChange={(event) => setChannelType(event.target.value)}><option value="text">Texto</option><option value="voice">Voz</option></select>{channelError && <small className="field-error">{channelError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setChannelOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-channel-form" className="primary-button" disabled={serverActionBusy || !channelName.trim()}>{serverActionBusy ? "Criando..." : "Criar"}</button></footer></section></div>}
     {createOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-create-title"><header><div><span className="section-label">NOVO ESPAÇO</span><h2 id="server-create-title">Criar servidor</h2></div><button type="button" className="icon-button" onClick={() => setCreateOpen(false)} disabled={creating} aria-label="Fechar"><Icon name="close" size={16} /></button></header><p>Crie um espaço persistente para reunir suas conversas.</p><form id="server-create-form" onSubmit={submitCreateServer}><label className="field-label" htmlFor="server-create-name">Nome do servidor</label><input id="server-create-name" className="text-input" value={createName} onChange={(event) => { setCreateName(event.target.value); if (createError) setCreateError(""); }} placeholder="Ex.: Estudos" minLength={2} maxLength={60} autoFocus aria-invalid={Boolean(createError)} />{createError && <small className="field-error">{createError}</small>}<div className="server-create-note"><Icon name="info" size={15} /><span>A imagem do servidor poderá ser adicionada quando estiver persistida na conta.</span></div></form><footer><button type="button" className="secondary-button" onClick={() => setCreateOpen(false)} disabled={creating}>Cancelar</button><button type="submit" form="server-create-form" className="primary-button" disabled={creating || createName.trim().length < 2}>{creating ? "Criando..." : "Criar servidor"}</button></footer></section></div>}
+    {lightboxImage && <div className="dm-lightbox server-lightbox" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLightboxImage(null); }}><button type="button" className="icon-button dm-lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Fechar imagem" title="Fechar"><Icon name="close" size={20} /></button><img src={lightboxImage.source} alt={lightboxImage.alt || "Imagem ampliada"} /></div>}
     <ToastStack toasts={toasts} />
   </main>;
 }
