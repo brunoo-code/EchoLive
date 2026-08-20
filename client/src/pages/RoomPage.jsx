@@ -62,6 +62,20 @@ function getActualScreenLabel(settings, fallbackPreset) {
   return `${resolution} · ${Math.round(settings.frameRate)} FPS`;
 }
 
+function formatRoomRemaining(expiresAt, now = Date.now()) {
+  const remainingMs = Number(expiresAt) - now;
+  if (!Number.isFinite(remainingMs) || remainingMs <= 0) return "";
+
+  const totalMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+  if (totalMinutes >= 60) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h${minutes ? ` ${minutes}min` : ""} restantes`;
+  }
+
+  return `${totalMinutes}min restantes`;
+}
+
 export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateSocial, onNavigateDm, onNavigateServer }) {
   const { logout, updateProfile: updateAccountProfile, status: authStatus, user: accountUser } = useAuth();
   const { startConversation } = useSocial();
@@ -97,6 +111,10 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const [copyFallbackLink, setCopyFallbackLink] = useState("");
   const [authModalMode, setAuthModalMode] = useState(null);
   const [roomName, setRoomName] = useState("");
+  const [roomExpiresAt, setRoomExpiresAt] = useState(null);
+  const [roomExpiryNow, setRoomExpiryNow] = useState(Date.now());
+  const [roomExpiryWarning, setRoomExpiryWarning] = useState("");
+  const [isRoomExpired, setIsRoomExpired] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState("voice-general");
   const [activeContentView, setActiveContentView] = useState("media");
   const [messages, setMessages] = useState([]);
@@ -158,6 +176,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const speechFrameRef = useRef(null);
   const isInVoiceRef = useRef(true);
   const statsHistoryRef = useRef(new Map());
+  const roomExpiryWarningsRef = useRef(new Set());
 
   const inviteLink = useMemo(() => `${window.location.origin}/room/${roomCode}`, [roomCode]);
 
@@ -182,6 +201,46 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   useEffect(() => {
     localStorage.setItem(CONFIRM_LEAVE_KEY, String(confirmLeaveRoom));
   }, [confirmLeaveRoom]);
+
+  useEffect(() => {
+    roomExpiryWarningsRef.current.clear();
+    setRoomExpiresAt(null);
+    setRoomExpiryNow(Date.now());
+    setRoomExpiryWarning("");
+    setIsRoomExpired(false);
+  }, [roomCode]);
+
+  useEffect(() => {
+    if (!roomExpiresAt) return undefined;
+
+    function updateRoomExpiry() {
+      const remainingMs = Number(roomExpiresAt) - Date.now();
+      const now = Date.now();
+      setRoomExpiryNow(now);
+
+      if (!Number.isFinite(remainingMs) || remainingMs <= 0) {
+        return;
+      }
+
+      const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+      const warning = remainingMs <= 5 * 60 * 1000
+        ? { key: "5", label: `${remainingMinutes} minuto${remainingMinutes === 1 ? "" : "s"}` }
+        : remainingMs <= 15 * 60 * 1000
+          ? { key: "15", label: `${remainingMinutes} minuto${remainingMinutes === 1 ? "" : "s"}` }
+          : null;
+
+      if (warning && !roomExpiryWarningsRef.current.has(warning.key)) {
+        roomExpiryWarningsRef.current.add(warning.key);
+        const message = `Sala expira em ${warning.label}.`;
+        setRoomExpiryWarning(message);
+        notify(message);
+      }
+    }
+
+    updateRoomExpiry();
+    const timer = window.setInterval(updateRoomExpiry, 60000);
+    return () => window.clearInterval(timer);
+  }, [notify, roomExpiresAt]);
 
   useEffect(() => {
     if (!isProfilePopoverOpen) return undefined;
@@ -286,6 +345,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     }
     setNickname(cleanNickname);
     setRoomError("");
+    setIsRoomExpired(false);
     setJoinState("joining");
     iceConfigRef.current = await getPeerConnectionConfig();
 
@@ -339,7 +399,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       });
     });
 
-    socket.on("room-users", async ({ self, participants, voiceParticipants, count, maxParticipants, roomName: joinedRoomName }) => {
+    socket.on("room-users", async ({ self, participants, voiceParticipants, count, maxParticipants, roomName: joinedRoomName, expiresAt }) => {
       if (requestedAuthenticated && self?.isGuest) {
         setRoomError("A sessao da conta nao foi reconhecida nesta conexao.");
         setJoinState("error");
@@ -358,6 +418,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       setParticipantCount(count);
       setMaxParticipants(maxParticipants || 10);
       setRoomName(joinedRoomName || `Sala ${roomCode}`);
+      setRoomExpiresAt(expiresAt || null);
       setRoomParticipants(participants);
       setIsInVoice(true);
       isInVoiceRef.current = true;
@@ -366,13 +427,14 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       emitMediaStatus();
     });
 
-    socket.on("room-roster", ({ participants: nextParticipants, voiceParticipants: nextVoiceParticipants, count, maxParticipants, roomName: joinedRoomName } = {}) => {
+    socket.on("room-roster", ({ participants: nextParticipants, voiceParticipants: nextVoiceParticipants, count, maxParticipants, roomName: joinedRoomName, expiresAt } = {}) => {
       const safeParticipants = Array.isArray(nextParticipants) ? nextParticipants : [];
       const safeVoiceParticipants = Array.isArray(nextVoiceParticipants) ? nextVoiceParticipants : [];
 
       setParticipantCount(Number.isInteger(count) ? count : safeParticipants.length);
       setMaxParticipants(maxParticipants || 10);
       setRoomName(joinedRoomName || `Sala ${roomCode}`);
+      if (expiresAt) setRoomExpiresAt(expiresAt);
       setRoomParticipants(safeParticipants.filter((participant) => participant.socketId !== socket.id));
 
       if (isInVoiceRef.current) {
@@ -400,10 +462,11 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       notify(message || "Nao foi possivel enviar a mensagem.");
     });
 
-    socket.on("user-joined", async ({ participant, participants, voiceParticipants, count, maxParticipants, roomName: joinedRoomName }) => {
+    socket.on("user-joined", async ({ participant, participants, voiceParticipants, count, maxParticipants, roomName: joinedRoomName, expiresAt }) => {
       setParticipantCount(count);
       setMaxParticipants(maxParticipants || 10);
       setRoomName(joinedRoomName || `Sala ${roomCode}`);
+      if (expiresAt) setRoomExpiresAt(expiresAt);
       setRoomParticipants(participants.filter((item) => item.socketId !== socket.id));
       if (isInVoiceRef.current) {
         upsertRemoteParticipants((voiceParticipants || [participant]).filter((item) => item.socketId !== socket.id));
@@ -500,11 +563,25 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
 
     socket.on("room-error", ({ message }) => {
       setRoomError(message);
+      setIsRoomExpired(String(message || "").toLowerCase().includes("expir"));
       notify(message);
       setJoinState("error");
       socket.disconnect();
       connectionStartedRef.current = false;
       cleanupLocalMedia();
+    });
+
+    socket.on("room-expired", ({ message, detail } = {}) => {
+      setRoomError([message || "Esta Sala Rápida expirou.", detail].filter(Boolean).join(" "));
+      setIsRoomExpired(true);
+      setHasJoined(false);
+      setJoinState("error");
+      setIsInVoice(false);
+      isInVoiceRef.current = false;
+      setRoomExpiresAt(null);
+      setRoomExpiryWarning("");
+      notify(message || "Esta Sala Rápida expirou.");
+      cleanupRoom();
     });
 
     socket.on("connect_error", () => {
@@ -1025,6 +1102,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     setSocketInstance(null);
     hasJoinedRef.current = false;
     connectionStartedRef.current = false;
+    setRoomExpiresAt(null);
+    setRoomExpiryWarning("");
   }
 
   function leaveRoom() {
@@ -1335,9 +1414,12 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         <section className="home-panel">
           <h1>EchoLive</h1>
           <p className="error-message">{roomError}</p>
-          <button className="primary-button" type="button" onClick={onBack}>
-            Voltar
-          </button>
+          {isRoomExpired ? (
+            <div className="room-expired-actions">
+              <button className="primary-button" type="button" onClick={onBack}>Criar nova sala</button>
+              <button className="secondary-button" type="button" onClick={onBack}>Voltar ao início</button>
+            </div>
+          ) : <button className="primary-button" type="button" onClick={onBack}>Voltar</button>}
         </section>
       </main>
     );
@@ -1371,6 +1453,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const voiceParticipants = isInVoice ? [localParticipant, ...remoteParticipants] : [];
   const currentParticipantCount = Math.max(participantCount, onlineParticipants.length);
   const connectionQuality = !isInVoice ? "Offline" : rtcDiagnostics.some((diagnostic) => diagnostic.connectionState === "failed" || diagnostic.warnings.length) ? "Instavel" : "Boa";
+  const roomExpiryLabel = formatRoomRemaining(roomExpiresAt, roomExpiryNow);
   const callParticipants = voiceParticipants.filter(
     (participant) => participant.isScreenSharing || (participant.cameraEnabled && participant.stream)
   ).sort(
@@ -1402,6 +1485,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       <Sidebar
         roomCode={roomCode}
         roomName={roomName}
+        roomExpiryLabel={roomExpiryLabel}
+        roomExpiryWarning={roomExpiryWarning}
         participantCount={currentParticipantCount}
         maxParticipants={maxParticipants}
         participants={voiceParticipants}

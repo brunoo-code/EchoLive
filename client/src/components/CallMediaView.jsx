@@ -23,10 +23,18 @@ export default function CallMediaView({
     .filter((participant) => participant && participant.inRoom !== false)
     .slice()
     .sort((left, right) => Number(right.isScreenSharing) - Number(left.isScreenSharing));
-  const focusedParticipant = callParticipants.find((participant) => participant.socketId === focusedMediaId) || callParticipants[0];
+  const hasVisualMedia = callParticipants.some((participant) => Boolean(
+    participant.stream && (participant.isScreenSharing || participant.cameraEnabled)
+  ));
+  const focusedParticipant = callParticipants.find((participant) => participant.socketId === focusedMediaId)
+    || callParticipants.find((participant) => participant.stream && (participant.isScreenSharing || participant.cameraEnabled))
+    || callParticipants[0];
   const countLabel = Number.isFinite(maxParticipants) ? `${participantCount}/${maxParticipants}` : participantCount;
 
   function focusParticipant(socketId) {
+    if (!hasVisualMedia) return;
+    const participant = callParticipants.find((item) => item.socketId === socketId);
+    if (!participant?.stream || (!participant.isScreenSharing && !participant.cameraEnabled)) return;
     onFocusParticipant?.(socketId);
     onViewModeChange?.("focus");
   }
@@ -59,7 +67,7 @@ export default function CallMediaView({
           <span>Participantes: {countLabel}</span>
           <div className="call-view-controls" aria-label="Modo de visualizacao">
             <button type="button" className={viewMode === "grid" ? "is-selected" : ""} onClick={() => onViewModeChange?.("grid")} aria-pressed={viewMode === "grid"}>Grade</button>
-            <button type="button" className={viewMode === "focus" ? "is-selected" : ""} onClick={() => { onViewModeChange?.("focus"); if (!focusedMediaId) onFocusParticipant?.(callParticipants[0]?.socketId || ""); }} aria-pressed={viewMode === "focus"} disabled={!callParticipants.length}>Foco</button>
+            <button type="button" className={viewMode === "focus" ? "is-selected" : ""} onClick={() => { if (!hasVisualMedia) return; onViewModeChange?.("focus"); if (!focusedMediaId) onFocusParticipant?.(focusedParticipant?.socketId || ""); }} aria-pressed={viewMode === "focus"} disabled={!hasVisualMedia}>Foco</button>
           </div>
         </div>
       </header>
@@ -70,7 +78,7 @@ export default function CallMediaView({
       {!isInVoice ? (
         <section className="voice-empty-surface" aria-label="Canal de voz vazio" />
       ) : callParticipants.length > 0 ? (
-        viewMode === "focus" && focusedParticipant ? (
+        viewMode === "focus" && hasVisualMedia && focusedParticipant ? (
           <section className="focus-layout">
             <div className="focus-main">{renderParticipantCard(focusedParticipant)}</div>
             <div className="focus-thumbnails">

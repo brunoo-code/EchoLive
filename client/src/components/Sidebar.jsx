@@ -8,6 +8,8 @@ import { useState } from "react";
 export default function Sidebar({
   roomCode,
   roomName,
+  roomExpiryLabel = "",
+  roomExpiryWarning = "",
   participantCount,
   maxParticipants,
   participants,
@@ -97,6 +99,8 @@ export default function Sidebar({
         <p className="sidebar-count">
           Participantes: {participantCount}/{maxParticipants || "-"}
         </p>
+        {roomExpiryLabel && <p className="sidebar-expiry">Sala temporaria · {roomExpiryLabel}</p>}
+        {roomExpiryWarning && <div className="sidebar-expiry-warning" role="status">{roomExpiryWarning}</div>}
         {copyFallbackLink && (
           <label className="field compact-field">
             <span>Copie manualmente</span>

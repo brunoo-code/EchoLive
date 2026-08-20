@@ -8,6 +8,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
   const [remoteParticipants, setRemoteParticipants] = useState([]);
   const [remoteStreams, setRemoteStreams] = useState({});
   const [localStream, setLocalStream] = useState(null);
+  const [screenStream, setScreenStream] = useState(null);
   const [micEnabled, setMicEnabled] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -87,6 +88,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
       audioTrackRef.current = null;
       cameraTrackRef.current = null;
       setLocalStream(null);
+      setScreenStream(null);
       setMicEnabled(false);
       setCameraEnabled(false);
       setIsScreenSharing(false);
@@ -231,6 +233,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     engineRef.current?.replaceTrack("video", cameraTrackRef.current);
     engineRef.current?.replaceTrack("audio", audioTrackRef.current);
     setIsScreenSharing(false);
+    setScreenStream(null);
     socket?.emit("screen-share-status", { isScreenSharing: false });
     socket?.emit("server:voice-media-status", {
       micEnabled: Boolean(audioTrackRef.current?.enabled),
@@ -251,6 +254,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
       if (!track) return;
       screenStreamRef.current = stream;
       screenTrackRef.current = track;
+      setScreenStream(stream);
       const displayAudioTrack = stream.getAudioTracks()[0] || null;
       if (displayAudioTrack) {
         const mixedAudio = createMixedAudioTrack(displayAudioTrack, audioTrackRef.current);
@@ -285,7 +289,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     isSpeaking: false,
     micEnabled,
     cameraEnabled,
-    stream: localStream
+    stream: isScreenSharing ? screenStream || localStream : localStream
   } : null;
   const participants = localParticipant && connected ? [localParticipant, ...remoteParticipants] : remoteParticipants;
 
@@ -294,6 +298,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     participants,
     remoteStreams,
     localStream,
+    screenStream,
     micEnabled,
     cameraEnabled,
     isScreenSharing,

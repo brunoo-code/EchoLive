@@ -42,6 +42,7 @@ import {
   leaveVoice,
   normalizeNickname,
   normalizeRoomCode,
+  setRoomExpiryHandler,
   updateParticipantMediaStatus,
   updateParticipantSpeakingStatus,
   updateParticipantNickname
@@ -86,6 +87,15 @@ function uploadKind(mimeType) {
 
 function uploadLimitFor(mimeType) {
   return UPLOAD_LIMITS[uploadKind(mimeType)];
+}
+
+function formatRoomDuration(ttlMs) {
+  const totalMinutes = Math.max(1, Math.round(Number(ttlMs) / 60000));
+  if (totalMinutes % 60 === 0) {
+    const hours = totalMinutes / 60;
+    return `${hours} hora${hours === 1 ? "" : "s"}`;
+  }
+  return `${totalMinutes} minuto${totalMinutes === 1 ? "" : "s"}`;
 }
 
 const app = express();
@@ -271,6 +281,18 @@ const io = new Server(httpServer, {
   }
 });
 
+setRoomExpiryHandler(({ roomCode, participants, ttlMs }) => {
+  io.to(roomCode).emit("room-expired", {
+    roomCode,
+    participants,
+    message: "Esta Sala Rápida expirou.",
+    detail: `A conversa foi encerrada após ${formatRoomDuration(ttlMs)}.`
+  });
+  participants.forEach((participant) => {
+    io.sockets.sockets.get(participant.socketId)?.leave(roomCode);
+  });
+});
+
 configureSocialSocket(io);
 io.use(async (socket, next) => {
   const sessionCookiePresent = Boolean(getSessionTokenFromCookieHeader(socket.handshake.headers.cookie || ""));
@@ -306,10 +328,13 @@ function emitRoomError(socket, message) {
 function emitRoomRoster(roomCode) {
   const code = normalizeRoomCode(roomCode);
   const participants = getParticipants(code);
+  const details = getRoomDetails(code);
 
   io.to(code).emit("room-roster", {
     roomCode: code,
-    roomName: getRoomDetails(code).name,
+    roomName: details.name,
+    createdAt: details.createdAt,
+    expiresAt: details.expiresAt,
     participants,
     voiceParticipants: getVoiceParticipants(code),
     count: participants.length,
@@ -389,7 +414,9 @@ io.on("connection", (socket) => {
 
     socket.emit("room-created", {
       roomCode: result.room.code,
-      roomName: result.room.name
+      roomName: result.room.name,
+      createdAt: result.room.createdAt,
+      expiresAt: result.room.expiresAt
     });
   });
 
@@ -400,11 +427,6 @@ io.on("connection", (socket) => {
 
     if (!isValidRoomCode(code)) {
       emitRoomError(socket, "Codigo de sala invalido.");
-      return;
-    }
-
-    if (!hasRoom(code)) {
-      emitRoomError(socket, "Sala nao encontrada.");
       return;
     }
 
@@ -457,10 +479,13 @@ io.on("connection", (socket) => {
     const existingParticipants = result.participants.filter(
       (participant) => participant.socketId !== socket.id
     );
+    const roomDetails = getRoomDetails(code);
 
     socket.emit("room-users", {
       roomCode: code,
       roomName: result.roomName,
+      createdAt: roomDetails.createdAt,
+      expiresAt: roomDetails.expiresAt,
       self: result.participant,
       participants: existingParticipants,
       voiceParticipants: getVoiceParticipants(code).filter((participant) => participant.socketId !== socket.id),
@@ -485,6 +510,8 @@ io.on("connection", (socket) => {
     socket.to(code).emit("user-joined", {
       participant: result.participant,
       roomName: result.roomName,
+      createdAt: roomDetails.createdAt,
+      expiresAt: roomDetails.expiresAt,
       participants: result.participants,
       voiceParticipants: getVoiceParticipants(code),
       count: result.participants.length,

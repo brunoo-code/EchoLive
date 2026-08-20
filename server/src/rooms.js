@@ -14,7 +14,43 @@ const socketRooms = new Map();
 const roomMessages = new Map();
 const roomDetails = new Map();
 const roomExpiryTimers = new Map();
-const TEMPORARY_ROOM_TTL_MS = 24 * 60 * 60 * 1000;
+const expiredRoomCodes = new Set();
+const DEFAULT_TEMPORARY_ROOM_TTL_MS = 5 * 60 * 60 * 1000;
+const configuredRoomTtl = Number(process.env.QUICK_ROOM_TTL_MS);
+const TEMPORARY_ROOM_TTL_MS = Number.isFinite(configuredRoomTtl) && configuredRoomTtl > 0
+  ? configuredRoomTtl
+  : DEFAULT_TEMPORARY_ROOM_TTL_MS;
+let roomExpiryHandler = null;
+
+export function setRoomExpiryHandler(handler) {
+  roomExpiryHandler = typeof handler === "function" ? handler : null;
+}
+
+function createRoomDetails(code, name) {
+  const createdAt = Date.now();
+  return {
+    code,
+    name: normalizeRoomName(name, code),
+    createdAt,
+    expiresAt: createdAt + TEMPORARY_ROOM_TTL_MS
+  };
+}
+
+function expireRoom(code) {
+  const room = rooms.get(code);
+  if (!room) return;
+
+  const participants = Array.from(room.values());
+  expiredRoomCodes.add(code);
+  cancelRoomExpiry(code);
+  rooms.delete(code);
+  roomVoiceUsers.delete(code);
+  roomMessages.delete(code);
+  roomDetails.delete(code);
+  participants.forEach((participant) => socketRooms.delete(participant.socketId));
+  roomExpiryHandler?.({ roomCode: code, participants, ttlMs: TEMPORARY_ROOM_TTL_MS });
+  console.log(`[ROOM] expired ${code}`);
+}
 
 function cancelRoomExpiry(code) {
   const timer = roomExpiryTimers.get(code);
@@ -24,16 +60,11 @@ function cancelRoomExpiry(code) {
 
 function scheduleRoomExpiry(code) {
   cancelRoomExpiry(code);
+  const expiresAt = roomDetails.get(code)?.expiresAt || Date.now() + TEMPORARY_ROOM_TTL_MS;
+  const delay = Math.max(0, expiresAt - Date.now());
   roomExpiryTimers.set(code, setTimeout(() => {
-    if ((rooms.get(code)?.size || 0) === 0) {
-      rooms.delete(code);
-      roomVoiceUsers.delete(code);
-      roomMessages.delete(code);
-      roomDetails.delete(code);
-      console.log(`[ROOM] expired ${code}`);
-    }
-    roomExpiryTimers.delete(code);
-  }, TEMPORARY_ROOM_TTL_MS));
+    expireRoom(code);
+  }, delay));
 }
 
 export function normalizeRoomCode(code) {
@@ -76,7 +107,9 @@ export function createRoomCode() {
   rooms.set(code, new Map());
   roomVoiceUsers.set(code, new Set());
   roomMessages.set(code, []);
-  roomDetails.set(code, { code, name: normalizeRoomName("", code) });
+  expiredRoomCodes.delete(code);
+  roomDetails.set(code, createRoomDetails(code, ""));
+  scheduleRoomExpiry(code);
   console.log(`[ROOM] created ${code}`);
   return code;
 }
@@ -108,8 +141,10 @@ export function createRoom(roomCode, roomName) {
   rooms.set(code, new Map());
   roomVoiceUsers.set(code, new Set());
   roomMessages.set(code, []);
-  const details = { code, name: normalizeRoomName(roomName, code) };
+  expiredRoomCodes.delete(code);
+  const details = createRoomDetails(code, roomName);
   roomDetails.set(code, details);
+  scheduleRoomExpiry(code);
   console.log(`[ROOM] created ${code}`);
   return { ok: true, room: details };
 }
@@ -128,10 +163,8 @@ export function joinRoom(roomCode, socketId, nickname, identity = {}) {
   const room = rooms.get(code);
 
   if (!room) {
-    return { ok: false, error: "Sala nao encontrada." };
+    return { ok: false, error: expiredRoomCodes.has(code) ? "Esta Sala Rápida expirou." : "Sala nao encontrada." };
   }
-
-  cancelRoomExpiry(code);
 
   if (room.size >= MAX_PARTICIPANTS_PER_ROOM && !room.has(socketId)) {
     return { ok: false, error: "Sala cheia." };
@@ -214,9 +247,6 @@ export function leaveRoom(socketId) {
       console.log(`[ROOM] ${participant.nickname} left ${roomCode}`);
     }
 
-    if (room.size === 0) {
-      scheduleRoomExpiry(roomCode);
-    }
   }
 
   socketRooms.delete(socketId);
@@ -274,7 +304,7 @@ export function getMaxParticipantsPerRoom() {
 
 export function getRoomDetails(roomCode) {
   const code = normalizeRoomCode(roomCode);
-  return roomDetails.get(code) || { code, name: `Sala ${code}` };
+  return roomDetails.get(code) || { code, name: `Sala ${code}`, createdAt: null, expiresAt: null };
 }
 
 export function updateParticipantNickname(socketId, nickname) {

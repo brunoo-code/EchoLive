@@ -567,7 +567,6 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
         {isGrouped ? <div className="message-avatar-placeholder server-message-time" aria-hidden="true"><time dateTime={message.createdAt}>{formatServerTime(message.createdAt)}</time></div> : <button type="button" className="message-avatar server-message-avatar" onClick={() => setProfileUser(message.sender)} aria-label={`Ver perfil de ${senderName}`}><UserAvatar user={message.sender} size={30} /></button>}
         <div className="message-body">
           {!isGrouped && <div className="message-meta"><strong>{senderName}</strong><time dateTime={message.createdAt} title={formatServerDateTime(message.createdAt)}>{formatServerTime(message.createdAt)}</time></div>}
-          {isGrouped && <time className="server-grouped-time" dateTime={message.createdAt}>{formatServerTime(message.createdAt)}</time>}
           {replyTarget && <button type="button" className="server-reply-ref" onClick={() => document.getElementById(`server-message-${replyTarget.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}>Respondendo a <strong>{replyTarget.sender?.displayName || replyTarget.sender?.username || "uma mensagem"}</strong>{replyTarget.content ? `: ${replyTarget.content.slice(0, 100)}` : ""}</button>}
           {message.deletedAt ? <p className="server-message-deleted">Mensagem removida.</p> : message.content ? <p>{linkifyMessage(message.content)}</p> : null}
           {attachment && attachmentSource && <div className="message-attachment server-message-attachment">
