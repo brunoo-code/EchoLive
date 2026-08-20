@@ -5,6 +5,7 @@ import Icon from "./Icon.jsx";
 import EmojiPicker from "./EmojiPicker.jsx";
 import { validateUploadFile } from "../utils/uploadLimits.js";
 import { linkifyMessage } from "../utils/linkifyMessage.js";
+import { ChatComposerFrame, ChatComposerRow, ChatHeader, ChatViewport } from "./ChatFrame.jsx";
 
 const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
 const FILE_ACCEPT = "application/pdf,application/zip,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,.docx,.xlsx,.pptx";
@@ -220,14 +221,9 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
 
   return (
     <section className="chat-stage-inner" aria-label="Canal de texto geral">
-      <header className="chat-header">
-        <div>
-          <p className="channel-title"><span aria-hidden="true">#</span> geral</p>
-          <p className="channel-subtitle">Converse com os participantes da sala.</p>
-        </div>
-      </header>
+      <ChatHeader title="geral" subtitle="Converse com os participantes da sala." />
 
-      <div className="message-list" aria-live="polite">
+      <ChatViewport>
         {messages.length === 0 && (
           <div className="empty-chat">
             <div className="empty-chat-icon" aria-hidden="true">#</div>
@@ -273,21 +269,21 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           </article>
           );
         })}
-      </div>
+      </ChatViewport>
 
       <div className={`typing-indicator${typingUsers.length ? " is-active" : ""}`} aria-live="polite" aria-atomic="true">
         <span className="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
         <span>{typingUsers.length ? renderTypingLabel() : " "}</span>
       </div>
 
-      <form className="chat-composer" onSubmit={sendMessage}>
+      <ChatComposerFrame onSubmit={sendMessage}>
         {selectedFile && (
           <div className="selected-file">
             <span>{selectedFile.name} ({formatSize(selectedFile.size)})</span>
             <button type="button" onClick={() => setSelectedFile(null)} aria-label="Remover anexo" title="Remover anexo"><Icon name="close" size={14} /></button>
           </div>
         )}
-        <div className="composer-row">
+        <ChatComposerRow>
           <button type="button" className="attach-button" onClick={() => { setIsAttachMenuOpen((current) => !current); setIsEmojiPickerOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Adicionar anexo" aria-label="Adicionar anexo" aria-haspopup="menu" aria-expanded={isAttachMenuOpen}>
             <Icon name="plus" size={17} />
           </button>
@@ -329,8 +325,8 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
             <strong>Figurinhas do Eko</strong>
             <span>As figurinhas oficiais serão adicionadas aqui.</span>
           </div>}
-        </div>
-      </form>
+        </ChatComposerRow>
+      </ChatComposerFrame>
     </section>
   );
 }
