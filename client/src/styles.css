@@ -6643,7 +6643,7 @@ video.screen-video {
 .rail-server-divider { margin-top: 2px; }
 .rail-server { border-radius: 12px; color: #f4f7fb; }
 .rail-server:hover, .rail-server.is-active { filter: saturate(1.15); box-shadow: 0 0 0 2px rgba(103,212,229,.22); }
-.server-page { display: grid; grid-template-columns: 58px 228px minmax(0, 1fr) 238px; gap: 12px; }
+.server-page { display: grid; grid-template-columns: var(--rail-width, 54px) var(--sidebar-width, 256px) minmax(0, 1fr) var(--members-width, 224px); gap: 0; min-height: 100dvh; padding: 0; }
 .server-sidebar, .server-members-panel { display: flex; min-height: 0; flex-direction: column; overflow: hidden; border-color: var(--room-line, rgba(255,255,255,.1)); border-radius: 10px; background: var(--room-panel, #11151c); box-shadow: none; }
 .server-sidebar-header, .server-main-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 64px; padding: 0 16px; border-bottom: 1px solid var(--room-line, rgba(255,255,255,.1)); }
 .server-sidebar-header > div { display: grid; min-width: 0; gap: 4px; }
@@ -6747,6 +6747,120 @@ video.screen-video {
 .server-page-gate { display: grid; min-height: 100vh; place-items: center; background: var(--echo-bg, #0d1117); }
 @media (max-width: 1100px) { .server-page { grid-template-columns: 58px 220px minmax(0, 1fr); }.server-members-panel { display: none; } }
 @media (max-width: 720px) { .server-page { display: block; }.server-page .room-rail { display: none; }.server-sidebar { min-height: 250px; border-radius: 0; }.server-main { min-height: 70vh; border-radius: 0; }.server-channel-list { max-height: 220px; }.server-sidebar-footer { display: none; } }
+
+/* Keep the permanent server on the same compact chat frame as RoomPage. */
+.server-page .room-rail,
+.server-page .server-sidebar,
+.server-page .server-members-panel {
+  height: 100dvh;
+  border-radius: 0;
+  box-shadow: none;
+}
+.server-page .server-sidebar,
+.server-page .server-members-panel {
+  border-width: 0 1px 0 0;
+  padding: 0;
+}
+.server-page .server-sidebar-header,
+.server-page .server-main-header {
+  min-height: var(--room-header-height, 56px);
+  padding: 0 16px;
+}
+.server-page .server-main-header {
+  background: rgba(25, 29, 36, .3);
+}
+.server-page .server-main-header .channel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  font-size: .86rem;
+  font-weight: 650;
+}
+.server-page .server-main-header .channel-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.server-page .server-main-header .channel-subtitle {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--room-muted, #91a0aa);
+  font-size: .64rem;
+}
+.server-page .server-message-list {
+  padding: 12px max(20px, 4vw);
+}
+.server-page .server-message {
+  max-width: 920px;
+  margin-inline: auto;
+  padding: 6px 8px;
+  border-radius: 5px;
+}
+.server-page .server-message:first-child { margin-top: 0; }
+.server-page .server-welcome {
+  align-content: start;
+  min-height: 0;
+  padding: 58px 20px;
+}
+.server-page .server-composer {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 7px max(14px, 3vw) 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.server-page .server-composer .composer-row {
+  min-height: 38px;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(25, 29, 36, .68);
+}
+.server-page .server-composer .composer-row input {
+  min-height: 30px;
+  font-size: .76rem;
+}
+.server-page .server-composer .composer-row .icon-button {
+  min-height: 30px;
+}
+.server-page .server-members-panel {
+  border-width: 0 0 0 1px;
+  padding: 0 10px;
+  background: #15181e;
+}
+.server-page .server-members-heading {
+  flex: 0 0 var(--room-header-height, 56px);
+  min-height: var(--room-header-height, 56px);
+  margin: 0;
+  padding: 0 3px;
+  border-bottom: 1px solid var(--room-line, rgba(255, 255, 255, .1));
+  font-size: .75rem;
+}
+.server-page .server-members-heading > span { display: flex; align-items: center; gap: 7px; }
+.server-page .server-members-heading .online-indicator { width: 7px; height: 7px; }
+.server-page .server-members-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 1px;
+  margin-top: 0;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.server-page .server-member-row {
+  grid-template-columns: 30px minmax(0, 1fr);
+  min-height: 42px;
+  gap: 7px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 5px;
+}
+.server-page .server-member-row:hover,
+.server-page .server-member-row:focus-visible { background: rgba(255, 255, 255, .055); }
+.server-page .server-member-row strong { font-size: .75rem; }
+.server-page .server-member-row small { font-size: .62rem; }
 
 .server-create-backdrop { z-index: 100; }
 .server-create-modal { width: min(460px, calc(100vw - 32px)); border: 1px solid var(--room-line, rgba(255,255,255,.12)); border-radius: 14px; background: var(--room-panel, #161b23); box-shadow: 0 24px 80px rgba(0,0,0,.44); padding: 22px; color: var(--room-text, #ecf1f5); }
