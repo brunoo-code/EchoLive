@@ -7073,8 +7073,8 @@ video.screen-video {
 .server-page .server-chat-message {
   grid-template-columns: 32px minmax(0, 1fr);
   column-gap: 12px;
-  width: min(100%, 980px);
-  margin-inline: auto;
+  width: 100%;
+  margin-inline: 0;
   padding: 4px 10px;
   border-radius: 6px;
 }
@@ -7123,6 +7123,18 @@ video.screen-video {
   object-fit: contain;
   border-radius: 6px;
 }
+.server-page .server-image-button.is-broken {
+  display: grid;
+  min-height: 64px;
+  place-items: center;
+  color: var(--room-muted, #91a0aa);
+  background: rgba(255,255,255,.03);
+}
+.server-page .server-image-button.is-broken::after {
+  content: "Imagem indisponível";
+  padding: 12px;
+  font-size: .68rem;
+}
 .server-page .server-message-attachment > span {
   max-width: 100%;
   overflow: hidden;
@@ -7131,3 +7143,13 @@ video.screen-video {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.server-typing { display:flex; align-items:center; gap:7px; min-height:18px; padding:0 4px 4px; color:var(--room-muted, #91a0aa); font-size:.66rem; }
+.server-typing .typing-dots { display:inline-flex; gap:2px; }
+.server-typing .typing-dots i { width:4px; height:4px; border-radius:50%; background:currentColor; animation:typing-bounce 900ms ease-in-out infinite; }
+.server-typing .typing-dots i:nth-child(2) { animation-delay:.14s; }
+.server-typing .typing-dots i:nth-child(3) { animation-delay:.28s; }
+.server-message-edit-form { display:grid; gap:6px; }
+.server-message-edit-form textarea { width:100%; min-height:58px; resize:vertical; border:1px solid var(--room-line); border-radius:7px; color:var(--room-text); background:rgba(255,255,255,.045); padding:7px 8px; font:inherit; }
+.server-message-edit-form > div { display:flex; gap:6px; }
+.server-message-edit-form .primary-button, .server-message-edit-form .secondary-button { min-height:28px; padding:0 9px; font-size:.68rem; }
+.edited-message-label { color:var(--room-muted); font-size:.62rem; }

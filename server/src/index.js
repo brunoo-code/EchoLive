@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import crypto from "node:crypto";
 import { unlink } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -54,6 +54,7 @@ const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || process.env.RENDER_EXTERNAL_U
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST_DIR = path.resolve(SERVER_DIR, "../../client/dist");
 const UPLOAD_DIR = path.resolve(SERVER_DIR, "../uploads");
+mkdirSync(UPLOAD_DIR, { recursive: true });
 const UPLOAD_LIMITS = Object.freeze({ image: 15 * 1024 * 1024, video: 50 * 1024 * 1024, file: 25 * 1024 * 1024 });
 const MAX_UPLOAD_SIZE = UPLOAD_LIMITS.video;
 const ALLOWED_UPLOADS = new Map([

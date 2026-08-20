@@ -53,12 +53,18 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const listedConversation = conversations.find((item) => item.id === conversationId) || null;
   const [conversationSnapshot, setConversationSnapshot] = useState(() => initialConversation?.id === conversationId ? initialConversation : null);
   const officialFirstOpenRef = useRef(false);
+  const draftKey = conversationId ? `echolive.dmDrafts.${conversationId}` : "";
   useEffect(() => {
     if (listedConversation) setConversationSnapshot(listedConversation);
   }, [listedConversation]);
   useEffect(() => {
     if (initialConversation?.id === conversationId) setConversationSnapshot(initialConversation);
   }, [conversationId, initialConversation]);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    try { setText(localStorage.getItem(draftKey) || ""); } catch { setText(""); }
+  }, [draftKey]);
   const conversation = listedConversation || (conversationSnapshot?.id === conversationId ? conversationSnapshot : null);
   const otherUser = conversation?.user;
   const isOfficial = Boolean(otherUser?.isOfficial);
@@ -241,7 +247,9 @@ export default function DirectMessagePage({ conversationId, initialConversation,
 
   function handleTypingInput(value) {
     if (isOfficial) return;
-    setText(value.slice(0, 4000));
+    const nextText = value.slice(0, 4000);
+    setText(nextText);
+    try { if (draftKey) localStorage.setItem(draftKey, nextText); } catch {}
     if (!socket || !conversationId || !conversationReady) return;
     socket.emit("dm:typing", { conversationId, typing: true });
     window.clearTimeout(typingTimerRef.current);
@@ -263,6 +271,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       if (savedMessage) setMessages((current) => appendUniqueMessage(current, savedMessage, conversationId));
       playUiSound("dmSent", uiSoundsEnabled());
       setText("");
+      try { if (draftKey) localStorage.removeItem(draftKey); } catch {}
       setSelectedFile(null);
       socket.emit("dm:typing", { conversationId, typing: false });
     });
@@ -271,7 +280,11 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   }
 
   function insertEmoji(emoji) {
-    setText((current) => `${current}${emoji}`.slice(0, 4000));
+    setText((current) => {
+      const nextText = `${current}${emoji}`.slice(0, 4000);
+      try { if (draftKey) localStorage.setItem(draftKey, nextText); } catch {}
+      return nextText;
+    });
     setIsEmojiOpen(false);
   }
 

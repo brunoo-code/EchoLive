@@ -48,6 +48,11 @@ function isGroupedServerMessage(previous, current) {
   return Number.isFinite(previousTime) && Number.isFinite(currentTime) && currentTime - previousTime < 5 * 60 * 1000;
 }
 
+function handleServerImageError(event) {
+  event.currentTarget.hidden = true;
+  event.currentTarget.parentElement?.classList.add("is-broken");
+}
+
 async function request(path, options = {}) {
   const response = await fetch(`${SERVER_URL}${path}`, { ...options, credentials: "include", headers: { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) } });
   const data = await response.json().catch(() => ({}));
@@ -70,6 +75,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
   const [draft, setDraft] = useState("");
+  const [typingUsers, setTypingUsers] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileAccept, setFileAccept] = useState(ALL_ACCEPT);
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
@@ -77,6 +83,8 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [isSending, setIsSending] = useState(false);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [editingMessageId, setEditingMessageId] = useState("");
+  const [editingDraft, setEditingDraft] = useState("");
   const [profileUser, setProfileUser] = useState(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -107,6 +115,8 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [focusedMediaId, setFocusedMediaId] = useState("");
   const [remoteVolumes, setRemoteVolumes] = useState({});
   const socketRef = useRef(null);
+  const typingTimerRef = useRef(null);
+  const isTypingRef = useRef(false);
   const fileInputRef = useRef(null);
   const messageInputRef = useRef(null);
   const [serverSocket, setServerSocket] = useState(null);
@@ -150,8 +160,11 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     setActiveChannelId("");
     setVoiceChannelId("");
     setDraft("");
+    setTypingUsers([]);
     setSelectedFile(null);
     setReplyingTo(null);
+    setEditingMessageId("");
+    setEditingDraft("");
     setError("");
     setActiveContentView("text");
     setViewMode("grid");
@@ -212,18 +225,36 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     const subscribe = () => serverSocket.emit("server:subscribe", { serverId, channelId: activeChannel.id });
     const handleMessage = (message) => setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
     const handleReaction = ({ messageId, emoji, active: reactionActive }) => setMessages((current) => current.map((message) => message.id !== messageId ? message : { ...message, reactions: updateReactionList(message.reactions, emoji, reactionActive) }));
+    const handleMessageUpdated = (message) => setMessages((current) => current.map((item) => item.id === message?.id ? message : item));
+    const handleMessageDeleted = ({ messageId } = {}) => setMessages((current) => current.map((item) => item.id === messageId ? { ...item, content: "", attachment: null, deletedAt: new Date().toISOString() } : item));
+    const handleTyping = ({ serverId: eventServerId, channelId: eventChannelId, userId, displayName, typing } = {}) => {
+      if (eventServerId !== serverId || eventChannelId !== activeChannel.id || userId === user?.id) return;
+      setTypingUsers((current) => {
+        if (!typing) return current.filter((item) => item.userId !== userId);
+        const next = { userId, displayName: displayName || "Alguem" };
+        return current.some((item) => item.userId === userId) ? current.map((item) => item.userId === userId ? next : item) : [...current, next];
+      });
+    };
     if (serverSocket.connected) subscribe();
     else serverSocket.once("connect", subscribe);
     serverSocket.on("server:message-created", handleMessage);
     serverSocket.on("server:reaction-updated", handleReaction);
+    serverSocket.on("server:message-updated", handleMessageUpdated);
+    serverSocket.on("server:message-deleted", handleMessageDeleted);
+    serverSocket.on("server:typing", handleTyping);
     return () => {
       active = false;
+      stopServerTyping();
+      setTypingUsers([]);
       serverSocket.emit("server:unsubscribe", { serverId, channelId: activeChannel.id });
       serverSocket.off("connect", subscribe);
       serverSocket.off("server:message-created", handleMessage);
       serverSocket.off("server:reaction-updated", handleReaction);
+      serverSocket.off("server:message-updated", handleMessageUpdated);
+      serverSocket.off("server:message-deleted", handleMessageDeleted);
+      serverSocket.off("server:typing", handleTyping);
     };
-  }, [activeChannel?.id, isAuthenticated, serverId, serverSocket]);
+  }, [activeChannel?.id, isAuthenticated, serverId, serverSocket, user?.id]);
 
   useEffect(() => {
     if (!activeChannel?.id || !serverId) return;
@@ -445,6 +476,31 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     });
   }
 
+  function stopServerTyping() {
+    if (typingTimerRef.current) {
+      window.clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+    if (isTypingRef.current) {
+      serverSocket?.emit("server:typing", { serverId, channelId: activeChannel?.id, typing: false });
+      isTypingRef.current = false;
+    }
+  }
+
+  function handleDraftChange(value) {
+    setDraft(value);
+    if (!serverSocket?.connected || !activeChannel?.id || activeChannel.type !== "text" || !value.trim()) {
+      stopServerTyping();
+      return;
+    }
+    if (!isTypingRef.current) {
+      serverSocket.emit("server:typing", { serverId, channelId: activeChannel.id, typing: true });
+      isTypingRef.current = true;
+    }
+    if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = window.setTimeout(stopServerTyping, 1800);
+  }
+
   async function uploadServerFile(file) {
     const body = new FormData();
     body.append("file", file);
@@ -479,6 +535,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
         setMessages((current) => current.some((item) => item.id === data.message.id) ? current : [...current, data.message]);
       }
       setDraft("");
+      stopServerTyping();
       setSelectedFile(null);
       setReplyingTo(null);
     } catch (requestError) {
@@ -492,6 +549,42 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     event.preventDefault();
     event.currentTarget.form?.requestSubmit();
+  }
+
+  async function editMessage(message) {
+    const content = editingDraft.trim();
+    if (!content || content.length > 4000) return;
+    const payload = { serverId, channelId: activeChannel?.id, messageId: message.id, content };
+    const socket = serverSocket;
+    try {
+      if (socket?.connected) {
+        const result = await new Promise((resolve) => socket.emit("server:message-edit", payload, resolve));
+        if (!result?.ok) throw new Error(result?.error || "Nao foi possivel editar a mensagem.");
+      } else {
+        const result = await request(`/api/servers/${serverId}/channels/${activeChannel.id}/messages/${message.id}`, { method: "PATCH", body: JSON.stringify({ content }) });
+        setMessages((current) => current.map((item) => item.id === message.id ? result.message : item));
+      }
+      setEditingMessageId("");
+      setEditingDraft("");
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function deleteMessage(message) {
+    const payload = { serverId, channelId: activeChannel?.id, messageId: message.id };
+    const socket = serverSocket;
+    try {
+      if (socket?.connected) {
+        const result = await new Promise((resolve) => socket.emit("server:message-delete", payload, resolve));
+        if (!result?.ok) throw new Error(result?.error || "Nao foi possivel remover a mensagem.");
+      } else {
+        await request(`/api/servers/${serverId}/channels/${activeChannel.id}/messages/${message.id}`, { method: "DELETE" });
+        setMessages((current) => current.map((item) => item.id === message.id ? { ...item, content: "", attachment: null, deletedAt: new Date().toISOString() } : item));
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    }
   }
 
   function toggleReaction(messageId, emoji) {
@@ -568,13 +661,13 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
         <div className="message-body">
           {!isGrouped && <div className="message-meta"><strong>{senderName}</strong><time dateTime={message.createdAt} title={formatServerDateTime(message.createdAt)}>{formatServerTime(message.createdAt)}</time></div>}
           {replyTarget && <button type="button" className="server-reply-ref" onClick={() => document.getElementById(`server-message-${replyTarget.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}>Respondendo a <strong>{replyTarget.sender?.displayName || replyTarget.sender?.username || "uma mensagem"}</strong>{replyTarget.content ? `: ${replyTarget.content.slice(0, 100)}` : ""}</button>}
-          {message.deletedAt ? <p className="server-message-deleted">Mensagem removida.</p> : message.content ? <p>{linkifyMessage(message.content)}</p> : null}
+          {editingMessageId === message.id ? <form className="server-message-edit-form" onSubmit={(event) => { event.preventDefault(); editMessage(message); }}><textarea value={editingDraft} onChange={(event) => setEditingDraft(event.target.value)} maxLength={4000} autoFocus /><div><button type="submit" className="primary-button">Salvar</button><button type="button" className="secondary-button" onClick={() => { setEditingMessageId(""); setEditingDraft(""); }}>Cancelar</button></div></form> : message.deletedAt ? <p className="server-message-deleted">Mensagem removida.</p> : message.content ? <p>{linkifyMessage(message.content)}{message.editedAt && <small className="edited-message-label"> (editada)</small>}</p> : null}
           {attachment && attachmentSource && <div className="message-attachment server-message-attachment">
-            {attachment.type === "image" ? <button type="button" className="server-image-button" onClick={() => setLightboxImage({ source: attachmentSource, alt: attachment.name || "Imagem anexada" })}><img src={attachmentSource} alt={attachment.name || "Imagem anexada"} /></button> : attachment.type === "video" ? <video controls preload="metadata" src={attachmentSource} /> : <a className="file-attachment" href={attachmentSource} target="_blank" rel="noreferrer" download>{attachment.name || "Arquivo"}</a>}
+            {attachment.type === "image" ? <button type="button" className="server-image-button" onClick={() => setLightboxImage({ source: attachmentSource, alt: attachment.name || "Imagem anexada" })}><img src={attachmentSource} alt={attachment.name || "Imagem anexada"} onError={handleServerImageError} /></button> : attachment.type === "video" ? <video controls preload="metadata" src={attachmentSource} /> : <a className="file-attachment" href={attachmentSource} target="_blank" rel="noreferrer" download>{attachment.name || "Arquivo"}</a>}
             <span>{attachment.name || "Arquivo"}{attachment.size ? ` · ${formatServerFileSize(attachment.size)}` : ""}</span>
           </div>}
           {!message.deletedAt && (message.reactions || []).length > 0 && <div className="server-message-reactions">{message.reactions.map((reaction) => <button type="button" key={reaction.emoji} className={reaction.reacted ? "is-active" : ""} onClick={() => toggleReaction(message.id, reaction.emoji)}>{reaction.emoji} <small>{reaction.count}</small></button>)}</div>}
-          {!message.deletedAt && <div className="server-message-hover-toolbar" aria-label="Ações da mensagem"><button type="button" onClick={() => setReplyingTo(message)} title="Responder" aria-label="Responder"><Icon name="reply" size={13} /></button><button type="button" onClick={() => toggleReaction(message.id, "👍")} title="Adicionar reação" aria-label="Adicionar reação">😊</button></div>}
+          {!message.deletedAt && !editingMessageId && <div className="server-message-hover-toolbar" aria-label="Ações da mensagem"><button type="button" onClick={() => setReplyingTo(message)} title="Responder" aria-label="Responder"><Icon name="reply" size={13} /></button><button type="button" onClick={() => toggleReaction(message.id, "👍")} title="Adicionar reação" aria-label="Adicionar reação">😊</button>{message.sender?.id === user?.id && <><button type="button" onClick={() => { setEditingMessageId(message.id); setEditingDraft(message.content || ""); }} title="Editar mensagem" aria-label="Editar mensagem"><Icon name="edit" size={13} /></button><button type="button" onClick={() => deleteMessage(message)} title="Remover mensagem" aria-label="Remover mensagem"><Icon name="trash" size={13} /></button></>}</div>}
         </div>
       </article>
     );
@@ -598,11 +691,12 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       {activeChannel?.type === "text" && <ChatComposerFrame onSubmit={sendMessage}>
         {replyingTo && <div className="server-replying"><span>Respondendo a {replyingTo.sender?.displayName || replyingTo.sender?.username || "mensagem"}</span><button type="button" className="icon-button" onClick={() => setReplyingTo(null)} aria-label="Cancelar resposta"><Icon name="close" size={13} /></button></div>}
         {selectedFile && <div className="selected-file"><span>{selectedFile.name} ({formatServerFileSize(selectedFile.size)})</span><button type="button" onClick={() => setSelectedFile(null)} aria-label="Remover anexo" title="Remover anexo"><Icon name="close" size={14} /></button></div>}
+        {typingUsers.length > 0 && <div className="server-typing" role="status" aria-live="polite"><span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>{typingUsers.length === 1 ? `${typingUsers[0].displayName} esta digitando` : `${typingUsers.length} pessoas estao digitando`}</div>}
         <ChatComposerRow>
           <button type="button" className="attach-button" onClick={() => { setIsAttachMenuOpen((current) => !current); setIsEmojiPickerOpen(false); }} disabled={isSending} title="Adicionar anexo" aria-label="Adicionar anexo" aria-haspopup="menu" aria-expanded={isAttachMenuOpen}><Icon name="plus" size={17} /></button>
           {isAttachMenuOpen && <div className="composer-popover attach-menu" role="menu" aria-label="Adicionar anexo"><button type="button" role="menuitem" onClick={() => openServerFilePicker(MEDIA_ACCEPT)}><Icon name="image" size={15} /><span>Enviar imagem ou vídeo</span></button><button type="button" role="menuitem" onClick={() => openServerFilePicker(FILE_ACCEPT)}><Icon name="file" size={15} /><span>Enviar arquivo</span></button></div>}
           <input ref={fileInputRef} className="visually-hidden" type="file" accept={fileAccept} onChange={handleServerFileChange} />
-          <textarea ref={messageInputRef} className="message-input" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleMessageKeyDown} placeholder={`Conversar em #${activeChannel.name}`} maxLength={4000} rows={1} disabled={isSending} aria-label={`Mensagem para #${activeChannel.name}`} />
+          <textarea ref={messageInputRef} className="message-input" value={draft} onChange={(event) => handleDraftChange(event.target.value)} onKeyDown={handleMessageKeyDown} placeholder={`Conversar em #${activeChannel.name}`} maxLength={4000} rows={1} disabled={isSending} aria-label={`Mensagem para #${activeChannel.name}`} />
           <div className="composer-actions"><button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}>😊</button><button type="submit" className="send-button" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}>{isSending ? "Enviando" : "Enviar"}</button></div>
           {isEmojiPickerOpen && <div className="composer-popover"><EmojiPicker onSelect={insertServerEmoji} /></div>}
         </ChatComposerRow>

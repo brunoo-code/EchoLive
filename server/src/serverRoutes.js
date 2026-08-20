@@ -318,6 +318,26 @@ export function attachServerSocket(io, socket) {
     acknowledge({ ok: true, message });
   });
 
+  socket.on("server:message-edit", async ({ serverId, channelId, messageId, content } = {}, ack) => {
+    const acknowledge = typeof ack === "function" ? ack : () => {};
+    const user = socket.data.accountUser;
+    if (!user || !isUuid(serverId) || !isUuid(channelId) || !isUuid(messageId)) return acknowledge({ ok: false, error: "Autenticacao necessaria." });
+    const result = await editServerMessage(serverId, channelId, messageId, user.id, content).catch(() => null);
+    if (!result?.message) return acknowledge({ ok: false, error: result?.error || "Nao foi possivel editar a mensagem." });
+    io.to(`server:${serverId}:channel:${channelId}`).emit("server:message-updated", result.message);
+    acknowledge({ ok: true, message: result.message });
+  });
+
+  socket.on("server:message-delete", async ({ serverId, channelId, messageId } = {}, ack) => {
+    const acknowledge = typeof ack === "function" ? ack : () => {};
+    const user = socket.data.accountUser;
+    if (!user || !isUuid(serverId) || !isUuid(channelId) || !isUuid(messageId)) return acknowledge({ ok: false, error: "Autenticacao necessaria." });
+    const result = await deleteServerMessage(serverId, channelId, messageId, user.id).catch(() => null);
+    if (!result?.ok) return acknowledge({ ok: false, error: result?.error || "Nao foi possivel remover a mensagem." });
+    io.to(`server:${serverId}:channel:${channelId}`).emit("server:message-deleted", { messageId });
+    acknowledge({ ok: true, messageId });
+  });
+
   socket.on("server:typing", ({ serverId, channelId, typing } = {}) => {
     const user = socket.data.accountUser;
     if (!user || !isUuid(serverId) || !isUuid(channelId)) return;
