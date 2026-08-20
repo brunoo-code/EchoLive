@@ -22,6 +22,59 @@ import {
   updateServer
 } from "./db/servers.js";
 
+const serverVoiceSessions = new Map();
+const socketServerVoice = new Map();
+
+function serverVoiceKey(serverId, channelId) {
+  return `server:${serverId}:voice:${channelId}`;
+}
+
+function serverVoiceParticipant(socket) {
+  const user = socket.data.accountUser;
+  return {
+    id: user.id,
+    userId: user.id,
+    socketId: socket.id,
+    nickname: user.displayName || user.username,
+    displayName: user.displayName || user.username,
+    username: user.username,
+    avatarUrl: user.avatarUrl || "",
+    avatarVariant: 0,
+    badges: user.badges || [],
+    isGuest: false,
+    inRoom: true,
+    isLocal: false,
+    isScreenSharing: false,
+    isSpeaking: false,
+    micEnabled: false,
+    cameraEnabled: false
+  };
+}
+
+export function getServerVoiceRoom(socketId) {
+  return socketServerVoice.get(socketId) || "";
+}
+
+export function areSocketsInSameServerVoice(socketId, otherSocketId) {
+  const room = getServerVoiceRoom(socketId);
+  return Boolean(room && room === getServerVoiceRoom(otherSocketId));
+}
+
+function leaveServerVoice(socket, announce = true) {
+  const key = socketServerVoice.get(socket.id);
+  if (!key) return null;
+  const session = serverVoiceSessions.get(key);
+  const participant = session?.get(socket.id) || null;
+  session?.delete(socket.id);
+  socketServerVoice.delete(socket.id);
+  socket.leave(key);
+  if (!session?.size) serverVoiceSessions.delete(key);
+  if (announce && participant) {
+    socket.to(key).emit("server:voice-user-left", { participant, participants: Array.from(session?.values() || []) });
+  }
+  return { key, participant, participants: Array.from(session?.values() || []) };
+}
+
 function handleServerError(response, error) {
   if (error?.code === "DATABASE_UNAVAILABLE") return response.status(503).json({ error: "Servidores estao temporariamente indisponiveis.", code: "SERVER_UNAVAILABLE" });
   console.error("[SERVER] request failed:", error?.message || error);
@@ -186,6 +239,54 @@ export function registerServerRoutes(app) {
 }
 
 export function attachServerSocket(io, socket) {
+  socket.on("server:voice-join", async ({ serverId, channelId } = {}, ack) => {
+    const acknowledge = typeof ack === "function" ? ack : () => {};
+    const user = socket.data.accountUser;
+    if (!user || !isUuid(serverId) || !isUuid(channelId)) return acknowledge({ ok: false, error: "Autenticacao necessaria." });
+    const server = await getServerForUser(serverId, user.id).catch(() => null);
+    const channel = server?.channels?.find((item) => item.id === channelId && item.type === "voice");
+    if (!channel) return acknowledge({ ok: false, error: "Canal de voz indisponivel." });
+    const previous = leaveServerVoice(socket, false);
+    const key = serverVoiceKey(serverId, channelId);
+    const session = serverVoiceSessions.get(key) || new Map();
+    const participant = serverVoiceParticipant(socket);
+    session.set(socket.id, participant);
+    serverVoiceSessions.set(key, session);
+    socketServerVoice.set(socket.id, key);
+    socket.join(key);
+    const participants = Array.from(session.values());
+    socket.emit("server:voice-users", { serverId, channelId, channel: { id: channel.id, name: channel.name }, participants: participants.filter((item) => item.socketId !== socket.id) });
+    socket.to(key).emit("server:voice-user-joined", { participant });
+    acknowledge({ ok: true, key, participants });
+    if (previous?.key && previous.key !== key) socket.emit("server:voice-left", { key: previous.key });
+  });
+
+  socket.on("server:voice-leave", (_payload, ack) => {
+    const result = leaveServerVoice(socket);
+    if (typeof ack === "function") ack({ ok: true, left: Boolean(result) });
+    if (result) socket.emit("server:voice-left", { key: result.key });
+  });
+
+  socket.on("server:voice-media-status", ({ micEnabled, cameraEnabled, isScreenSharing } = {}) => {
+    const key = getServerVoiceRoom(socket.id);
+    const session = key && serverVoiceSessions.get(key);
+    const participant = session?.get(socket.id);
+    if (!participant) return;
+    Object.assign(participant, { micEnabled: Boolean(micEnabled), cameraEnabled: Boolean(cameraEnabled), isScreenSharing: Boolean(isScreenSharing) });
+    socket.to(key).emit("server:voice-media-status", { from: socket.id, ...participant });
+  });
+
+  socket.on("server:voice-speaking-state", ({ isSpeaking } = {}) => {
+    const key = getServerVoiceRoom(socket.id);
+    const session = key && serverVoiceSessions.get(key);
+    const participant = session?.get(socket.id);
+    if (!participant) return;
+    participant.isSpeaking = Boolean(isSpeaking);
+    socket.to(key).emit("server:voice-speaking-state", { from: socket.id, isSpeaking: participant.isSpeaking });
+  });
+
+  socket.on("disconnect", () => { leaveServerVoice(socket); });
+
   socket.on("server:subscribe", async ({ serverId, channelId } = {}, ack) => {
     const acknowledge = typeof ack === "function" ? ack : () => {};
     const user = socket.data.accountUser;

@@ -16,8 +16,9 @@ import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
 import Icon from "../components/Icon.jsx";
 import ToastStack from "../components/ToastStack.jsx";
 import useToasts from "../hooks/useToasts.js";
-import { requestInitialMedia, requestSingleKind, stopStream } from "../utils/media.js";
+import { createMixedAudioTrack, requestInitialMedia, requestScreenShareStream, requestSingleKind, stopStream } from "../utils/media.js";
 import { getPeerConnectionConfig, SERVER_URL } from "../utils/webrtc.js";
+import { createVoiceCallEngine } from "../utils/voiceCallEngine.js";
 import { playUiSound } from "../utils/uiSounds.js";
 import { getGuestAvatarVariant, getGuestIdentity } from "../utils/guestIdentity.js";
 import { useAuth } from "../auth/AuthContext.jsx";
@@ -128,6 +129,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const { toasts, notify } = useToasts();
 
   const socketRef = useRef(null);
+  const voiceEngineRef = useRef(null);
+  const voiceEngineDetachRef = useRef(null);
   const peersRef = useRef(new Map());
   const pendingIceRef = useRef(new Map());
   const remoteStreamsRef = useRef(new Map());
@@ -294,6 +297,24 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     const socket = io(SERVER_URL, { withCredentials: true });
     socketRef.current = socket;
     setSocketInstance(socket);
+    voiceEngineRef.current = createVoiceCallEngine({
+      socket,
+      peerStore: peersRef.current,
+      pendingIceStore: pendingIceRef.current,
+      remoteStreamsStore: remoteStreamsRef.current,
+      getIceConfig: () => iceConfigRef.current,
+      getLocalTracks: () => ({
+        audio: mixedAudioTrackRef.current || audioTrackRef.current,
+        video: screenTrackRef.current || cameraTrackRef.current
+      }),
+      debug: debugRtc,
+      onRemoteStream: (remoteSocketId, stream) => {
+        setRemoteParticipants((current) => current.map((participant) => (
+          participant.socketId === remoteSocketId ? { ...participant, stream } : participant
+        )));
+      }
+    });
+    voiceEngineDetachRef.current = voiceEngineRef.current.attachSignaling({ prepareLocalMedia: setupLocalMedia });
 
     socket.on("connect", () => {
       setSelfId(socket.id);
@@ -434,46 +455,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       cleanupLocalMedia();
     });
 
-    socket.on("webrtc-offer", async ({ from, offer }) => {
-      console.log("[WEBRTC] offer received", from);
-      await setupLocalMedia();
-      const peer = createPeer(from, false, false);
-      await peer.pc.setRemoteDescription(new RTCSessionDescription(offer));
-      refreshPeerTransceivers(peer, true);
-      syncLocalTracksToPeer(peer);
-      await flushPendingIce(from);
-      const answer = await peer.pc.createAnswer();
-      await peer.pc.setLocalDescription(answer);
-      socket.emit("webrtc-answer", { to: from, answer });
-    });
-
-    socket.on("webrtc-answer", async ({ from, answer }) => {
-      console.log("[WEBRTC] answer received", from);
-      const peer = peersRef.current.get(from);
-
-      if (!peer) {
-        return;
-      }
-
-      await peer.pc.setRemoteDescription(new RTCSessionDescription(answer));
-      await flushPendingIce(from);
-    });
-
-    socket.on("ice-candidate", async ({ from, candidate }) => {
-      console.log("[WEBRTC] ICE candidate received", from);
-      await setupLocalMedia();
-      const peer = peersRef.current.get(from) || createPeer(from, false, false);
-
-      if (!peer.pc.remoteDescription) {
-        const pending = pendingIceRef.current.get(from) || [];
-        pending.push(candidate);
-        pendingIceRef.current.set(from, pending);
-        return;
-      }
-
-      await peer.pc.addIceCandidate(new RTCIceCandidate(candidate));
-    });
-
     socket.on("screen-share-status", ({ from, isScreenSharing }) => {
       setRemoteParticipants((current) =>
         current.map((participant) =>
@@ -608,121 +589,20 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   }
 
   function createPeer(remoteSocketId, shouldCreateOffer, createOfferTransceivers = true) {
-    const existingPeer = peersRef.current.get(remoteSocketId);
-
-    if (existingPeer) {
-      return existingPeer;
-    }
-
-    console.log("[WEBRTC] creating peer", remoteSocketId);
-    const pc = new RTCPeerConnection(iceConfigRef.current);
-    const peer = {
-      pc,
-      audioSender: null,
-      videoSender: null
-    };
-
-    if (createOfferTransceivers) {
-      pc.addTransceiver("audio", { direction: "sendrecv" });
-      pc.addTransceiver("video", { direction: "sendrecv" });
-    }
-
-    peersRef.current.set(remoteSocketId, peer);
-    refreshPeerTransceivers(peer, createOfferTransceivers);
-    syncLocalTracksToPeer(peer);
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        socketRef.current?.emit("ice-candidate", {
-          to: remoteSocketId,
-          candidate: event.candidate
-        });
-      }
-    };
-
-    pc.ontrack = (event) => {
-      if (debugRtc) {
-        console.debug("[RTC DEBUG] ontrack", {
-          peer: remoteSocketId,
-          kind: event.track.kind,
-          id: event.track.id,
-          readyState: event.track.readyState,
-          streams: event.streams.map((stream) => stream.getTracks().map((track) => ({ kind: track.kind, id: track.id })))
-        });
-      }
-      const stream = remoteStreamsRef.current.get(remoteSocketId) || new MediaStream();
-      if (!stream.getTracks().some((track) => track.id === event.track.id)) {
-        stream.addTrack(event.track);
-      }
-      remoteStreamsRef.current.set(remoteSocketId, stream);
-      setRemoteParticipants((current) =>
-        current.map((participant) =>
-          participant.socketId === remoteSocketId ? { ...participant, stream } : participant
-        )
-      );
-    };
-
-    pc.onconnectionstatechange = () => {
-      if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
-        if (pc.connectionState === "failed") {
-          removePeer(remoteSocketId);
-        }
-      }
-    };
-
-    if (shouldCreateOffer) {
-      window.setTimeout(() => sendOffer(remoteSocketId, pc), 0);
-    }
-
-    return peer;
+    return voiceEngineRef.current?.createPeer(remoteSocketId, shouldCreateOffer, createOfferTransceivers)
+      || peersRef.current.get(remoteSocketId);
   }
 
   function refreshPeerTransceivers(peer, makeSendRecv = false) {
-    const audioTransceiver = peer.pc.getTransceivers().find((transceiver) => (
-      transceiver.receiver.track?.kind === "audio" || transceiver.sender.track?.kind === "audio"
-    ));
-    const videoTransceiver = peer.pc.getTransceivers().find((transceiver) => (
-      transceiver.receiver.track?.kind === "video" || transceiver.sender.track?.kind === "video"
-    ));
-
-    if (makeSendRecv) {
-      if (audioTransceiver) audioTransceiver.direction = "sendrecv";
-      if (videoTransceiver) videoTransceiver.direction = "sendrecv";
-    }
-
-    peer.audioSender = audioTransceiver?.sender || null;
-    peer.videoSender = videoTransceiver?.sender || null;
+    voiceEngineRef.current?.refreshPeerTransceivers(peer, makeSendRecv);
   }
 
   async function sendOffer(remoteSocketId, pc) {
-    if (pc.signalingState !== "stable") {
-      return;
-    }
-
-    const peer = peersRef.current.get(remoteSocketId);
-    if (peer) {
-      syncLocalTracksToPeer(peer);
-    }
-
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    socketRef.current?.emit("webrtc-offer", { to: remoteSocketId, offer });
-    console.log("[WEBRTC] offer sent", remoteSocketId);
+    await voiceEngineRef.current?.sendOffer(remoteSocketId, pc);
   }
 
   async function flushPendingIce(remoteSocketId) {
-    const peer = peersRef.current.get(remoteSocketId);
-    const pending = pendingIceRef.current.get(remoteSocketId) || [];
-
-    if (!peer || !peer.pc.remoteDescription) {
-      return;
-    }
-
-    for (const candidate of pending) {
-      await peer.pc.addIceCandidate(new RTCIceCandidate(candidate));
-    }
-
-    pendingIceRef.current.delete(remoteSocketId);
+    await voiceEngineRef.current?.flushPendingIce(remoteSocketId);
   }
 
   function upsertRemoteParticipants(participants) {
@@ -764,12 +644,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   }
 
   function replaceSenderTrackForAll(kind, track) {
-    peersRef.current.forEach((peer) => {
-      const sender = kind === "audio" ? peer.audioSender : peer.videoSender;
-      if (sender) {
-        sender.replaceTrack(track?.readyState === "live" ? track : null);
-      }
-    });
+    voiceEngineRef.current?.replaceTrack(kind, track);
   }
 
   function getScreenBitrate(preset, peerCount) {
@@ -823,21 +698,9 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   }
 
   function syncLocalTracksToPeer(peer) {
-    if (!peer) {
-      return;
-    }
-
-    const audioTrack = audioTrackRef.current?.readyState === "live" ? audioTrackRef.current : null;
-    const videoTrack = (screenTrackRef.current || cameraTrackRef.current)?.readyState === "live"
-      ? screenTrackRef.current || cameraTrackRef.current
-      : null;
-
-    peer.audioSender?.replaceTrack(audioTrack);
-    if (peer.videoSender) {
-      peer.videoSender.replaceTrack(videoTrack).then(() => {
-        if (screenTrackRef.current) return configureVideoSender(peer.videoSender, "screen", peersRef.current.size, streamPreset);
-        return undefined;
-      }).catch(() => {});
+    voiceEngineRef.current?.syncLocalTracksToPeer(peer);
+    if (screenTrackRef.current && peer?.videoSender) {
+      configureVideoSender(peer.videoSender, "screen", peersRef.current.size, streamPreset);
     }
   }
 
@@ -1043,16 +906,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     }
 
     try {
-      let screenStream;
       const screenConstraints = getScreenShareConstraints(streamPreset);
-      try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: screenConstraints, audio: true });
-      } catch (error) {
-        if (!['TypeError', 'OverconstrainedError', 'NotSupportedError'].includes(error?.name)) {
-          throw error;
-        }
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-      }
+      const screenStream = await requestScreenShareStream(screenConstraints);
       const screenTrack = screenStream.getVideoTracks()[0];
 
       if (!screenTrack) {
@@ -1084,38 +939,12 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
 
   function createDisplayAudioMix(displayAudioTrack) {
     teardownDisplayAudioMix();
-
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) {
-      return;
-    }
-
-    try {
-      const context = new AudioContextClass();
-      const destination = context.createMediaStreamDestination();
-      const displaySource = context.createMediaStreamSource(new MediaStream([displayAudioTrack]));
-      const displayGain = context.createGain();
-      displayGain.gain.value = 1;
-      displaySource.connect(displayGain).connect(destination);
-
-      const microphoneTrack = audioTrackRef.current;
-      if (microphoneTrack?.readyState === "live") {
-        const microphoneSource = context.createMediaStreamSource(new MediaStream([microphoneTrack]));
-        const microphoneGain = context.createGain();
-        microphoneGain.gain.value = microphoneTrack.enabled ? 1 : 0;
-        microphoneSource.connect(microphoneGain).connect(destination);
-        microphoneGainRef.current = microphoneGain;
-      }
-
-      audioMixContextRef.current = context;
-      mixedAudioTrackRef.current = destination.stream.getAudioTracks()[0] || null;
-      replaceSenderTrackForAll("audio", mixedAudioTrackRef.current);
-      if (context.state === "suspended") {
-        context.resume().catch(() => {});
-      }
-    } catch {
-      teardownDisplayAudioMix();
-    }
+    const mixedAudio = createMixedAudioTrack(displayAudioTrack, audioTrackRef.current);
+    if (!mixedAudio?.track) return;
+    audioMixContextRef.current = mixedAudio.context;
+    microphoneGainRef.current = mixedAudio.microphoneGain;
+    mixedAudioTrackRef.current = mixedAudio.track;
+    replaceSenderTrackForAll("audio", mixedAudioTrackRef.current);
   }
 
   function teardownDisplayAudioMix() {
@@ -1157,16 +986,11 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   }
 
   function removePeer(remoteSocketId) {
-    const peer = peersRef.current.get(remoteSocketId);
-    peer?.pc.close();
-    peersRef.current.delete(remoteSocketId);
-    pendingIceRef.current.delete(remoteSocketId);
-    remoteStreamsRef.current.get(remoteSocketId)?.getTracks().forEach((track) => track.stop());
-    remoteStreamsRef.current.delete(remoteSocketId);
+    voiceEngineRef.current?.removePeer(remoteSocketId);
   }
 
   function closePeers() {
-    Array.from(peersRef.current.keys()).forEach(removePeer);
+    voiceEngineRef.current?.closePeers();
     setRemoteParticipants([]);
   }
 
@@ -1190,7 +1014,10 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
 
   function cleanupRoom() {
     socketRef.current?.emit("leave-room");
+    voiceEngineDetachRef.current?.();
+    voiceEngineDetachRef.current = null;
     closePeers();
+    voiceEngineRef.current = null;
     cleanupLocalMedia();
     socketRef.current?.removeAllListeners();
     socketRef.current?.disconnect();

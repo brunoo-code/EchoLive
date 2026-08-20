@@ -52,6 +52,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const typingTimerRef = useRef(null);
   const listedConversation = conversations.find((item) => item.id === conversationId) || null;
   const [conversationSnapshot, setConversationSnapshot] = useState(() => initialConversation?.id === conversationId ? initialConversation : null);
+  const officialFirstOpenRef = useRef(false);
   useEffect(() => {
     if (listedConversation) setConversationSnapshot(listedConversation);
   }, [listedConversation]);
@@ -103,15 +104,18 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     setError("");
     setMessages([]);
     setHasMore(false);
+    officialFirstOpenRef.current = false;
     if (import.meta.env.DEV) console.debug("[DM:history:start]");
     loadMessages(conversationId).then((data) => {
       if (!active) return;
       const history = extractHistory(data);
-      setMessages(mergeMessages(history.messages, conversationId, user));
+      const nextMessages = mergeMessages(history.messages, conversationId, user);
+      setMessages(nextMessages);
       setHasMore(history.hasMore);
       setHistoryStatus("ready");
       if (import.meta.env.DEV) console.debug("[DM:history:success]", { count: history.messages.length });
       markRead(conversationId).catch(() => {});
+      officialFirstOpenRef.current = Boolean(otherUser?.isOfficial && nextMessages.length);
     }).catch((requestError) => {
       if (!active) return;
       setError(requestError.message || "Nao foi possivel carregar esta conversa.");
@@ -121,7 +125,14 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       if (import.meta.env.DEV) console.debug("[DM:history:finally]");
     });
     return () => { active = false; };
-  }, [conversationId, loadMessages, markRead, retryVersion, user?.id]);
+  }, [conversationId, loadMessages, markRead, retryVersion, user?.id, otherUser?.isOfficial]);
+
+  useEffect(() => {
+    if (!officialFirstOpenRef.current || !messages.length || !otherUser?.isOfficial || historyStatus !== "ready") return;
+    officialFirstOpenRef.current = false;
+    shouldAutoScrollRef.current = false;
+    messagesRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [historyStatus, messages.length, otherUser?.isOfficial]);
 
   useEffect(() => {
     if (!conversationId || !otherUser || !socket) {

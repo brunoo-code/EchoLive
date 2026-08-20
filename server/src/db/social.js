@@ -263,10 +263,11 @@ async function grantBetaBadge(userId) {
 
 async function seedOfficialMessages(conversationId, displayName) {
   const messages = [
-    ["welcome", `Oi, ${displayName || "por aqui"}. Eu sou o Eko, a presença do EchoLive por aqui.`],
-    ["identity", "Com uma conta, sua identidade continua com você entre amigos, mensagens e salas."],
-    ["quick-room", "Só quer conversar agora? Uma sala rápida resolve."],
-    ["stay", "Quer ficar por aqui? Sua conta vai acompanhar você quando voltar."]
+    ["welcome", `Oi, ${displayName || "por aqui"}! Eu sou o Eko, a presença do EchoLive por aqui.\n\nPor aqui você pode conversar, criar salas e manter seus amigos por perto.`],
+    ["quick-room", "Quer conversar agora? Crie uma Sala Rápida, compartilhe o convite e comece na hora. Ela é temporária e não exige conta para quem entrar."],
+    ["servers", "Quer criar um espaço que fica? Servidores são permanentes: seus canais, membros e mensagens continuam aqui mesmo depois que todo mundo sai."],
+    ["friends", "Encontre seus amigos. Adicione pessoas, converse por DM e veja quando elas estiverem online."],
+    ["ready", "Pronto. Esse espaço é seu. ✨\n\nQuando quiser, comece por uma Sala Rápida ou crie seu primeiro servidor."]
   ];
   for (const [officialKey, content] of messages) {
     await query(

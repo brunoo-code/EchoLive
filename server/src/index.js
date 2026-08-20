@@ -17,7 +17,7 @@ import {
   registerAccountPresence,
   registerSocialRoutes
 } from "./social.js";
-import { attachServerSocket, registerServerRoutes } from "./serverRoutes.js";
+import { areSocketsInSameServerVoice, attachServerSocket, getServerVoiceRoom, registerServerRoutes } from "./serverRoutes.js";
 import { checkDatabase, getDatabaseError, isDatabaseConfigured } from "./db/pool.js";
 import { getConversationForUser } from "./db/social.js";
 import { markRoomActivityLeft, recordRoomActivity } from "./db/roomActivity.js";
@@ -249,6 +249,9 @@ const typingSockets = new Map();
 const typingTimers = new Map();
 
 function canSignal(socket, to) {
+  if (areSocketsInSameServerVoice(socket.id, to)) {
+    return Boolean(to && io.sockets.sockets.has(to));
+  }
   const voiceParticipants = getVoiceParticipants(getSocketRoom(socket.id));
   return Boolean(
     to &&
@@ -589,7 +592,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("screen-share-status", ({ isScreenSharing } = {}) => {
-    const roomCode = getSocketRoom(socket.id);
+    const roomCode = getSocketRoom(socket.id) || getServerVoiceRoom(socket.id);
 
     if (!roomCode) {
       return;

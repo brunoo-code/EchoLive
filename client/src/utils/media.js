@@ -48,6 +48,56 @@ export async function requestSingleKind(kind, deviceId = "") {
   }
 }
 
+export async function requestScreenShareStream(video = true) {
+  try {
+    return await navigator.mediaDevices.getDisplayMedia({ video, audio: true });
+  } catch (error) {
+    if (!['TypeError', 'OverconstrainedError', 'NotSupportedError'].includes(error?.name)) {
+      throw error;
+    }
+    return navigator.mediaDevices.getDisplayMedia({ video, audio: false });
+  }
+}
+
+export function getDefaultScreenShareConstraints() {
+  return {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    frameRate: { ideal: 30, max: 30 }
+  };
+}
+
+export function createMixedAudioTrack(displayAudioTrack, microphoneTrack) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass || !displayAudioTrack) return null;
+
+  try {
+    const context = new AudioContextClass();
+    const destination = context.createMediaStreamDestination();
+    const displaySource = context.createMediaStreamSource(new MediaStream([displayAudioTrack]));
+    const displayGain = context.createGain();
+    displayGain.gain.value = 1;
+    displaySource.connect(displayGain).connect(destination);
+
+    let microphoneGain = null;
+    if (microphoneTrack?.readyState === "live") {
+      const microphoneSource = context.createMediaStreamSource(new MediaStream([microphoneTrack]));
+      microphoneGain = context.createGain();
+      microphoneGain.gain.value = microphoneTrack.enabled ? 1 : 0;
+      microphoneSource.connect(microphoneGain).connect(destination);
+    }
+
+    if (context.state === "suspended") context.resume().catch(() => {});
+    return {
+      context,
+      microphoneGain,
+      track: destination.stream.getAudioTracks()[0] || null
+    };
+  } catch {
+    return null;
+  }
+}
+
 function getAudioConstraints(deviceId = "") {
   return {
     echoCancellation: true,
