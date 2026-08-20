@@ -264,11 +264,34 @@ async function grantBetaBadge(userId) {
 async function seedOfficialMessages(conversationId, displayName) {
   const messages = [
     ["welcome", `Oi, ${displayName || "por aqui"}! Eu sou o Eko, a presença do EchoLive por aqui.\n\nPor aqui você pode conversar, criar salas e manter seus amigos por perto.`],
-    ["quick-room", "Quer conversar agora? Crie uma Sala Rápida, compartilhe o convite e comece na hora. Ela é temporária e não exige conta para quem entrar."],
+    ["quick_room", "Quer conversar agora? Crie uma Sala Rápida, compartilhe o convite e comece na hora. Ela é temporária e não exige conta para quem entrar."],
     ["servers", "Quer criar um espaço que fica? Servidores são permanentes: seus canais, membros e mensagens continuam aqui mesmo depois que todo mundo sai."],
     ["friends", "Encontre seus amigos. Adicione pessoas, converse por DM e veja quando elas estiverem online."],
     ["ready", "Pronto. Esse espaço é seu. ✨\n\nQuando quiser, comece por uma Sala Rápida ou crie seu primeiro servidor."]
   ];
+  await query(
+    `DELETE FROM dm_messages legacy
+     WHERE legacy.conversation_id = $1
+       AND legacy.official_key = 'quick-room'
+       AND EXISTS (
+         SELECT 1 FROM dm_messages canonical
+         WHERE canonical.conversation_id = legacy.conversation_id
+           AND canonical.official_key = 'quick_room'
+       )`,
+    [conversationId]
+  );
+  await query(
+    `UPDATE dm_messages
+     SET official_key = 'quick_room'
+     WHERE conversation_id = $1
+       AND official_key = 'quick-room'
+       AND NOT EXISTS (
+         SELECT 1 FROM dm_messages canonical
+         WHERE canonical.conversation_id = $1
+           AND canonical.official_key = 'quick_room'
+       )`,
+    [conversationId]
+  );
   for (const [officialKey, content] of messages) {
     await query(
       `INSERT INTO dm_messages (conversation_id, sender_user_id, content, message_type, official_key)
@@ -300,6 +323,16 @@ export async function ensureAccountSocialBootstrap(userId) {
     console.error("[OFFICIAL:seed] bootstrap skipped:", error.message);
   });
   if (process.env.NODE_ENV !== "production") {
+    const onboarding = await query(
+      `SELECT official_key FROM dm_messages WHERE conversation_id = $1 AND message_type = 'official' ORDER BY created_at, id`,
+      [conversation.id]
+    );
+    console.debug("[OFFICIAL:onboarding]", {
+      userId,
+      conversationId: conversation.id,
+      count: onboarding.rows.length,
+      keys: onboarding.rows.map((row) => row.official_key)
+    });
     console.debug("[OFFICIAL:ensure]", { userId, conversationId: conversation.id, status: "ready" });
   }
   return conversation;

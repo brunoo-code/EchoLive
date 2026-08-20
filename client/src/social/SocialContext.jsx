@@ -87,9 +87,11 @@ export function SocialProvider({ children }) {
     const data = await socialRequest("/api/social/dms");
     const nextConversations = data.conversations || [];
     if (import.meta.env.DEV) {
-      console.debug("[OFFICIAL:client]", {
+      const official = nextConversations.find((conversation) => conversation.user?.isOfficial === true);
+      console.debug("[OFFICIAL:conversation]", {
         conversationCount: nextConversations.length,
-        officialFound: nextConversations.some((conversation) => conversation.user?.isOfficial === true)
+        officialFound: Boolean(official),
+        officialConversationId: official?.id || null
       });
     }
     setConversations(nextConversations);

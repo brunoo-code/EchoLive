@@ -68,18 +68,55 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   }, [isAuthenticated, serverId]);
 
   useEffect(() => {
-    if (!serverId || !activeChannel?.id || activeChannel.type !== "text") return undefined;
-    let active = true;
-    setActiveChannelId(activeChannel.id);
-    request(`/api/servers/${serverId}/channels/${activeChannel.id}/messages`).then((data) => { if (active) setMessages(data.messages || []); }).catch((requestError) => { if (active) setError(requestError.message); });
+    if (!isAuthenticated || !serverId) {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      setServerSocket(null);
+      setVoiceChannelId("");
+      return undefined;
+    }
     const socket = io(SERVER_URL, { withCredentials: true });
     socketRef.current = socket;
     setServerSocket(socket);
-    socket.on("connect", () => socket.emit("server:subscribe", { serverId, channelId: activeChannel.id }));
-    socket.on("server:message-created", (message) => setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]));
-    socket.on("server:reaction-updated", ({ messageId, emoji, active: reactionActive }) => setMessages((current) => current.map((message) => message.id !== messageId ? message : { ...message, reactions: updateReactionList(message.reactions, emoji, reactionActive) })));
-    return () => { active = false; socket.emit("server:unsubscribe", { serverId, channelId: activeChannel.id }); socket.disconnect(); socketRef.current = null; setServerSocket(null); setVoiceChannelId(""); };
-  }, [activeChannel?.id, serverId]);
+    const handleConnect = () => {
+      if (import.meta.env.DEV) console.debug("[SERVER:socket]", { serverId, socketId: socket.id, connected: socket.connected });
+    };
+    const handleConnectError = (socketError) => {
+      if (import.meta.env.DEV) console.debug("[SERVER:socket:error]", { serverId, message: socketError?.message || "unknown" });
+    };
+    socket.on("connect", handleConnect);
+    socket.on("connect_error", handleConnectError);
+    return () => {
+      socket.emit("server:voice-leave");
+      socket.disconnect();
+      socket.off("connect", handleConnect);
+      socket.off("connect_error", handleConnectError);
+      if (socketRef.current === socket) socketRef.current = null;
+      setServerSocket((current) => current === socket ? null : current);
+      setVoiceChannelId("");
+    };
+  }, [isAuthenticated, serverId]);
+
+  useEffect(() => {
+    if (!serverId || !activeChannel?.id || activeChannel.type !== "text" || !serverSocket) return undefined;
+    let active = true;
+    setActiveChannelId(activeChannel.id);
+    request(`/api/servers/${serverId}/channels/${activeChannel.id}/messages`).then((data) => { if (active) setMessages(data.messages || []); }).catch((requestError) => { if (active) setError(requestError.message); });
+    const subscribe = () => serverSocket.emit("server:subscribe", { serverId, channelId: activeChannel.id });
+    const handleMessage = (message) => setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
+    const handleReaction = ({ messageId, emoji, active: reactionActive }) => setMessages((current) => current.map((message) => message.id !== messageId ? message : { ...message, reactions: updateReactionList(message.reactions, emoji, reactionActive) }));
+    if (serverSocket.connected) subscribe();
+    else serverSocket.once("connect", subscribe);
+    serverSocket.on("server:message-created", handleMessage);
+    serverSocket.on("server:reaction-updated", handleReaction);
+    return () => {
+      active = false;
+      serverSocket.emit("server:unsubscribe", { serverId, channelId: activeChannel.id });
+      serverSocket.off("connect", subscribe);
+      serverSocket.off("server:message-created", handleMessage);
+      serverSocket.off("server:reaction-updated", handleReaction);
+    };
+  }, [activeChannel?.id, isAuthenticated, serverId, serverSocket]);
 
   useEffect(() => {
     if (!activeChannel?.id || !serverId) return;
@@ -174,6 +211,38 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const showServerListLoading = !serverId && (serversStatus === "idle" || serversStatus === "loading");
   const showServerListError = !serverId && serversStatus === "error";
   const showServerEmpty = !serverId && serversStatus === "ready" && !servers.length;
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const renderBranch = showServerLoading ? "loading-server" : serverNotFound ? "not-found" : showServerListError ? "server-list-error" : showServerEmpty ? "empty-server-list" : messages.length ? "messages" : "empty-channel";
+    console.debug("[SERVER:UI]", {
+      serverId: serverId || null,
+      serverLoaded: Boolean(server),
+      selectedChannelId: activeChannel?.id || null,
+      selectedChannelType: activeChannel?.type || null,
+      voiceChannelId: voiceChannelId || null,
+      voiceConnected: serverVoice.connected,
+      memberCount: members.length,
+      messageCount: messages.length,
+      renderBranch
+    });
+  }, [activeChannel?.id, activeChannel?.type, members.length, messages.length, server, serverId, serverNotFound, serverVoice.connected, showServerEmpty, showServerListError, showServerLoading, voiceChannelId]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.debug("[SERVER:VOICE:UI]", {
+      serverId: serverId || null,
+      channelId: voiceChannelId || null,
+      activeVoiceRow: Boolean(voiceChannelId),
+      footerVisible: serverVoice.connected,
+      participantCount: serverVoice.participants.length,
+      controls: {
+        microphone: serverVoice.micEnabled,
+        camera: serverVoice.cameraEnabled,
+        screenShare: serverVoice.isScreenSharing
+      }
+    });
+  }, [serverId, serverVoice.cameraEnabled, serverVoice.connected, serverVoice.isScreenSharing, serverVoice.micEnabled, serverVoice.participants.length, voiceChannelId]);
 
   return <main className="page app-shell room-page server-page">
     <RoomRail roomCode="" roomName="" recentRooms={[]} onHome={onNavigateHome} onSocial={onNavigateSocial} onOpenSwitcher={handleCreateServer} servers={servers} activeServerId={serverId} onOpenServer={onNavigateServer} onCreateServer={handleCreateServer} />

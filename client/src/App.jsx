@@ -8,6 +8,8 @@ import { AuthProvider } from "./auth/AuthContext.jsx";
 import { SocialProvider } from "./social/SocialContext.jsx";
 import { ServerProvider } from "./servers/ServerContext.jsx";
 
+const BUILD_ID = import.meta.env.VITE_BUILD_ID || "8.0.3";
+
 function getRoute() {
   const pathname = window.location.pathname;
   const roomMatch = pathname.match(/^\/room\/([A-Za-z0-9]{3,9})$/);
@@ -27,6 +29,14 @@ export default function App() {
 
 function AppContent() {
   const [route, setRoute] = useState(getRoute);
+
+  useEffect(() => {
+    document.documentElement.dataset.echoliveBuild = BUILD_ID;
+    if (import.meta.env.DEV) {
+      console.debug("[ECHOLIVE:build]", { buildId: BUILD_ID, path: window.location.pathname });
+    }
+    return () => { delete document.documentElement.dataset.echoliveBuild; };
+  }, []);
 
   useEffect(() => {
     const handlePopState = () => setRoute(getRoute());

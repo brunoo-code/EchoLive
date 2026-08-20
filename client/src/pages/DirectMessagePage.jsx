@@ -95,6 +95,18 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   }, [conversationStatus, historyStatus, messages.length, realtimeStatus]);
 
   useEffect(() => {
+    if (!import.meta.env.DEV || !isOfficial) return;
+    console.debug("[OFFICIAL:render]", {
+      path: window.location.pathname,
+      conversationId,
+      conversationFound: Boolean(conversation),
+      historyStatus,
+      messageCount: messages.length,
+      officialKeys: messages.map((message) => message.officialKey).filter(Boolean)
+    });
+  }, [conversation, conversationId, historyStatus, isOfficial, messages]);
+
+  useEffect(() => {
     if (!conversationId || !user?.id) {
       setHistoryStatus("idle");
       return undefined;
@@ -113,7 +125,16 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       setMessages(nextMessages);
       setHasMore(history.hasMore);
       setHistoryStatus("ready");
-      if (import.meta.env.DEV) console.debug("[DM:history:success]", { count: history.messages.length });
+      if (import.meta.env.DEV) {
+        console.debug("[DM:history:success]", { count: history.messages.length });
+        if (otherUser?.isOfficial) {
+          console.debug("[OFFICIAL:messages-api]", {
+            conversationId,
+            count: history.messages.length,
+            officialKeys: nextMessages.map((message) => message.officialKey).filter(Boolean)
+          });
+        }
+      }
       markRead(conversationId).catch(() => {});
       officialFirstOpenRef.current = Boolean(otherUser?.isOfficial && nextMessages.length);
     }).catch((requestError) => {
