@@ -298,14 +298,28 @@ async function seedOfficialMessages(conversationId, displayName) {
        SELECT $1, u.id, $2, 'official', $3
        FROM users u
        WHERE u.system_key = 'echolive_official'
-         AND NOT EXISTS (
-           SELECT 1 FROM dm_messages m
-           WHERE m.conversation_id = $1 AND m.official_key = $3
-         )
-       ON CONFLICT (conversation_id, official_key) WHERE official_key IS NOT NULL DO NOTHING`,
+       ON CONFLICT (conversation_id, official_key) WHERE official_key IS NOT NULL
+       DO UPDATE SET
+         sender_user_id = EXCLUDED.sender_user_id,
+         content = EXCLUDED.content,
+         message_type = 'official',
+         attachment = NULL`,
       [conversationId, content, officialKey]
     );
   }
+}
+
+async function listOfficialMessageKeys(conversationId) {
+  const result = await query(
+    `SELECT official_key
+       FROM dm_messages
+      WHERE conversation_id = $1
+        AND message_type = 'official'
+        AND official_key IS NOT NULL
+      ORDER BY created_at, id`,
+    [conversationId]
+  );
+  return result.rows.map((row) => row.official_key);
 }
 
 async function ensureOfficialConversationBootstrap(conversationId, userId) {
@@ -334,19 +348,18 @@ export async function ensureAccountSocialBootstrap(userId) {
     console.error("[OFFICIAL:badge] bootstrap skipped:", error.message);
   });
   const userResult = await query("SELECT display_name FROM users WHERE id = $1 LIMIT 1", [userId]);
-  await seedOfficialMessages(conversation.id, userResult.rows[0]?.display_name).catch((error) => {
-    console.error("[OFFICIAL:seed] bootstrap skipped:", error.message);
-  });
+  await seedOfficialMessages(conversation.id, userResult.rows[0]?.display_name);
+  const officialKeys = await listOfficialMessageKeys(conversation.id);
+  const expectedKeys = ["welcome", "quick_room", "servers", "friends", "ready"];
+  if (!expectedKeys.every((key) => officialKeys.includes(key))) {
+    throw new Error("OFFICIAL_BOOTSTRAP_INCOMPLETE");
+  }
   if (process.env.NODE_ENV !== "production") {
-    const onboarding = await query(
-      `SELECT official_key FROM dm_messages WHERE conversation_id = $1 AND message_type = 'official' ORDER BY created_at, id`,
-      [conversation.id]
-    );
     console.debug("[OFFICIAL:onboarding]", {
       userId,
       conversationId: conversation.id,
-      count: onboarding.rows.length,
-      keys: onboarding.rows.map((row) => row.official_key)
+      count: officialKeys.length,
+      keys: officialKeys
     });
     console.debug("[OFFICIAL:ensure]", { userId, conversationId: conversation.id, status: "ready" });
   }
@@ -459,9 +472,7 @@ export async function listConversations(userId) {
 }
 
 export async function listMessages(conversationId, userId, { before = "", limit = 50 } = {}) {
-  await ensureOfficialConversationBootstrap(conversationId, userId).catch((error) => {
-    console.error("[OFFICIAL:repair] bootstrap before messages failed:", error.message);
-  });
+  const isOfficialConversation = await ensureOfficialConversationBootstrap(conversationId, userId);
   const safeLimit = Math.min(50, Math.max(1, Number(limit) || 50));
   const params = [conversationId, userId];
   const beforeClause = before ? "AND m.created_at < $3" : "";
@@ -506,9 +517,17 @@ export async function listMessages(conversationId, userId, { before = "", limit 
       officialCount: messages.filter((message) => message.messageType === "official").length
     });
   }
+  const officialKeys = messages.map((message) => message.officialKey).filter(Boolean);
   return {
     messages,
-    hasMore: result.rows.length === safeLimit
+    hasMore: result.rows.length === safeLimit,
+    ...(isOfficialConversation ? {
+      official: {
+        messageCount: officialKeys.length,
+        expectedCount: 5,
+        keys: officialKeys
+      }
+    } : {})
   };
 }
 

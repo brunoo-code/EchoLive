@@ -36,7 +36,7 @@ export default function ControlsBar({
           <Icon name="settings" size={14} />
           <span>Opcoes</span>
         </button>
-        {isPresetMenuOpen && <div className="screen-preset-menu" role="menu" aria-label="Qualidade da transmissao">{presetOptions.map(([value, label]) => <button type="button" key={value} className={streamPreset === value ? "is-selected" : ""} onClick={() => { onStreamPresetChange(value); setIsPresetMenuOpen(false); }} role="menuitemradio" aria-checked={streamPreset === value}><span>{label}</span>{value === "1080p60" && <small>Maior uso de conexao e processamento</small>}</button>)}</div>}
+        {isPresetMenuOpen && <div className="screen-preset-menu" role="menu" aria-label="Qualidade da transmissao">{presetOptions.map(([value, label]) => <button type="button" key={value} className={streamPreset === value ? "is-selected" : ""} onClick={() => { onStreamPresetChange?.(value); setIsPresetMenuOpen(false); }} role="menuitemradio" aria-checked={streamPreset === value}><span>{label}</span>{value === "1080p60" && <small>Maior uso de conexao e processamento</small>}</button>)}</div>}
       </div>
     </>;
   }
@@ -56,7 +56,7 @@ export default function ControlsBar({
           {isScreenSharing && <small>{screenShareLabel}</small>}
         </button>
         <button type="button" className="screen-preset-trigger" onClick={() => setIsPresetMenuOpen((value) => !value)} title="Escolher qualidade da transmissao" aria-label="Escolher qualidade da transmissao" aria-haspopup="menu" aria-expanded={isPresetMenuOpen}><Icon name="settings" size={14} /><Icon name="chevron" size={12} /></button>
-        {isPresetMenuOpen && <div className="screen-preset-menu" role="menu" aria-label="Qualidade da transmissao">{presetOptions.map(([value, label]) => <button type="button" key={value} className={streamPreset === value ? "is-selected" : ""} onClick={() => { onStreamPresetChange(value); setIsPresetMenuOpen(false); }} role="menuitemradio" aria-checked={streamPreset === value}><span>{label}</span>{value === "1080p60" && <small>Maior uso de conexao e processamento</small>}</button>)}</div>}
+        {isPresetMenuOpen && <div className="screen-preset-menu" role="menu" aria-label="Qualidade da transmissao">{presetOptions.map(([value, label]) => <button type="button" key={value} className={streamPreset === value ? "is-selected" : ""} onClick={() => { onStreamPresetChange?.(value); setIsPresetMenuOpen(false); }} role="menuitemradio" aria-checked={streamPreset === value}><span>{label}</span>{value === "1080p60" && <small>Maior uso de conexao e processamento</small>}</button>)}</div>}
         {isScreenSharing && <p className="screen-share-guidance">Para compartilhar videos ou musica com audio, prefira uma aba do navegador. O audio da tela inteira pode incluir sons da propria chamada.</p>}
       </div>
     </footer>
