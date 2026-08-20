@@ -131,13 +131,15 @@ export default function DirectMessagePage({ conversationId, initialConversation,
           conversationId,
           apiCount: history.messages.length,
           pageCount: nextMessages.length,
-          officialCount: nextMessages.filter((message) => message.messageType === "official").length
+          officialCount: nextMessages.filter((message) => message.messageType === "official").length,
+          officialApi: history.official || null
         });
         if (otherUser?.isOfficial) {
           console.debug("[OFFICIAL:messages-api]", {
             conversationId,
             count: history.messages.length,
-            officialKeys: nextMessages.map((message) => message.officialKey).filter(Boolean)
+            officialKeys: nextMessages.map((message) => message.officialKey).filter(Boolean),
+            officialApi: history.official || null
           });
         }
       }
@@ -370,7 +372,11 @@ function extractHistory(data) {
       : Array.isArray(data?.data?.messages)
         ? data.data.messages
         : [];
-  return { messages, hasMore: Boolean(data?.hasMore ?? data?.data?.hasMore) };
+  return {
+    messages,
+    hasMore: Boolean(data?.hasMore ?? data?.data?.hasMore),
+    official: data?.official || data?.data?.official || null
+  };
 }
 
 function Message({ message, mine, compact, showDate, onOpenImage }) {

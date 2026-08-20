@@ -5,7 +5,7 @@ import AudioParticipant from "../components/AudioParticipant.jsx";
 import AuthModal from "../components/AuthModal.jsx";
 import DevicesModal from "../components/DevicesModal.jsx";
 import SettingsModal from "../components/SettingsModal.jsx";
-import ParticipantCard from "../components/ParticipantCard.jsx";
+import CallMediaView from "../components/CallMediaView.jsx";
 import ParticipantsPanel from "../components/ParticipantsPanel.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
@@ -1376,27 +1376,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   ).sort(
     (left, right) => Number(right.isScreenSharing) - Number(left.isScreenSharing)
   );
-  const focusedParticipant = callParticipants.find((participant) => participant.socketId === focusedMediaId) || callParticipants[0];
   const screenShareLabel = getActualScreenLabel(screenShareSettings, streamPreset);
-
-  function renderParticipantCard(participant, compact = false) {
-    return (
-      <ParticipantCard
-        key={`${compact ? "thumb" : "main"}-${participant.socketId}`}
-        {...participant}
-        screenShareLabel={participant.isLocal ? screenShareLabel : ""}
-        compact={compact}
-        isDeafened={isDeafened}
-        notify={notify}
-        outputDeviceId={selectedOutputId}
-        onFocus={(socketId) => {
-          setFocusedMediaId(socketId);
-          setViewMode("focus");
-        }}
-        onVolumeChange={(volume) => changeRemoteVolume(participant.socketId, volume)}
-      />
-    );
-  }
 
   return (
     <main className="page room-page app-shell">
@@ -1457,46 +1437,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       />
 
       <section className="central-stage">
-        {activeContentView === "media" ? <section className="call-stage channel-view">
-        <header className="room-header">
-          <div>
-            <p className="eyebrow">Voz</p>
-            <p className="call-context-line">Geral</p>
-          </div>
-          <div className="room-meta">
-            <span>Participantes: {currentParticipantCount}/{maxParticipants}</span>
-            <div className="call-view-controls" aria-label="Modo de visualizacao">
-              <button type="button" className={viewMode === "grid" ? "is-selected" : ""} onClick={() => setViewMode("grid")} aria-pressed={viewMode === "grid"}>Grade</button>
-              <button type="button" className={viewMode === "focus" ? "is-selected" : ""} onClick={() => { setViewMode("focus"); setFocusedMediaId((current) => current || callParticipants[0]?.socketId || ""); }} aria-pressed={viewMode === "focus"} disabled={!callParticipants.length}>Foco</button>
-            </div>
-          </div>
-        </header>
-
-        {joinState === "joining" && <p className="status-line">Entrando na sala...</p>}
-        {joinState === "disconnected" && (
-          <p className="status-line danger">Conexao com o servidor perdida.</p>
-        )}
-
-        {!isInVoice ? (
-          <section className="voice-empty-surface" aria-label="Canal de voz vazio" />
-        ) : callParticipants.length > 0 ? (
-          viewMode === "focus" && focusedParticipant ? (
-            <section className="focus-layout">
-              <div className="focus-main">{renderParticipantCard(focusedParticipant)}</div>
-              <div className="focus-thumbnails">
-                {callParticipants.filter((participant) => participant.socketId !== focusedParticipant.socketId).map((participant) => renderParticipantCard(participant, true))}
-              </div>
-            </section>
-          ) : (
-            <section className={`participants-grid count-${callParticipants.length} ${callParticipants.some((participant) => participant.isScreenSharing) ? "has-sharing" : ""}`}>
-              {callParticipants.map((participant) => renderParticipantCard(participant))}
-            </section>
-          )
-        ) : (
-          <section className="voice-empty-surface" aria-label="Canal de voz vazio" />
-        )}
-
-        </section> : <section className="chat-stage channel-view">
+        {activeContentView === "media" ? <CallMediaView participants={voiceParticipants} channelName="Geral" participantCount={currentParticipantCount} maxParticipants={maxParticipants} isInVoice={isInVoice} isJoining={joinState === "joining"} isDisconnected={joinState === "disconnected"} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} outputDeviceId={selectedOutputId} screenShareLabel={screenShareLabel} onVolumeChange={changeRemoteVolume} notify={notify} /> : <section className="chat-stage channel-view">
           {isScreenSharing && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name="screenShare" size={15} /><span>Transmissao ativa</span><strong>Ver transmissao</strong></button>}
           <ChatPanel
               socket={socketInstance}
