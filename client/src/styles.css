@@ -667,7 +667,10 @@ h2 {
   justify-content: center;
   width: 8px;
   height: 8px;
-  flex: 0 0 auto;
+  flex: 0 0 8px;
+  align-self: center;
+  inset: auto;
+  transform: none;
   border: 0;
 }
 .profile-status-trigger .menu-status-dot.user-status-badge--dnd::after,
@@ -2801,6 +2804,11 @@ video.screen-video {
   min-height: 38px;
   padding: 0 9px;
   font-size: 0.78rem;
+}
+.profile-status-options button.is-disabled,
+.profile-popover-actions button.is-disabled {
+  opacity: .45;
+  cursor: not-allowed;
 }
 
 .profile-status-options button .ui-icon,
@@ -8654,6 +8662,27 @@ video.screen-video {
   border-radius: 8px;
   background: #1b1b20;
   box-shadow: 0 14px 30px rgba(0, 0, 0, .38);
+}
+.presence-menu,
+.profile-status-options,
+.profile-status-options button {
+  box-sizing: border-box;
+}
+.profile-status-options button {
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+  line-height: 1.2;
+}
+.profile-status-options .menu-status-dot,
+.profile-status-trigger .menu-status-dot {
+  position: static;
+  display: inline-flex;
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  margin: 0;
+  transform: none;
 }
 .profile-status-options button { min-height: 36px; padding: 0 9px; font-size: .76rem; }
 .profile-status-options button .ui-icon:last-child { margin-left: auto; }

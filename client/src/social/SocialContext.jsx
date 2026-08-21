@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { io } from "socket.io-client";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { SERVER_URL } from "../utils/webrtc.js";
-import { playUiSound, uiSoundsEnabled } from "../utils/uiSounds.js";
+import { playUiSound, uiNotificationSoundsEnabled } from "../utils/uiSounds.js";
 
 const SocialContext = createContext(null);
 
@@ -61,7 +61,7 @@ export function SocialProvider({ children }) {
       const oldest = playedSoundEventsRef.current.values().next().value;
       if (oldest) playedSoundEventsRef.current.delete(oldest);
     }
-    playUiSound(soundName, uiSoundsEnabled(user?.status));
+    playUiSound(soundName, uiNotificationSoundsEnabled(user?.status));
   }
 
   const refreshFriends = useCallback(async () => {

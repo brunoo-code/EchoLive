@@ -18,7 +18,7 @@ function cleanImageDataUrl(value) {
 }
 
 function mapChannel(row) {
-  return { id: row.id, serverId: row.server_id, type: row.type, name: row.name, position: row.position, isDefault: Number(row.position) === 0 };
+  return { id: row.id, serverId: row.server_id, type: row.type, name: row.name, position: row.position, isDefault: Boolean(row.is_default) };
 }
 
 function mapServer(row) {
@@ -109,7 +109,7 @@ export async function listServersForUser(userId) {
   const result = await query(
     `SELECT s.*, m.role,
             (SELECT COUNT(*)::int FROM server_members sm2 WHERE sm2.server_id = s.id) AS member_count,
-            COALESCE((SELECT json_agg(json_build_object('id', c.id, 'serverId', c.server_id, 'type', c.type, 'name', c.name, 'position', c.position, 'isDefault', c.position = 0) ORDER BY c.type, c.position, c.created_at)
+            COALESCE((SELECT json_agg(json_build_object('id', c.id, 'serverId', c.server_id, 'type', c.type, 'name', c.name, 'position', c.position, 'isDefault', c.is_default) ORDER BY c.type, c.position, c.created_at)
                       FROM server_channels c WHERE c.server_id = s.id), '[]'::json) AS channels
      FROM servers s
      JOIN server_members m ON m.server_id = s.id AND m.user_id = $1
@@ -124,7 +124,7 @@ export async function getServerForUser(serverId, userId) {
   const result = await query(
     `SELECT s.*, m.role,
             (SELECT COUNT(*)::int FROM server_members sm2 WHERE sm2.server_id = s.id) AS member_count,
-            COALESCE((SELECT json_agg(json_build_object('id', c.id, 'serverId', c.server_id, 'type', c.type, 'name', c.name, 'position', c.position, 'isDefault', c.position = 0) ORDER BY c.type, c.position, c.created_at)
+            COALESCE((SELECT json_agg(json_build_object('id', c.id, 'serverId', c.server_id, 'type', c.type, 'name', c.name, 'position', c.position, 'isDefault', c.is_default) ORDER BY c.type, c.position, c.created_at)
                       FROM server_channels c WHERE c.server_id = s.id), '[]'::json) AS channels
      FROM servers s
      JOIN server_members m ON m.server_id = s.id AND m.user_id = $2
@@ -203,8 +203,8 @@ export async function createServer(userId, input) {
     const serverId = inserted.rows[0].id;
     await client.query("INSERT INTO server_members (server_id, user_id, role) VALUES ($1, $2, 'owner')", [serverId, userId]);
     await client.query(
-      `INSERT INTO server_channels (server_id, type, name, position)
-       VALUES ($1, 'text', 'geral', 0), ($1, 'voice', 'Geral', 0)`,
+      `INSERT INTO server_channels (server_id, type, name, position, is_default)
+       VALUES ($1, 'text', 'geral', 0, TRUE), ($1, 'voice', 'Geral', 0, TRUE)`,
       [serverId]
     );
     return serverId;
@@ -258,7 +258,7 @@ export async function createChannel(serverId, userId, input) {
   const validation = validateChannelInput(input || {});
   if (validation.error) return { error: validation.error };
   try {
-    const result = await query("INSERT INTO server_channels (server_id, type, name, position) VALUES ($1, $2, $3, COALESCE((SELECT MAX(position) + 1 FROM server_channels WHERE server_id = $1 AND type = $2), 0)) RETURNING *", [serverId, validation.value.type, validation.value.name]);
+    const result = await query("INSERT INTO server_channels (server_id, type, name, position, is_default) VALUES ($1, $2, $3, COALESCE((SELECT MAX(position) + 1 FROM server_channels WHERE server_id = $1 AND type = $2), 0), FALSE) RETURNING *", [serverId, validation.value.type, validation.value.name]);
     return { channel: mapChannel(result.rows[0]) };
   } catch (error) {
     if (error.code === "23505") return { error: "Ja existe um canal com esse nome.", code: "CHANNEL_EXISTS" };
@@ -284,9 +284,9 @@ export async function deleteChannel(serverId, channelId, userId) {
   const current = await getServerForUser(serverId, userId);
   if (!current || !["owner", "admin"].includes(current.role)) return { error: "Sem permissao para apagar canais.", code: "FORBIDDEN" };
   return withTransaction(async (client) => {
-    const existing = await client.query("SELECT id, position FROM server_channels WHERE id = $1 AND server_id = $2 FOR UPDATE", [channelId, serverId]);
+    const existing = await client.query("SELECT id, is_default FROM server_channels WHERE id = $1 AND server_id = $2 FOR UPDATE", [channelId, serverId]);
     if (!existing.rows[0]) return { error: "Canal nao encontrado.", code: "NOT_FOUND" };
-    if (Number(existing.rows[0].position) === 0) return { error: "O canal padrao nao pode ser excluido.", code: "PROTECTED_CHANNEL" };
+    if (existing.rows[0].is_default) return { error: "O canal padrao nao pode ser excluido.", code: "PROTECTED_CHANNEL" };
     await client.query("DELETE FROM server_channels WHERE id = $1 AND server_id = $2", [channelId, serverId]);
     return { ok: true };
   });

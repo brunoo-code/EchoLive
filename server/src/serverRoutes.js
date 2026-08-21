@@ -96,7 +96,8 @@ function handleChannelError(response, error, action) {
     "23503": "O servidor ou canal informado nao esta mais disponivel. Recarregue a pagina.",
     "23502": "O servidor nao conseguiu salvar todos os dados do canal."
   };
-  return response.status(500).json({ error: knownErrors[error?.code] || `Nao foi possivel ${action} o canal.`, code: "CHANNEL_OPERATION_FAILED" });
+  const status = error?.code === "23505" ? 409 : error?.code === "23503" ? 409 : 500;
+  return response.status(status).json({ error: knownErrors[error?.code] || `Nao foi possivel ${action} o canal.`, code: error?.code === "23505" ? "CHANNEL_EXISTS" : "CHANNEL_OPERATION_FAILED" });
 }
 
 function requireUuid(value, response, message = "Identificador invalido.") {
@@ -182,7 +183,7 @@ export function registerServerRoutes(app, io = null) {
     if (!requireUuid(request.params.serverId, response)) return;
     try {
       const result = await createChannel(request.params.serverId, request.user.id, request.body || {});
-      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result);
+      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : result.code === "CHANNEL_EXISTS" ? 409 : 400).json(result);
       io?.to(serverUpdatesKey(request.params.serverId)).emit("server:channel-created", { serverId: request.params.serverId, channel: result.channel });
       return response.status(201).json(result);
     } catch (error) { return handleChannelError(response, error, "criar"); }
@@ -192,7 +193,7 @@ export function registerServerRoutes(app, io = null) {
     if (!requireUuid(request.params.serverId, response) || !requireUuid(request.params.channelId, response)) return;
     try {
       const result = await updateChannel(request.params.serverId, request.params.channelId, request.user.id, request.body || {});
-      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result);
+      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : result.code === "CHANNEL_EXISTS" ? 409 : 400).json(result);
       io?.to(serverUpdatesKey(request.params.serverId)).emit("server:channel-updated", { serverId: request.params.serverId, channel: result.channel });
       return response.json(result);
     } catch (error) { return handleChannelError(response, error, "editar"); }
@@ -202,7 +203,7 @@ export function registerServerRoutes(app, io = null) {
     if (!requireUuid(request.params.serverId, response) || !requireUuid(request.params.channelId, response)) return;
     try {
       const result = await deleteChannel(request.params.serverId, request.params.channelId, request.user.id);
-      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : result.code === "PROTECTED_CHANNEL" ? 400 : 404).json(result);
+      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : result.code === "PROTECTED_CHANNEL" ? 409 : 404).json(result);
       io?.to(serverUpdatesKey(request.params.serverId)).emit("server:channel-deleted", { serverId: request.params.serverId, channelId: request.params.channelId });
       return response.json(result);
     } catch (error) { return handleChannelError(response, error, "excluir"); }

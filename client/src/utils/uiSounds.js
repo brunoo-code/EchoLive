@@ -15,13 +15,17 @@ let contextRef = null;
 let activeSource = null;
 let unlockBound = false;
 
-export function uiSoundsEnabled(presenceStatus) {
-  if (presenceStatus === "dnd" || presenceStatus === "Não perturbe") return false;
+export function uiSoundsEnabled() {
   try {
     return window.localStorage.getItem("echolive.uiSounds") !== "false";
   } catch {
     return true;
   }
+}
+
+export function uiNotificationSoundsEnabled(presenceStatus) {
+  if (presenceStatus === "dnd" || presenceStatus === "Não perturbe") return false;
+  return uiSoundsEnabled();
 }
 
 function bindContextUnlock() {

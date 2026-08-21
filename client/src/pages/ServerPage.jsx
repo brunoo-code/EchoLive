@@ -19,7 +19,7 @@ import { SERVER_URL } from "../utils/webrtc.js";
 import { validateUploadFile } from "../utils/uploadLimits.js";
 import { linkifyMessage } from "../utils/linkifyMessage.js";
 import { publicPresence } from "../utils/presence.js";
-import { playUiSound, uiSoundsEnabled } from "../utils/uiSounds.js";
+import { playUiSound, uiNotificationSoundsEnabled, uiSoundsEnabled } from "../utils/uiSounds.js";
 import useServerVoiceCall from "../hooks/useServerVoiceCall.js";
 import useToasts from "../hooks/useToasts.js";
 
@@ -276,6 +276,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       setServer((current) => current ? { ...current, channels: (current.channels || []).filter((item) => item.id !== channelId) } : current);
       setActiveChannelId((current) => current === channelId ? "" : current);
       setVoiceChannelId((current) => current === channelId ? "" : current);
+      if (voiceViewChannelId === channelId) setActiveContentView("text");
       setVoiceViewChannelId((current) => current === channelId ? "" : current);
     };
     const handleServerDeleted = ({ serverId: eventServerId } = {}) => {
@@ -308,7 +309,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     const handleMessage = (message) => {
       if (!message?.id || knownServerMessageIdsRef.current.has(message.id)) return;
       knownServerMessageIdsRef.current.add(message.id);
-      if (message.sender?.id !== user?.id) playUiSound("message-received", uiSoundsEnabled(user?.status));
+      if (message.sender?.id !== user?.id) playUiSound("message-received", uiNotificationSoundsEnabled(user?.status));
       setMessages((current) => [...current, message]);
     };
     const handleReaction = ({ messageId, emoji, active: reactionActive }) => setMessages((current) => current.map((message) => message.id !== messageId ? message : { ...message, reactions: updateReactionList(message.reactions, emoji, reactionActive) }));
