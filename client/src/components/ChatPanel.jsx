@@ -26,7 +26,7 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ChatPanel({ socket, socketId, roomCode, messages, notify, uiSounds, displayName, isReady }) {
+export default function ChatPanel({ socket, socketId, roomCode, messages, notify, uiSounds, notificationSoundsAllowed = true, displayName, isReady }) {
   const [draft, setDraft] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [isSending, setIsSending] = useState(false);
@@ -82,14 +82,13 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
   }, [socket, socketId]);
 
   useEffect(() => {
-    if (!hasSeenMessageBatchRef.current && messages.length > 0) {
-      messages.forEach((message) => knownMessageIdsRef.current.add(message.id));
-      hasSeenMessageBatchRef.current = true;
-      return;
-    }
-
+    const newRemoteMessages = hasSeenMessageBatchRef.current
+      ? messages.filter((message) => !knownMessageIdsRef.current.has(message.id) && message.socketId !== socketId)
+      : [];
+    if (newRemoteMessages.length > 0 && notificationSoundsAllowed) playUiSound("message-received", uiSounds);
     messages.forEach((message) => knownMessageIdsRef.current.add(message.id));
-  }, [messages]);
+    if (messages.length > 0) hasSeenMessageBatchRef.current = true;
+  }, [messages, notificationSoundsAllowed, socketId, uiSounds]);
 
   function stopTyping() {
     if (typingTimeoutRef.current) {

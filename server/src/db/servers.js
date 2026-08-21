@@ -238,7 +238,9 @@ export async function updateServerNickname(serverId, userId, value) {
 export async function deleteServer(serverId, userId) {
   const current = await getServerForUser(serverId, userId);
   if (!current || current.role !== "owner") return { error: "Somente o proprietario pode apagar o servidor.", code: "FORBIDDEN" };
-  await query("UPDATE servers SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1", [serverId]);
+  await withTransaction(async (client) => {
+    await client.query("DELETE FROM servers WHERE id = $1 AND owner_user_id = $2", [serverId, userId]);
+  });
   return { ok: true };
 }
 

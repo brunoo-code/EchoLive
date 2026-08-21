@@ -1591,6 +1591,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
               messages={messages}
               notify={notify}
               uiSounds={uiSounds}
+              notificationSoundsAllowed={profile.status !== "dnd" && profile.status !== "Não perturbe"}
               displayName={localDisplayName}
               isReady={hasJoined}
             />

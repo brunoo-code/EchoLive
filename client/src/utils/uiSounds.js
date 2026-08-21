@@ -3,7 +3,7 @@ const PROFILES = {
   "mic-mute": [220, 150, 0.07], "mic-unmute": [420, 620, 0.08],
   "voice-join": [360, 560, 0.1], "voice-leave": [500, 280, 0.1],
   "screen-start": [300, 720, 0.09], "screen-stop": [620, 300, 0.09],
-  "message-send": [520, 680, 0.045],
+  "message-send": [520, 680, 0.045], "message-received": [300, 390, 0.06],
   "dmReceived": [580, 760, 0.075],
   "dmSent": [520, 690, 0.045],
   "friendRequestReceived": [430, 650, 0.085],
@@ -12,6 +12,25 @@ const PROFILES = {
 };
 let contextRef = null;
 let activeSource = null;
+let unlockBound = false;
+
+export function uiSoundsEnabled(presenceStatus) {
+  if (presenceStatus === "dnd" || presenceStatus === "Não perturbe") return false;
+  try {
+    return window.localStorage.getItem("echolive.uiSounds") !== "false";
+  } catch {
+    return true;
+  }
+}
+
+function bindContextUnlock() {
+  if (unlockBound || typeof window === "undefined") return;
+  unlockBound = true;
+  const unlock = () => contextRef?.resume?.().catch(() => {});
+  ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
+    window.addEventListener(eventName, unlock, { capture: true, once: true });
+  });
+}
 
 export function playUiSound(name, enabled = true) {
   if (!enabled || typeof window === "undefined") return;
@@ -20,6 +39,7 @@ export function playUiSound(name, enabled = true) {
   if (!profile || !Context) return;
   try {
     contextRef ||= new Context();
+    bindContextUnlock();
     const context = contextRef;
     if (context.state === "suspended") context.resume().catch(() => {});
     activeSource?.stop?.();

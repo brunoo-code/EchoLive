@@ -2,17 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { io } from "socket.io-client";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { SERVER_URL } from "../utils/webrtc.js";
-import { playUiSound } from "../utils/uiSounds.js";
+import { playUiSound, uiSoundsEnabled } from "../utils/uiSounds.js";
 
 const SocialContext = createContext(null);
-
-function notificationSoundsEnabled() {
-  try {
-    return window.localStorage.getItem("echolive.uiSounds") !== "false";
-  } catch {
-    return true;
-  }
-}
 
 function isVisibleActiveDm(conversationId) {
   if (typeof window === "undefined" || document.visibilityState !== "visible" || !document.hasFocus()) return false;
@@ -69,7 +61,7 @@ export function SocialProvider({ children }) {
       const oldest = playedSoundEventsRef.current.values().next().value;
       if (oldest) playedSoundEventsRef.current.delete(oldest);
     }
-    playUiSound(soundName, notificationSoundsEnabled());
+    playUiSound(soundName, uiSoundsEnabled(user?.status));
   }
 
   const refreshFriends = useCallback(async () => {

@@ -152,7 +152,9 @@ export function registerServerRoutes(app, io = null) {
     if (!requireUuid(request.params.serverId, response)) return;
     try {
       const result = await deleteServer(request.params.serverId, request.user.id);
-      return result.error ? response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result) : response.json(result);
+      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result);
+      io?.to(serverUpdatesKey(request.params.serverId)).emit("server:deleted", { serverId: request.params.serverId });
+      return response.json(result);
     } catch (error) { return handleServerError(response, error); }
   });
 

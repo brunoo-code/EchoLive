@@ -4897,7 +4897,7 @@ video.screen-video {
 .room-page .message-avatar { width: 30px; height: 30px; font-size: 0.74rem; }
 .room-page .message-meta strong { font-size: 0.82rem; font-weight: 650; }
 .room-page .message-meta time { color: #7f8998; font-size: 0.66rem; }
-.room-page .message-body > p { color: #d8dee8; line-height: 1.42; }
+.room-page .message-body > p { color: #d8dee8; font-size: 15px; line-height: 1.42; }
 .room-page .message-body a { color: var(--echo-blue); }
 .room-page .message-body a:hover { text-decoration: underline; }
 .room-page .message-attachment { margin-top: 7px; font-size: 0.68rem; }
@@ -5678,7 +5678,7 @@ video.screen-video {
 .room-page .message-list { padding: 12px max(20px, 4vw); }
 .room-page .chat-message { max-width: 920px; margin-inline: auto; padding: 6px 8px; border-radius: 5px; }
 .room-page .chat-message.is-grouped { padding-top: 1px; }
-.room-page .message-body > p { font-size: .78rem; }
+.room-page .message-body > p { font-size: 15px; }
 .room-page .chat-composer { padding: 7px max(14px, 3vw) 12px; }
 .room-page .composer-row { padding: 4px; border-radius: 8px; background: rgba(25,29,36,.68); }
 .room-page .message-input { min-height: 30px; font-size: .76rem; }
@@ -7650,7 +7650,7 @@ video.screen-video {
 .room-page .message-body > p,
 .server-page .server-chat-message .message-body > p {
   color: var(--shell-secondary);
-  font-size: .82rem;
+  font-size: 15px;
   line-height: 1.45;
 }
 
@@ -8067,7 +8067,7 @@ video.screen-video {
 .server-page .server-chat-message .message-body > p {
   margin-top: 2px;
   color: var(--room-text, #ecf1f5);
-  font-size: .92rem;
+  font-size: 15px;
   line-height: 1.4;
 }
 .server-page .server-message-attachment {
@@ -8624,6 +8624,7 @@ video.screen-video {
 .profile-status-trigger:hover,
 .profile-status-trigger:focus-visible { border-color: rgba(255, 255, 255, .16); color: #f0eff3; background: #2b2a31; outline: none; }
 .profile-status-trigger .ui-icon { margin-left: auto; color: #8f8c98; }
+.profile-status-trigger .user-status-badge { position: relative; right: auto; bottom: auto; flex: 0 0 auto; border: 0; }
 .profile-status-options {
   position: absolute;
   z-index: 3;

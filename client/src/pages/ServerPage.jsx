@@ -19,6 +19,7 @@ import { SERVER_URL } from "../utils/webrtc.js";
 import { validateUploadFile } from "../utils/uploadLimits.js";
 import { linkifyMessage } from "../utils/linkifyMessage.js";
 import { publicPresence } from "../utils/presence.js";
+import { playUiSound, uiSoundsEnabled } from "../utils/uiSounds.js";
 import useServerVoiceCall from "../hooks/useServerVoiceCall.js";
 import useToasts from "../hooks/useToasts.js";
 
@@ -137,6 +138,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const isTypingRef = useRef(false);
   const fileInputRef = useRef(null);
   const messageInputRef = useRef(null);
+  const knownServerMessageIdsRef = useRef(new Set());
   const [serverSocket, setServerSocket] = useState(null);
 
   const activeChannel = useMemo(() => server?.channels?.find((channel) => channel.id === activeChannelId) || server?.channels?.find((channel) => channel.type === "text") || null, [activeChannelId, server]);
@@ -185,6 +187,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     setServer(null);
     setMembers([]);
     setMessages([]);
+    knownServerMessageIdsRef.current.clear();
     setHasMoreMessages(false);
     setLoadingOlderMessages(false);
     setActiveChannelId("");
@@ -267,11 +270,15 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       setVoiceChannelId((current) => current === channelId ? "" : current);
       setVoiceViewChannelId((current) => current === channelId ? "" : current);
     };
+    const handleServerDeleted = ({ serverId: eventServerId } = {}) => {
+      if (eventServerId === serverId) onNavigateSocial?.();
+    };
 
     serverSocket.on("connect", watchServer);
     serverSocket.on("server:channel-created", handleChannelCreated);
     serverSocket.on("server:channel-updated", handleChannelUpdated);
     serverSocket.on("server:channel-deleted", handleChannelDeleted);
+    serverSocket.on("server:deleted", handleServerDeleted);
     watchServer();
     return () => {
       serverSocket.emit("server:unwatch", { serverId });
@@ -279,6 +286,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       serverSocket.off("server:channel-created", handleChannelCreated);
       serverSocket.off("server:channel-updated", handleChannelUpdated);
       serverSocket.off("server:channel-deleted", handleChannelDeleted);
+      serverSocket.off("server:deleted", handleServerDeleted);
     };
   }, [serverId, serverSocket]);
 
@@ -286,9 +294,15 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     if (!serverId || !activeChannel?.id || activeChannel.type !== "text" || !serverSocket) return undefined;
     let active = true;
     setActiveChannelId(activeChannel.id);
-    request(`/api/servers/${serverId}/channels/${activeChannel.id}/messages?limit=50`).then((data) => { if (active) { setMessages(data.messages || []); setHasMoreMessages(Boolean(data.hasMore)); } }).catch((requestError) => { if (active) setError(requestError.message); });
+    knownServerMessageIdsRef.current.clear();
+    request(`/api/servers/${serverId}/channels/${activeChannel.id}/messages?limit=50`).then((data) => { if (active) { (data.messages || []).forEach((message) => knownServerMessageIdsRef.current.add(message.id)); setMessages(data.messages || []); setHasMoreMessages(Boolean(data.hasMore)); } }).catch((requestError) => { if (active) setError(requestError.message); });
     const subscribe = () => serverSocket.emit("server:subscribe", { serverId, channelId: activeChannel.id });
-    const handleMessage = (message) => setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
+    const handleMessage = (message) => {
+      if (!message?.id || knownServerMessageIdsRef.current.has(message.id)) return;
+      knownServerMessageIdsRef.current.add(message.id);
+      if (message.sender?.id !== user?.id) playUiSound("message-received", uiSoundsEnabled(user?.status));
+      setMessages((current) => [...current, message]);
+    };
     const handleReaction = ({ messageId, emoji, active: reactionActive }) => setMessages((current) => current.map((message) => message.id !== messageId ? message : { ...message, reactions: updateReactionList(message.reactions, emoji, reactionActive) }));
     const handleMessageUpdated = (message) => setMessages((current) => current.map((item) => item.id === message?.id ? message : item));
     const handleMessageDeleted = ({ messageId } = {}) => setMessages((current) => current.map((item) => item.id === messageId ? { ...item, content: "", attachment: null, deletedAt: new Date().toISOString() } : item));
@@ -319,7 +333,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       serverSocket.off("server:message-deleted", handleMessageDeleted);
       serverSocket.off("server:typing", handleTyping);
     };
-  }, [activeChannel?.id, isAuthenticated, serverId, serverSocket, user?.id]);
+  }, [activeChannel?.id, isAuthenticated, serverId, serverSocket, user?.id, user?.status]);
 
   useEffect(() => {
     if (!activeChannel?.id || !serverId) return;
@@ -715,6 +729,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
         if (!result?.ok) throw new Error(result?.error || "Nao foi possivel enviar a mensagem.");
       } else {
         const data = await request(`/api/servers/${serverId}/channels/${activeChannel.id}/messages`, { method: "POST", body: JSON.stringify({ content, attachment, replyToMessageId: replyingTo?.id || null }) });
+        knownServerMessageIdsRef.current.add(data.message.id);
         setMessages((current) => current.some((item) => item.id === data.message.id) ? current : [...current, data.message]);
       }
       setDraft("");
