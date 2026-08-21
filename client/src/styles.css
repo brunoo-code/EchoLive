@@ -659,7 +659,14 @@ h2 {
 .profile-status-options, .profile-popover-actions { display: grid; gap: 4px; margin-top: 10px; }
 .profile-status-options button, .profile-popover-actions button { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 8px; border-color: transparent; border-radius: 7px; color: var(--text-muted); background: transparent; text-align: left; font-size: 0.78rem; }
 .profile-status-options button:hover, .profile-popover-actions button:hover, .profile-status-options button.is-selected { transform: none; color: var(--text-main); background: rgba(255, 255, 255, .08); }
-.profile-status-options .user-status-badge { position: relative; right: auto; bottom: auto; border: 0; }
+.profile-status-trigger .menu-status-dot,
+.profile-status-options .menu-status-dot {
+  position: static;
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border: 0;
+}
 .profile-popover-actions { padding-top: 8px; border-top: 1px solid var(--border); }
 
 .profile-popover-banner {
@@ -8624,7 +8631,6 @@ video.screen-video {
 .profile-status-trigger:hover,
 .profile-status-trigger:focus-visible { border-color: rgba(255, 255, 255, .16); color: #f0eff3; background: #2b2a31; outline: none; }
 .profile-status-trigger .ui-icon { margin-left: auto; color: #8f8c98; }
-.profile-status-trigger .user-status-badge { position: relative; right: auto; bottom: auto; flex: 0 0 auto; border: 0; }
 .profile-status-options {
   position: absolute;
   z-index: 3;

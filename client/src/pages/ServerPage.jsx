@@ -529,10 +529,12 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     setChannelRequestBusy(true);
     setChannelError("");
     try {
-      const data = await request(`/api/servers/${serverId}/channels`, { method: "POST", body: JSON.stringify({ name, type: channelType }) });
+      if (!serverId) throw new Error("Servidor indisponível. Recarregue a página e tente novamente.");
+      const data = await request(`/api/servers/${encodeURIComponent(serverId)}/channels`, { method: "POST", body: JSON.stringify({ name, type: channelType }) });
       const created = data.channel;
       if (!created?.id) throw new Error("O servidor não confirmou a criação do canal.");
       setServer((current) => current ? { ...current, channels: (current.channels || []).some((item) => item.id === created.id) ? current.channels : [...(current.channels || []), created] } : current);
+      if (created.type === "text") setActiveChannelId(created.id);
       setChannelOpen(false);
       notify("Canal criado.");
     } catch (requestError) {
@@ -574,9 +576,13 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     setChannelRequestBusy(true);
     setSettingsError("");
     try {
-      await request(`/api/servers/${serverId}/channels/${channel.id}`, { method: "DELETE" });
+      await request(`/api/servers/${encodeURIComponent(serverId)}/channels/${encodeURIComponent(channel.id)}`, { method: "DELETE" });
       setServer((current) => current ? { ...current, channels: (current.channels || []).filter((item) => item.id !== channel.id) } : current);
       if (activeChannelId === channel.id) setActiveChannelId("");
+      if (voiceViewChannelId === channel.id) {
+        setVoiceViewChannelId("");
+        setActiveContentView("text");
+      }
       if (voiceChannelId === channel.id) {
         serverVoice.leave();
         setVoiceChannelId("");

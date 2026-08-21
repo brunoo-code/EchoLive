@@ -40,13 +40,13 @@ export default function PresenceMenu({ value, onChange, placement = "below", cla
 
   return <div ref={rootRef} className={`presence-menu presence-menu--${placement} ${opensLeft ? "opens-left" : ""} ${className}`.trim()}>
     <button type="button" className="profile-status-trigger" onClick={() => setOpen((currentOpen) => !currentOpen)} aria-expanded={open} aria-haspopup="menu">
-      <UserStatusBadge status={current} size="sm" />
+      <UserStatusBadge status={current} size="sm" className="menu-status-dot" />
       <span>{presenceLabel(current)}</span>
       <Icon name="chevron" size={14} />
     </button>
     {open && <div className="profile-status-options" role="menu" aria-label={label}>
       {PRESENCE_OPTIONS.map((option) => <button type="button" role="menuitemradio" aria-checked={current === option.value} className={current === option.value ? "is-selected" : ""} key={option.value} onClick={() => select(option.value)}>
-        <UserStatusBadge status={option.value} size="sm" />
+        <UserStatusBadge status={option.value} size="sm" className="menu-status-dot" />
         <span>{option.label}</span>
         {current === option.value && <Icon name="check" size={14} />}
       </button>)}
