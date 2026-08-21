@@ -6,6 +6,7 @@ import SocialEmptyState from "../components/SocialEmptyState.jsx";
 import EmojiPicker from "../components/EmojiPicker.jsx";
 import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
 import SocialUserProfilePopover from "../components/SocialUserProfilePopover.jsx";
+import ProfilePopover from "../components/ProfilePopover.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useSocial } from "../social/SocialContext.jsx";
 import { SERVER_URL } from "../utils/webrtc.js";
@@ -25,7 +26,7 @@ function uiSoundsEnabled() {
 }
 
 export default function DirectMessagePage({ conversationId, initialConversation, onNavigateHome, onNavigateFriends, onNavigateDm, onOpenAccountSettings }) {
-  const { user } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const { conversations, onlineUserIds, socket, socialReady, loadMessages, markRead, socialStatus, hideConversation, notificationCount } = useSocial();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
@@ -336,7 +337,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const openSidebarProfile = (profileUser, anchorRect) => setProfilePopover({
     user: {
       ...profileUser,
-      status: onlineUserIds.has(profileUser.id) ? (profileUser.status === "dnd" ? "dnd" : "online") : "offline"
+      status: profileUser.id === user?.id ? user.status : onlineUserIds.has(profileUser.id) ? (profileUser.status === "dnd" ? "dnd" : "online") : "offline"
     },
     anchorRect
   });
@@ -377,7 +378,8 @@ export default function DirectMessagePage({ conversationId, initialConversation,
         </div>
       </form>}
     </section>
-    {profilePopover && <SocialUserProfilePopover participant={profilePopover.user} anchorRect={profilePopover.anchorRect} onClose={() => setProfilePopover(null)} onMessage={(person) => { setProfilePopover(null); onNavigateDm?.(conversationId, conversation); }} onViewProfile={(person) => { setProfilePopover(null); setProfileOpen(person); }} />}
+    {profilePopover?.user?.id === user?.id && <ProfilePopover accountUser={user} profile={user} nickname={user.displayName || user.username} avatarUrl={user.avatarUrl || ""} onStatusChange={(nextStatus) => updateProfile({ status: nextStatus })} onEditProfile={() => { setProfilePopover(null); onOpenAccountSettings?.("profile"); }} onOpenSettings={() => { setProfilePopover(null); onOpenAccountSettings?.("profile"); }} onLogout={async () => { await logout(); onNavigateHome?.(); }} onClose={() => setProfilePopover(null)} />}
+    {profilePopover && profilePopover.user?.id !== user?.id && <SocialUserProfilePopover participant={profilePopover.user} anchorRect={profilePopover.anchorRect} onClose={() => setProfilePopover(null)} onMessage={(person) => { setProfilePopover(null); onNavigateDm?.(conversationId, conversation); }} onViewProfile={(person) => { setProfilePopover(null); setProfileOpen(person); }} />}
     {profileOpen && <SocialUserProfileModal userId={profileOpen.id} initialUser={profileOpen} onClose={() => setProfileOpen(null)} onMessage={(nextConversation) => { setProfileOpen(null); onNavigateDm(nextConversation.id, nextConversation); }} />}
     {lightboxImage && <div className="dm-lightbox" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setLightboxImage(null); }}><button type="button" className="icon-button dm-lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Fechar imagem" title="Fechar"><Icon name="close" size={20} /></button><img src={lightboxImage.source} alt={lightboxImage.alt || "Imagem ampliada"} /></div>}
   </main>;

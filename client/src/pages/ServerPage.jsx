@@ -8,6 +8,7 @@ import CallMediaView, { MediaPip } from "../components/CallMediaView.jsx";
 import UserAvatar from "../components/UserAvatar.jsx";
 import { ChatComposerFrame, ChatComposerRow, ChatHeader, ChatViewport } from "../components/ChatFrame.jsx";
 import EmojiPicker from "../components/EmojiPicker.jsx";
+import ProfilePopover from "../components/ProfilePopover.jsx";
 import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
 import SocialUserProfilePopover from "../components/SocialUserProfilePopover.jsx";
 import AudioParticipant from "../components/AudioParticipant.jsx";
@@ -67,7 +68,7 @@ async function request(path, options = {}) {
 }
 
 export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial, onNavigateServer, onOpenAccountSettings }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout, updateProfile } = useAuth();
   const { servers, createServer, deleteServer, leaveServer, refreshServers, status: serversStatus, updateServer } = useServers();
   const { toasts, notify } = useToasts();
   const [server, setServer] = useState(null);
@@ -119,6 +120,8 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [channelError, setChannelError] = useState("");
   const [editingChannelId, setEditingChannelId] = useState("");
   const [editingChannelName, setEditingChannelName] = useState("");
+  const [channelDeleteTarget, setChannelDeleteTarget] = useState(null);
+  const [channelRequestBusy, setChannelRequestBusy] = useState(false);
   const [serverActionBusy, setServerActionBusy] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [streamPreset, setStreamPreset] = useState("720p30");
@@ -151,11 +154,11 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     socketId: `server-member-${member.id}`,
     nickname: member.displayName || member.username,
     displayName: member.displayName || member.username,
-    status: member.id === user?.id ? "online" : member.status || "offline",
+    status: member.id === user?.id ? user?.status || member.status || "online" : member.status || "offline",
     isLocal: member.id === user?.id,
     secondaryText: member.role === "owner" ? "Proprietário" : member.role === "admin" ? "Administrador" : "Membro",
     rawUser: member
-  })), [members, user?.id]);
+  })), [members, user?.id, user?.status]);
   const currentServerMember = members.find((member) => member.id === user?.id) || null;
   const serverDisplayName = currentServerMember?.displayName || user?.displayName || user?.username || "Conta";
   const voiceIdentity = user ? { id: user.id, userId: user.id, displayName: serverDisplayName, username: user.username, avatarUrl: user.avatarUrl || "", badges: user.badges || [] } : null;
@@ -242,6 +245,40 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       setVoiceChannelId("");
     };
   }, [isAuthenticated, serverId]);
+
+  useEffect(() => {
+    if (!serverSocket || !serverId) return undefined;
+
+    const watchServer = () => serverSocket.emit("server:watch", { serverId });
+    const handleChannelCreated = ({ serverId: eventServerId, channel } = {}) => {
+      if (eventServerId !== serverId || !channel?.id) return;
+      setServer((current) => current ? { ...current, channels: (current.channels || []).some((item) => item.id === channel.id) ? current.channels : [...(current.channels || []), channel] } : current);
+    };
+    const handleChannelUpdated = ({ serverId: eventServerId, channel } = {}) => {
+      if (eventServerId !== serverId || !channel?.id) return;
+      setServer((current) => current ? { ...current, channels: (current.channels || []).map((item) => item.id === channel.id ? channel : item) } : current);
+    };
+    const handleChannelDeleted = ({ serverId: eventServerId, channelId } = {}) => {
+      if (eventServerId !== serverId || !channelId) return;
+      setServer((current) => current ? { ...current, channels: (current.channels || []).filter((item) => item.id !== channelId) } : current);
+      setActiveChannelId((current) => current === channelId ? "" : current);
+      setVoiceChannelId((current) => current === channelId ? "" : current);
+      setVoiceViewChannelId((current) => current === channelId ? "" : current);
+    };
+
+    serverSocket.on("connect", watchServer);
+    serverSocket.on("server:channel-created", handleChannelCreated);
+    serverSocket.on("server:channel-updated", handleChannelUpdated);
+    serverSocket.on("server:channel-deleted", handleChannelDeleted);
+    watchServer();
+    return () => {
+      serverSocket.emit("server:unwatch", { serverId });
+      serverSocket.off("connect", watchServer);
+      serverSocket.off("server:channel-created", handleChannelCreated);
+      serverSocket.off("server:channel-updated", handleChannelUpdated);
+      serverSocket.off("server:channel-deleted", handleChannelDeleted);
+    };
+  }, [serverId, serverSocket]);
 
   useEffect(() => {
     if (!serverId || !activeChannel?.id || activeChannel.type !== "text" || !serverSocket) return undefined;
@@ -456,23 +493,29 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
 
   async function submitCreateChannel(event) {
     event.preventDefault();
+    if (channelRequestBusy) return;
     const name = channelName.trim();
     if (!name || name.length > 40) {
       setChannelError("Use um nome entre 1 e 40 caracteres.");
       return;
     }
-    setServerActionBusy(true);
+    if (!["text", "voice"].includes(channelType)) {
+      setChannelError("Escolha um tipo de canal válido.");
+      return;
+    }
+    setChannelRequestBusy(true);
     setChannelError("");
     try {
       const data = await request(`/api/servers/${serverId}/channels`, { method: "POST", body: JSON.stringify({ name, type: channelType }) });
       const created = data.channel;
-      setServer((current) => current ? { ...current, channels: [...(current.channels || []), created] } : current);
+      if (!created?.id) throw new Error("O servidor não confirmou a criação do canal.");
+      setServer((current) => current ? { ...current, channels: (current.channels || []).some((item) => item.id === created.id) ? current.channels : [...(current.channels || []), created] } : current);
       setChannelOpen(false);
       notify("Canal criado.");
     } catch (requestError) {
       setChannelError(requestError.message);
     } finally {
-      setServerActionBusy(false);
+      setChannelRequestBusy(false);
     }
   }
 
@@ -482,37 +525,60 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       setSettingsError("Use um nome de canal entre 1 e 40 caracteres.");
       return;
     }
-    setServerActionBusy(true);
+    setChannelRequestBusy(true);
     setSettingsError("");
     try {
       const data = await request(`/api/servers/${serverId}/channels/${channel.id}`, { method: "PATCH", body: JSON.stringify({ name }) });
-      setServer((current) => current ? { ...current, channels: current.channels.map((item) => item.id === channel.id ? data.channel : item) } : current);
+      if (!data.channel?.id) throw new Error("O servidor não confirmou a alteração do canal.");
+      setServer((current) => current ? { ...current, channels: (current.channels || []).map((item) => item.id === channel.id ? data.channel : item) } : current);
       setEditingChannelId("");
       setEditingChannelName("");
     } catch (requestError) {
       setSettingsError(requestError.message);
     } finally {
-      setServerActionBusy(false);
+      setChannelRequestBusy(false);
     }
   }
 
-  async function removeChannel(channel) {
-    if (!window.confirm(`Excluir o canal ${channel.name}?`)) return;
-    setServerActionBusy(true);
+  function removeChannel(channel) {
+    setSettingsError("");
+    setChannelDeleteTarget(channel);
+  }
+
+  async function confirmDeleteChannel() {
+    const channel = channelDeleteTarget;
+    if (!channel?.id || channelRequestBusy) return;
+    setChannelRequestBusy(true);
     setSettingsError("");
     try {
       await request(`/api/servers/${serverId}/channels/${channel.id}`, { method: "DELETE" });
-      setServer((current) => current ? { ...current, channels: current.channels.filter((item) => item.id !== channel.id) } : current);
+      setServer((current) => current ? { ...current, channels: (current.channels || []).filter((item) => item.id !== channel.id) } : current);
       if (activeChannelId === channel.id) setActiveChannelId("");
       if (voiceChannelId === channel.id) {
         serverVoice.leave();
         setVoiceChannelId("");
         setVoiceViewChannelId("");
       }
+      setChannelDeleteTarget(null);
+      notify("Canal excluído.");
     } catch (requestError) {
       setSettingsError(requestError.message);
     } finally {
-      setServerActionBusy(false);
+      setChannelRequestBusy(false);
+    }
+  }
+
+  function beginRenameChannel(channel) {
+    openServerSettings("channels");
+    setEditingChannelId(channel.id);
+    setEditingChannelName(channel.name);
+  }
+
+  async function changeAccountStatus(status) {
+    try {
+      await updateProfile({ status });
+    } catch (requestError) {
+      notify(requestError.message || "Não foi possível atualizar o status.");
     }
   }
 
@@ -532,19 +598,20 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   }
 
   useEffect(() => {
-    if (!createOpen && !settingsOpen && !inviteOpen && !leaveOpen && !deleteOpen && !channelOpen) return undefined;
+    if (!createOpen && !settingsOpen && !inviteOpen && !leaveOpen && !deleteOpen && !channelOpen && !channelDeleteTarget) return undefined;
     const handleKeyDown = (event) => {
-      if (event.key !== "Escape" || creating || serverActionBusy) return;
+      if (event.key !== "Escape" || creating || serverActionBusy || channelRequestBusy) return;
       setCreateOpen(false);
       setSettingsOpen(false);
       setInviteOpen(false);
       setLeaveOpen(false);
       setDeleteOpen(false);
       setChannelOpen(false);
+      setChannelDeleteTarget(null);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [channelOpen, createOpen, creating, deleteOpen, inviteOpen, leaveOpen, serverActionBusy, settingsOpen]);
+  }, [channelDeleteTarget, channelOpen, channelRequestBusy, createOpen, creating, deleteOpen, inviteOpen, leaveOpen, serverActionBusy, settingsOpen]);
 
   function validateServerFile(file) {
     if (!file) return false;
@@ -794,7 +861,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
 
   return <main className={`page app-shell room-page server-page ${activeContentView === "media" && !isMemberPanelOpen ? "call-members-collapsed" : ""}`}>
     <RoomRail roomCode="" roomName="" recentRooms={[]} onHome={onNavigateHome} onSocial={onNavigateSocial} onOpenSwitcher={handleCreateServer} servers={servers} activeServerId={serverId} onOpenServer={onNavigateServer} onCreateServer={handleCreateServer} />
-    <Sidebar variant="server" serverName={server?.name || "Seus servidores"} serverIconUrl={server?.iconUrl || ""} serverTextChannels={textChannels} serverVoiceChannels={voiceChannels} serverActiveChannelId={activeChannel?.id} serverVoiceChannelId={voiceChannelId} serverVoiceViewedChannelId={activeContentView === "media" ? voiceViewChannelId : ""} serverConnectedVoiceChannelId={serverVoice.connected ? voiceChannelId : ""} voiceChannelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || voiceChannels[0]?.name || "Geral"} onSelectServerChannel={selectServerChannel} onToggleServerVoice={toggleVoice} serverVoiceParticipants={serverVoice.participants} serverNavigationState={serverSidebarState} nickname={serverDisplayName} status={user?.status || "online"} customStatus={user?.customStatus || ""} avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} isInVoice={serverVoice.connected} connectionQuality="" micEnabled={serverVoice.micEnabled} cameraEnabled={serverVoice.cameraEnabled} isScreenSharing={serverVoice.isScreenSharing} streamPreset={streamPreset} screenShareLabel={streamPreset.replace("p", "p · ").replace("30", "30 FPS").replace("60", "60 FPS")} onStreamPresetChange={setStreamPreset} isDeafened={isDeafened} onProfileClick={(event) => setProfileUser({ user: { ...user, displayName: serverDisplayName, serverNickname: currentServerMember?.serverNickname || "" }, anchorRect: event?.currentTarget?.getBoundingClientRect?.() })} onOpenUserSettings={onOpenAccountSettings} onToggleMicrophone={serverVoice.toggleMicrophone} onToggleCamera={serverVoice.toggleCamera} onToggleScreenShare={serverVoice.toggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={() => { serverVoice.leave(); setVoiceChannelId(""); setVoiceViewChannelId(""); setActiveContentView("text"); }} onJoinVoice={() => voiceChannels[0] && toggleVoice(voiceChannels[0].id)} onLeaveRoom={onNavigateHome} onServerInvite={canManageServer ? openServerInvite : undefined} onServerSettings={server ? openServerSettings : undefined} onServerLeave={server ? openLeaveServer : undefined} onServerDelete={canDeleteServer ? openDeleteServer : undefined} canManageServer={canManageServer} canDeleteServer={canDeleteServer} onCreateServerChannel={canManageServer ? openCreateChannel : undefined} />
+    <Sidebar variant="server" serverName={server?.name || "Seus servidores"} serverIconUrl={server?.iconUrl || ""} serverTextChannels={textChannels} serverVoiceChannels={voiceChannels} serverActiveChannelId={activeChannel?.id} serverVoiceChannelId={voiceChannelId} serverVoiceViewedChannelId={activeContentView === "media" ? voiceViewChannelId : ""} serverConnectedVoiceChannelId={serverVoice.connected ? voiceChannelId : ""} voiceChannelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || voiceChannels[0]?.name || "Geral"} onSelectServerChannel={selectServerChannel} onToggleServerVoice={toggleVoice} serverVoiceParticipants={serverVoice.participants} serverNavigationState={serverSidebarState} nickname={serverDisplayName} status={user?.status || "online"} customStatus={user?.customStatus || ""} avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} isInVoice={serverVoice.connected} connectionQuality="" micEnabled={serverVoice.micEnabled} cameraEnabled={serverVoice.cameraEnabled} isScreenSharing={serverVoice.isScreenSharing} streamPreset={streamPreset} screenShareLabel={streamPreset.replace("p", "p · ").replace("30", "30 FPS").replace("60", "60 FPS")} onStreamPresetChange={setStreamPreset} isDeafened={isDeafened} onProfileClick={(event) => setProfileUser({ user: { ...user, displayName: serverDisplayName, serverNickname: currentServerMember?.serverNickname || "" }, anchorRect: event?.currentTarget?.getBoundingClientRect?.() })} onOpenUserSettings={onOpenAccountSettings} onToggleMicrophone={serverVoice.toggleMicrophone} onToggleCamera={serverVoice.toggleCamera} onToggleScreenShare={serverVoice.toggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={() => { serverVoice.leave(); setVoiceChannelId(""); setVoiceViewChannelId(""); setActiveContentView("text"); }} onJoinVoice={() => voiceChannels[0] && toggleVoice(voiceChannels[0].id)} onLeaveRoom={onNavigateHome} onServerInvite={canManageServer ? openServerInvite : undefined} onServerSettings={server ? openServerSettings : undefined} onServerLeave={server && server.role !== "owner" ? openLeaveServer : undefined} onServerDelete={canDeleteServer ? openDeleteServer : undefined} canManageServer={canManageServer} canDeleteServer={canDeleteServer} onCreateServerChannel={canManageServer ? openCreateChannel : undefined} onRenameServerChannel={canManageServer ? beginRenameChannel : undefined} onDeleteServerChannel={canManageServer ? removeChannel : undefined} />
     <section className="central-stage">
       {activeContentView === "media" ? <CallMediaView participants={serverVoice.participants} channelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || "Geral"} participantCount={serverVoice.participants.length} isInVoice={serverVoice.connected} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} volumeById={remoteVolumes} onVolumeChange={changeRemoteVolume} screenShareLabel={streamPreset.replace("p", "p · ").replace("30", "30 FPS").replace("60", "60 FPS")} notify={notify} micEnabled={serverVoice.micEnabled} onToggleMicrophone={serverVoice.toggleMicrophone} cameraEnabled={serverVoice.cameraEnabled} onToggleCamera={serverVoice.toggleCamera} isScreenSharing={serverVoice.isScreenSharing} onToggleScreenShare={serverVoice.toggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={() => { serverVoice.leave(); setVoiceChannelId(""); setVoiceViewChannelId(""); setActiveContentView("text"); }} membersVisible={isMemberPanelOpen} onToggleMembers={() => setIsMemberPanelOpen((value) => !value)} streamPreset={streamPreset} onStreamPresetChange={setStreamPreset} /> : <section className="chat-stage channel-view">
       <div className="chat-stage-inner">
@@ -820,7 +887,8 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     </section>}
     </section>
     <ParticipantsPanel heading="Membros" participants={memberParticipants} showMedia={false} showPresenceIndicator={false} onProfileClick={(person, anchorRect) => setProfileUser({ user: person || user, anchorRect })} onParticipantClick={(member, anchorRect) => setProfileUser({ user: member, anchorRect })} />
-    {profileUser && <SocialUserProfilePopover participant={profileUser.user} anchorRect={profileUser.anchorRect} onClose={() => setProfileUser(null)} onViewProfile={(person) => { setProfileUser(null); setProfileDetailsUser(person); }} />}
+    {profileUser && profileUser.user?.id === user?.id && <ProfilePopover accountUser={user} profile={{ ...profileUser.user, status: user?.status }} nickname={profileUser.user.displayName || user?.displayName} avatarUrl={user?.avatarUrl || ""} isInVoice={serverVoice.connected} voiceChannelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || "Geral"} onStatusChange={changeAccountStatus} onEditProfile={() => { setProfileUser(null); onOpenAccountSettings?.("profile"); }} onOpenSettings={() => { setProfileUser(null); onOpenAccountSettings?.("profile"); }} onLogout={async () => { await logout(); onNavigateHome?.(); }} onClose={() => setProfileUser(null)} />}
+    {profileUser && profileUser.user?.id !== user?.id && <SocialUserProfilePopover participant={profileUser.user} anchorRect={profileUser.anchorRect} onClose={() => setProfileUser(null)} onViewProfile={(person) => { setProfileUser(null); setProfileDetailsUser(person); }} />}
     {profileDetailsUser && <SocialUserProfileModal userId={profileDetailsUser.id} initialUser={{ ...profileDetailsUser, status: profileDetailsUser.status || "online" }} onClose={() => setProfileDetailsUser(null)} />}
     {settingsOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setSettingsOpen(false); }}>
       <section className="server-settings-modal" role="dialog" aria-modal="true" aria-labelledby="server-settings-title">
@@ -830,6 +898,8 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
             {canManageServer && <button type="button" className={settingsSection === "overview" ? "is-active" : ""} onClick={() => setSettingsSection("overview")}><Icon name="server" size={16} />Visao geral</button>}
             <button type="button" className={settingsSection === "identity" ? "is-active" : ""} onClick={() => setSettingsSection("identity")}><Icon name="user" size={16} />Perfil no servidor</button>
             {canManageServer && <button type="button" className={settingsSection === "channels" ? "is-active" : ""} onClick={() => setSettingsSection("channels")}><Icon name="hash" size={16} />Canais</button>}
+            {canManageServer && <button type="button" className={settingsSection === "members" ? "is-active" : ""} onClick={() => setSettingsSection("members")}><Icon name="members" size={16} />Membros</button>}
+            {canManageServer && <button type="button" className={settingsSection === "invites" ? "is-active" : ""} onClick={() => setSettingsSection("invites")}><Icon name="link" size={16} />Convites</button>}
             <span />
             <button type="button" className={settingsSection === "danger" ? "is-active danger-menu-item" : "danger-menu-item"} onClick={() => setSettingsSection("danger")}><Icon name={canDeleteServer ? "trash" : "leave"} size={16} />{canDeleteServer ? "Excluir servidor" : "Sair do servidor"}</button>
           </nav>
@@ -837,17 +907,20 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
             {settingsSection === "overview" && canManageServer && <section><span className="section-label">IDENTIDADE DO SERVIDOR</span><h3>Visao geral</h3><p>Nome e imagem aparecem na rail e no cabecalho do servidor.</p><div className="server-icon-editor"><div className="server-icon-preview">{settingsIconUrl ? <img src={settingsIconUrl} alt="" /> : (settingsName || "S").slice(0, 2).toUpperCase()}</div><div><label className="secondary-button server-icon-upload"><Icon name="image" size={15} />Alterar imagem<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => selectServerIcon(event, setSettingsIconUrl, setSettingsError)} /></label>{settingsIconUrl && <button type="button" className="text-button" onClick={() => setSettingsIconUrl("")}>Remover</button>}<small>PNG, JPEG ou WebP. Maximo 2 MB.</small></div></div><label className="field-label" htmlFor="server-settings-name">Nome do servidor</label><input id="server-settings-name" className="text-input" value={settingsName} onChange={(event) => { setSettingsName(event.target.value); setSettingsError(""); }} minLength={2} maxLength={60} aria-invalid={Boolean(settingsError)} /></section>}
             {settingsSection === "identity" && <section><span className="section-label">IDENTIDADE LOCAL</span><h3>Perfil neste servidor</h3><p>O apelido aparece apenas neste servidor. Deixe vazio para usar seu nome global.</p><div className="server-member-preview"><UserAvatar user={{ ...user, displayName: settingsNickname || user?.displayName }} size={48} /><div><strong>{settingsNickname || user?.displayName || user?.username}</strong><small>@{user?.username}</small></div></div><label className="field-label" htmlFor="server-settings-nickname">Apelido no servidor</label><input id="server-settings-nickname" className="text-input" value={settingsNickname} onChange={(event) => { setSettingsNickname(event.target.value); setSettingsError(""); }} maxLength={40} placeholder={user?.displayName || user?.username} /></section>}
             {settingsSection === "channels" && canManageServer && <section><div className="server-settings-section-row"><div><span className="section-label">ORGANIZACAO</span><h3>Canais</h3></div><button type="button" className="secondary-button" onClick={() => { setSettingsOpen(false); openCreateChannel("text"); }}><Icon name="plus" size={15} />Novo canal</button></div><p>Renomeie ou remova canais sem sair deste contexto.</p><div className="server-settings-channel-list">{(server?.channels || []).map((channel) => <div className="server-settings-channel-row" key={channel.id}><Icon name={channel.type === "voice" ? "voice" : "hash"} size={16} />{editingChannelId === channel.id ? <input className="text-input" value={editingChannelName} onChange={(event) => setEditingChannelName(event.target.value)} maxLength={40} autoFocus /> : <span><strong>{channel.name}</strong><small>{channel.type === "voice" ? "Voz" : "Texto"}</small></span>}<div>{editingChannelId === channel.id ? <><button type="button" className="icon-button" onClick={() => saveChannelName(channel)} title="Salvar" aria-label="Salvar nome"><Icon name="check" size={15} /></button><button type="button" className="icon-button" onClick={() => setEditingChannelId("")} title="Cancelar" aria-label="Cancelar"><Icon name="close" size={15} /></button></> : <><button type="button" className="icon-button" onClick={() => { setEditingChannelId(channel.id); setEditingChannelName(channel.name); }} title="Renomear" aria-label={`Renomear ${channel.name}`}><Icon name="edit" size={15} /></button><button type="button" className="icon-button danger-menu-item" onClick={() => removeChannel(channel)} title="Excluir" aria-label={`Excluir ${channel.name}`}><Icon name="trash" size={15} /></button></>}</div></div>)}</div></section>}
+            {settingsSection === "members" && canManageServer && <section><span className="section-label">PESSOAS</span><h3>Membros</h3><p>Veja quem participa e qual é a função de cada pessoa neste servidor.</p><div className="server-settings-member-list">{members.map((member) => <div className="server-settings-member-row" key={member.id}><UserAvatar user={member} size={32} /><span><strong>{member.displayName || member.username}</strong><small>@{member.username}</small></span><small>{member.role === "owner" ? "Proprietário" : member.role === "admin" ? "Administrador" : "Membro"}</small></div>)}</div></section>}
+            {settingsSection === "invites" && canManageServer && <section><span className="section-label">ACESSO</span><h3>Convites</h3><p>Crie um link para convidar pessoas. A entrada continua protegida pelas permissões do servidor.</p><button type="button" className="secondary-button" onClick={() => { setSettingsOpen(false); openServerInvite(); }}><Icon name="link" size={15} />Criar convite</button></section>}
             {settingsSection === "danger" && <section className="server-settings-danger"><span className="section-label">ZONA DE RISCO</span><h3>{canDeleteServer ? "Excluir servidor" : "Sair do servidor"}</h3><p>{canDeleteServer ? "A exclusao remove canais, mensagens, membros e convites de forma permanente." : "Voce podera voltar depois com um novo convite."}</p><button type="button" className="danger-button" onClick={() => { setSettingsOpen(false); canDeleteServer ? openDeleteServer() : openLeaveServer(); }}>{canDeleteServer ? "Excluir servidor" : "Sair do servidor"}</button></section>}
             {settingsError && <small className="field-error" role="alert">{settingsError}</small>}
           </form>
         </div>
-        {!["channels", "danger"].includes(settingsSection) && <footer><button type="button" className="secondary-button" onClick={() => setSettingsOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-settings-form" className="primary-button" disabled={serverActionBusy || (canManageServer && settingsName.trim().length < 2)}>{serverActionBusy ? "Salvando..." : "Salvar alteracoes"}</button></footer>}
+        {!["channels", "members", "invites", "danger"].includes(settingsSection) && <footer><button type="button" className="secondary-button" onClick={() => setSettingsOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-settings-form" className="primary-button" disabled={serverActionBusy || (canManageServer && settingsName.trim().length < 2)}>{serverActionBusy ? "Salvando..." : "Salvar alteracoes"}</button></footer>}
       </section>
     </div>}
     {inviteOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setInviteOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-invite-title"><header><div><span className="section-label">CONVITE</span><h2 id="server-invite-title">Convidar para {server?.name}</h2></div><button type="button" className="icon-button" onClick={() => setInviteOpen(false)} aria-label="Fechar"><Icon name="close" size={16} /></button></header>{inviteError ? <p className="field-error">{inviteError}</p> : inviteLink ? <><label className="field-label" htmlFor="server-invite-link">Link de convite</label><input id="server-invite-link" className="text-input" value={inviteLink} readOnly onFocus={(event) => event.target.select()} /><footer><button type="button" className="secondary-button" onClick={() => setInviteOpen(false)}>Fechar</button><button type="button" className="primary-button" onClick={copyServerInvite}>Copiar convite</button></footer></> : <p>Gerando um convite...</p>}</section></div>}
     {leaveOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setLeaveOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-leave-title"><header><div><span className="section-label">MEMBRESIA</span><h2 id="server-leave-title">Sair do servidor</h2></div><button type="button" className="icon-button" onClick={() => setLeaveOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header>{server?.role === "owner" ? <p>Transfira a propriedade ou exclua o servidor antes de sair.</p> : <p>Sair de <strong>{server?.name}</strong>? Você poderá voltar usando um convite.</p>}<footer><button type="button" className="secondary-button" onClick={() => setLeaveOpen(false)} disabled={serverActionBusy}>Cancelar</button>{server?.role !== "owner" && <button type="button" className="primary-button" onClick={confirmLeaveServer} disabled={serverActionBusy}>{serverActionBusy ? "Saindo..." : "Sair do servidor"}</button>}</footer></section></div>}
     {deleteOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setDeleteOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-delete-title"><header><div><span className="section-label">AÇÃO PERMANENTE</span><h2 id="server-delete-title">Excluir servidor?</h2></div><button type="button" className="icon-button" onClick={() => setDeleteOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><p>Você está prestes a excluir permanentemente: <strong>{server?.name}</strong>. Canais, mensagens, membros, convites e configurações serão removidos. Esta ação não pode ser desfeita.</p><form id="server-delete-form" onSubmit={(event) => { event.preventDefault(); confirmDeleteServer(); }}><label className="field-label" htmlFor="server-delete-name">Digite o nome do servidor para confirmar:</label><input id="server-delete-name" className="text-input" value={deleteName} onChange={(event) => { setDeleteName(event.target.value); setDeleteError(""); }} autoFocus aria-invalid={Boolean(deleteError)} />{deleteError && <small className="field-error">{deleteError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setDeleteOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-delete-form" className="primary-button danger-action-button" disabled={serverActionBusy || deleteName !== server?.name}>{serverActionBusy ? "Excluindo..." : "Excluir servidor"}</button></footer></section></div>}
-    {channelOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !serverActionBusy) setChannelOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-channel-title"><header><div><span className="section-label">CANAIS</span><h2 id="server-channel-title">Criar canal</h2></div><button type="button" className="icon-button" onClick={() => setChannelOpen(false)} disabled={serverActionBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><form id="server-channel-form" onSubmit={submitCreateChannel}><label className="field-label" htmlFor="server-channel-name">Nome</label><input id="server-channel-name" className="text-input" value={channelName} onChange={(event) => { setChannelName(event.target.value); setChannelError(""); }} maxLength={40} autoFocus aria-invalid={Boolean(channelError)} /><label className="field-label" htmlFor="server-channel-type">Tipo</label><select id="server-channel-type" className="text-input" value={channelType} onChange={(event) => setChannelType(event.target.value)}><option value="text">Texto</option><option value="voice">Voz</option></select>{channelError && <small className="field-error">{channelError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setChannelOpen(false)} disabled={serverActionBusy}>Cancelar</button><button type="submit" form="server-channel-form" className="primary-button" disabled={serverActionBusy || !channelName.trim()}>{serverActionBusy ? "Criando..." : "Criar"}</button></footer></section></div>}
+    {channelOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !channelRequestBusy) setChannelOpen(false); }}><section className="server-create-modal server-channel-modal" role="dialog" aria-modal="true" aria-labelledby="server-channel-title"><header><div><span className="section-label">CANAIS</span><h2 id="server-channel-title">Criar canal</h2></div><button type="button" className="icon-button" onClick={() => setChannelOpen(false)} disabled={channelRequestBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><form id="server-channel-form" onSubmit={submitCreateChannel}><label className="field-label" htmlFor="server-channel-name">Nome do canal</label><input id="server-channel-name" className="text-input" value={channelName} onChange={(event) => { setChannelName(event.target.value); setChannelError(""); }} maxLength={40} autoFocus aria-invalid={Boolean(channelError)} /><label className="field-label" htmlFor="server-channel-type">Tipo</label><select id="server-channel-type" className="text-input" value={channelType} onChange={(event) => setChannelType(event.target.value)}><option value="text">Texto</option><option value="voice">Voz</option></select>{channelError && <small className="field-error" role="alert">{channelError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setChannelOpen(false)} disabled={channelRequestBusy}>Cancelar</button><button type="submit" form="server-channel-form" className="primary-button" disabled={channelRequestBusy || !channelName.trim()}>{channelRequestBusy ? "Criando..." : "Criar canal"}</button></footer></section></div>}
+    {channelDeleteTarget && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !channelRequestBusy) setChannelDeleteTarget(null); }}><section className="server-create-modal server-channel-delete-modal" role="dialog" aria-modal="true" aria-labelledby="server-channel-delete-title"><header><div><span className="section-label">AÇÃO PERMANENTE</span><h2 id="server-channel-delete-title">Excluir canal?</h2></div><button type="button" className="icon-button" onClick={() => setChannelDeleteTarget(null)} disabled={channelRequestBusy} aria-label="Fechar"><Icon name="close" size={16} /></button></header><p>O canal <strong>{channelDeleteTarget.name}</strong> e suas mensagens serão removidos permanentemente.</p>{settingsError && <small className="field-error" role="alert">{settingsError}</small>}<footer><button type="button" className="secondary-button" onClick={() => setChannelDeleteTarget(null)} disabled={channelRequestBusy}>Cancelar</button><button type="button" className="primary-button danger-action-button" onClick={confirmDeleteChannel} disabled={channelRequestBusy}>{channelRequestBusy ? "Excluindo..." : "Excluir canal"}</button></footer></section></div>}
     {createOpen && <div className="modal-backdrop server-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !creating) setCreateOpen(false); }}><section className="server-create-modal" role="dialog" aria-modal="true" aria-labelledby="server-create-title"><header><div><span className="section-label">NOVO ESPACO</span><h2 id="server-create-title">Criar servidor</h2></div><button type="button" className="icon-button" onClick={() => setCreateOpen(false)} disabled={creating} aria-label="Fechar"><Icon name="close" size={16} /></button></header><p>Crie um espaco persistente para reunir suas conversas.</p><form id="server-create-form" onSubmit={submitCreateServer}><div className="server-icon-editor"><div className="server-icon-preview">{createIconUrl ? <img src={createIconUrl} alt="" /> : (createName || "S").slice(0, 2).toUpperCase()}</div><div><label className="secondary-button server-icon-upload"><Icon name="image" size={15} />Escolher imagem<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => selectServerIcon(event, setCreateIconUrl, setCreateError)} /></label>{createIconUrl && <button type="button" className="text-button" onClick={() => setCreateIconUrl("")}>Remover</button>}</div></div><label className="field-label" htmlFor="server-create-name">Nome do servidor</label><input id="server-create-name" className="text-input" value={createName} onChange={(event) => { setCreateName(event.target.value); if (createError) setCreateError(""); }} placeholder="Ex.: Estudos" minLength={2} maxLength={60} autoFocus aria-invalid={Boolean(createError)} />{createError && <small className="field-error">{createError}</small>}</form><footer><button type="button" className="secondary-button" onClick={() => setCreateOpen(false)} disabled={creating}>Cancelar</button><button type="submit" form="server-create-form" className="primary-button" disabled={creating || createName.trim().length < 2}>{creating ? "Criando..." : "Criar servidor"}</button></footer></section></div>}
     {lightboxImage && <div className="dm-lightbox server-lightbox" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLightboxImage(null); }}><button type="button" className="icon-button dm-lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Fechar imagem" title="Fechar"><Icon name="close" size={20} /></button><img src={lightboxImage.source} alt={lightboxImage.alt || "Imagem ampliada"} /></div>}
     <ToastStack toasts={toasts} />

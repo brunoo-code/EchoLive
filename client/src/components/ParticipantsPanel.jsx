@@ -13,14 +13,15 @@ export default function ParticipantsPanel({ participants, onProfileClick, onPart
         {participants.map((participant) => (
           <div className={`online-person ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-person" : ""}`} key={participant.socketId} onClick={(event) => { const anchor = event.currentTarget.getBoundingClientRect(); if (participant.isLocal) onProfileClick?.(participant.rawUser || participant, anchor); else onParticipantClick?.(participant.rawUser || participant, anchor); }} onKeyDown={(event) => { if (event.key !== "Enter" && event.key !== " ") return; event.preventDefault(); const anchor = event.currentTarget.getBoundingClientRect(); if (participant.isLocal) onProfileClick?.(participant.rawUser || participant, anchor); else onParticipantClick?.(participant.rawUser || participant, anchor); }} role="button" tabIndex={0}>
             <div className="avatar-dot" aria-hidden="true">
-              <UserAvatar user={participant} size={30} />
+              <UserAvatar user={participant} size={32} />
               <UserStatusBadge status={participant.status} size="md" />
             </div>
             <div className="online-person-info">
-              <strong title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</strong>
-              {participant.isLocal && <span className="you-badge">Voce</span>}
-              {participant.isGuest && <span className="visitor-badge">Visitante</span>}
-              {participant.secondaryText && <span>{participant.secondaryText}</span>}
+              <span className="online-person-name-row">
+                <strong title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</strong>
+                {participant.isGuest && <span className="visitor-badge">Visitante</span>}
+              </span>
+              {participant.secondaryText && <span className="online-person-role">{participant.secondaryText}</span>}
             </div>
             {showMedia && <div className="mini-status" aria-label="Status de midia">
               <span className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}><Icon name={participant.micEnabled === false ? "micOff" : "mic"} size={14} /></span>

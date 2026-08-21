@@ -3,7 +3,7 @@ import BrandMark from "./BrandMark.jsx";
 import Icon from "./Icon.jsx";
 import ControlsBar from "./ControlsBar.jsx";
 import UserAvatar from "./UserAvatar.jsx";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Sidebar({
   roomCode,
@@ -63,11 +63,33 @@ export default function Sidebar({
   onServerDelete,
   canManageServer = false,
   canDeleteServer = false,
-  onCreateServerChannel
+  onCreateServerChannel,
+  onRenameServerChannel,
+  onDeleteServerChannel
 }) {
   const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
   const [isServerMenuOpen, setIsServerMenuOpen] = useState(false);
+  const [channelMenuId, setChannelMenuId] = useState("");
+  const serverMenuRef = useRef(null);
   const isServer = variant === "server";
+
+  useEffect(() => {
+    if (!isServerMenuOpen && !channelMenuId) return undefined;
+
+    function closeMenus(event) {
+      if (event.type === "keydown" && event.key !== "Escape") return;
+      if (event.type === "pointerdown" && (serverMenuRef.current?.contains(event.target) || event.target.closest?.(".server-channel-actions, .server-channel-context-menu"))) return;
+      setIsServerMenuOpen(false);
+      setChannelMenuId("");
+    }
+
+    document.addEventListener("pointerdown", closeMenus);
+    document.addEventListener("keydown", closeMenus);
+    return () => {
+      document.removeEventListener("pointerdown", closeMenus);
+      document.removeEventListener("keydown", closeMenus);
+    };
+  }, [channelMenuId, isServerMenuOpen]);
 
   async function copyRoomCode() {
     try {
@@ -81,21 +103,25 @@ export default function Sidebar({
 
   return (
     <aside className="app-sidebar" aria-label={isServer ? "Navegacao do servidor" : "Informacoes da sala"}>
-      <div className={`brand-block ${isServer ? "server-brand-block" : ""}`}>
+      <div className={`brand-block ${isServer ? "server-brand-block" : ""}`} ref={isServer ? serverMenuRef : null}>
         <div className={`brand-mark ${isServer && serverIconUrl ? "has-server-icon" : ""}`} aria-hidden="true">{isServer && serverIconUrl ? <img src={serverIconUrl} alt="" /> : <BrandMark size={30} />}</div>
         <div>
           <strong>{isServer ? serverName || "Seus servidores" : "EchoLive"}</strong>
           {!isServer && <span>Sua call privada</span>}
         </div>
-        {isServer && <button type="button" className="server-menu-trigger" onClick={() => setIsServerMenuOpen((value) => !value)} title="Menu do servidor" aria-label="Menu do servidor" aria-expanded={isServerMenuOpen}><Icon name="chevron" size={15} /></button>}
+        {isServer && <button type="button" className="server-menu-trigger" onClick={() => { setChannelMenuId(""); setIsServerMenuOpen((value) => !value); }} title="Menu do servidor" aria-label="Menu do servidor" aria-haspopup="menu" aria-expanded={isServerMenuOpen}><Icon name="chevron" size={15} /></button>}
+        {isServer && isServerMenuOpen && <div className="server-context-menu" role="menu">
+          {onServerInvite && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerInvite(); }}><Icon name="account" size={15} />Convidar pessoas</button>}
+          {onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings(canManageServer ? "overview" : "identity"); }}><Icon name="settings" size={15} />{canManageServer ? "Configurações do servidor" : "Perfil neste servidor"}</button>}
+          {canManageServer && onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings("overview"); }}><Icon name="edit" size={15} />Editar nome e ícone</button>}
+          {canManageServer && onCreateServerChannel && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onCreateServerChannel("text"); }}><Icon name="plus" size={15} />Criar canal</button>}
+          {canManageServer && onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings("channels"); }}><Icon name="hash" size={15} />Gerenciar canais</button>}
+          {canManageServer && onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings("members"); }}><Icon name="members" size={15} />Membros</button>}
+          {(onServerLeave || (canDeleteServer && onServerDelete)) && <div className="server-menu-divider" />}
+          {onServerLeave && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerLeave(); }}><Icon name="leave" size={15} />Sair do servidor</button>}
+          {canDeleteServer && onServerDelete && <button type="button" role="menuitem" className="danger-menu-item" onClick={() => { setIsServerMenuOpen(false); onServerDelete(); }}><Icon name="trash" size={15} />Excluir servidor</button>}
+        </div>}
       </div>
-      {isServer && isServerMenuOpen && <div className="server-context-menu" role="menu">
-        {onServerInvite && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerInvite(); }}><Icon name="account" size={15} />Convidar pessoas</button>}
-        {onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings(); }}><Icon name="settings" size={15} />{canManageServer ? "Configuracoes do servidor" : "Perfil neste servidor"}</button>}
-        {(onServerInvite || canManageServer) && <div className="server-menu-divider" />}
-        {onServerLeave && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerLeave(); }}><Icon name="leave" size={15} />Sair do servidor</button>}
-        {canDeleteServer && onServerDelete && <button type="button" role="menuitem" className="danger-menu-item" onClick={() => { setIsServerMenuOpen(false); onServerDelete(); }}><Icon name="trash" size={15} />Excluir servidor</button>}
-      </div>}
 
       {!isServer && <section className="sidebar-section room-section">
         <div className="room-section-heading"><p className="section-label">Sala atual</p><button type="button" className="room-menu-trigger" onClick={() => setIsRoomMenuOpen((value) => !value)} title="Acoes da sala" aria-label="Acoes da sala"><Icon name="more" size={17} /></button></div>
@@ -150,7 +176,7 @@ export default function Sidebar({
           ))}
         </div>
       </section> : <section className="sidebar-section channel-section server-channel-section">
-         {serverNavigationState || <ServerChannelNavigation channels={serverTextChannels} voiceChannels={serverVoiceChannels} activeChannelId={serverActiveChannelId} voiceChannelId={serverVoiceChannelId} viewedVoiceChannelId={serverVoiceViewedChannelId} connectedVoiceChannelId={serverConnectedVoiceChannelId} onSelectChannel={onSelectServerChannel} onToggleVoice={onToggleServerVoice} participants={serverVoiceParticipants} canManageServer={canManageServer} onCreateChannel={onCreateServerChannel} />}
+         {serverNavigationState || <ServerChannelNavigation channels={serverTextChannels} voiceChannels={serverVoiceChannels} activeChannelId={serverActiveChannelId} voiceChannelId={serverVoiceChannelId} viewedVoiceChannelId={serverVoiceViewedChannelId} connectedVoiceChannelId={serverConnectedVoiceChannelId} onSelectChannel={onSelectServerChannel} onToggleVoice={onToggleServerVoice} participants={serverVoiceParticipants} canManageServer={canManageServer} onCreateChannel={onCreateServerChannel} channelMenuId={channelMenuId} onToggleChannelMenu={(channelId) => { setIsServerMenuOpen(false); setChannelMenuId((current) => current === channelId ? "" : channelId); }} onRenameChannel={(channel) => { setChannelMenuId(""); onRenameServerChannel?.(channel); }} onDeleteChannel={(channel) => { setChannelMenuId(""); onDeleteServerChannel?.(channel); }} />}
       </section>}
 
       <div className="sidebar-lower-region">
@@ -195,23 +221,14 @@ export default function Sidebar({
   );
 }
 
-function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voiceChannelId, viewedVoiceChannelId, connectedVoiceChannelId, onSelectChannel, onToggleVoice, participants, canManageServer, onCreateChannel }) {
+function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voiceChannelId, viewedVoiceChannelId, connectedVoiceChannelId, onSelectChannel, onToggleVoice, participants, canManageServer, onCreateChannel, channelMenuId, onToggleChannelMenu, onRenameChannel, onDeleteChannel }) {
   return <>
     <div className="server-channel-heading"><p className="section-label">Canais de texto</p>{canManageServer && <button type="button" className="server-channel-add" onClick={() => onCreateChannel?.("text")} title="Criar canal de texto" aria-label="Criar canal de texto"><Icon name="plus" size={14} /></button>}</div>
-    {channels.map((channel) => (
-      <button type="button" className={`channel-button ${channel.id === activeChannelId ? "is-selected" : ""}`} key={channel.id} onClick={() => onSelectChannel?.(channel.id)}>
-        <span className="channel-icon channel-hash" aria-hidden="true">#</span>
-        <strong>{channel.name}</strong>
-      </button>
-    ))}
+    {channels.map((channel) => <ServerChannelRow key={channel.id} channel={channel} selected={channel.id === activeChannelId} canManage={canManageServer} menuOpen={channelMenuId === channel.id} onSelect={() => onSelectChannel?.(channel.id)} onToggleMenu={() => onToggleChannelMenu?.(channel.id)} onRename={() => onRenameChannel?.(channel)} onDelete={() => onDeleteChannel?.(channel)} />)}
     <div className="server-channel-heading voice-label"><p className="section-label">Canais de voz</p>{canManageServer && <button type="button" className="server-channel-add" onClick={() => onCreateChannel?.("voice")} title="Criar canal de voz" aria-label="Criar canal de voz"><Icon name="plus" size={14} /></button>}</div>
     {voiceChannels.map((channel) => (
       <div key={channel.id}>
-        <button type="button" className={`channel-button ${channel.id === viewedVoiceChannelId ? "is-selected" : ""} ${channel.id === connectedVoiceChannelId ? "is-connected" : ""}`} onClick={() => onToggleVoice?.(channel.id)}>
-          <span className="channel-icon" aria-hidden="true"><Icon name="voice" size={16} /></span>
-          <strong>{channel.name}</strong>
-          <span className="channel-count">{channel.id === voiceChannelId ? participants.length : ""}</span>
-        </button>
+        <ServerChannelRow channel={channel} selected={channel.id === viewedVoiceChannelId} connected={channel.id === connectedVoiceChannelId} count={channel.id === voiceChannelId ? participants.length : ""} canManage={canManageServer} menuOpen={channelMenuId === channel.id} onSelect={() => onToggleVoice?.(channel.id)} onToggleMenu={() => onToggleChannelMenu?.(channel.id)} onRename={() => onRenameChannel?.(channel)} onDelete={() => onDeleteChannel?.(channel)} />
         {channel.id === (connectedVoiceChannelId || voiceChannelId) && <div className="call-member-list">
           {participants.map((participant) => (
             <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId}>
@@ -228,4 +245,19 @@ function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voi
       </div>
     ))}
   </>;
+}
+
+function ServerChannelRow({ channel, selected, connected, count = "", canManage, menuOpen, onSelect, onToggleMenu, onRename, onDelete }) {
+  return <div className="server-channel-row">
+    <button type="button" className={`channel-button ${selected ? "is-selected" : ""} ${connected ? "is-connected" : ""}`} onClick={onSelect}>
+      <span className={`channel-icon ${channel.type === "text" ? "channel-hash" : ""}`} aria-hidden="true">{channel.type === "text" ? "#" : <Icon name="voice" size={16} />}</span>
+      <strong>{channel.name}</strong>
+      {count !== "" && <span className="channel-count">{count}</span>}
+    </button>
+    {canManage && <button type="button" className="server-channel-actions" onClick={onToggleMenu} title={`Ações de ${channel.name}`} aria-label={`Ações de ${channel.name}`} aria-haspopup="menu" aria-expanded={menuOpen}><Icon name="more" size={15} /></button>}
+    {canManage && menuOpen && <div className="server-channel-context-menu" role="menu">
+      <button type="button" role="menuitem" onClick={onRename}><Icon name="edit" size={14} />Renomear canal</button>
+      <button type="button" role="menuitem" className="danger-menu-item" onClick={onDelete}><Icon name="trash" size={14} />Excluir canal</button>
+    </div>}
+  </div>;
 }

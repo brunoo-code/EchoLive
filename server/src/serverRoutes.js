@@ -30,6 +30,10 @@ function serverVoiceKey(serverId, channelId) {
   return `server:${serverId}:voice:${channelId}`;
 }
 
+function serverUpdatesKey(serverId) {
+  return `server:${serverId}:updates`;
+}
+
 function serverVoiceParticipant(socket, member = null) {
   const user = socket.data.accountUser;
   const displayName = member?.serverNickname || user.displayName || user.username;
@@ -91,7 +95,7 @@ function requireUuid(value, response, message = "Identificador invalido.") {
   return true;
 }
 
-export function registerServerRoutes(app) {
+export function registerServerRoutes(app, io = null) {
   app.get("/api/servers", optionalAuth, requireAuth, async (request, response) => {
     try { return response.json({ servers: await listServersForUser(request.user.id) }); } catch (error) { return handleServerError(response, error); }
   });
@@ -164,7 +168,9 @@ export function registerServerRoutes(app) {
     if (!requireUuid(request.params.serverId, response)) return;
     try {
       const result = await createChannel(request.params.serverId, request.user.id, request.body || {});
-      return result.error ? response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result) : response.status(201).json(result);
+      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result);
+      io?.to(serverUpdatesKey(request.params.serverId)).emit("server:channel-created", { serverId: request.params.serverId, channel: result.channel });
+      return response.status(201).json(result);
     } catch (error) { return handleServerError(response, error); }
   });
 
@@ -172,7 +178,9 @@ export function registerServerRoutes(app) {
     if (!requireUuid(request.params.serverId, response) || !requireUuid(request.params.channelId, response)) return;
     try {
       const result = await updateChannel(request.params.serverId, request.params.channelId, request.user.id, request.body || {});
-      return result.error ? response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result) : response.json(result);
+      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result);
+      io?.to(serverUpdatesKey(request.params.serverId)).emit("server:channel-updated", { serverId: request.params.serverId, channel: result.channel });
+      return response.json(result);
     } catch (error) { return handleServerError(response, error); }
   });
 
@@ -180,7 +188,9 @@ export function registerServerRoutes(app) {
     if (!requireUuid(request.params.serverId, response) || !requireUuid(request.params.channelId, response)) return;
     try {
       const result = await deleteChannel(request.params.serverId, request.params.channelId, request.user.id);
-      return result.error ? response.status(result.code === "FORBIDDEN" ? 403 : 404).json(result) : response.json(result);
+      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : 404).json(result);
+      io?.to(serverUpdatesKey(request.params.serverId)).emit("server:channel-deleted", { serverId: request.params.serverId, channelId: request.params.channelId });
+      return response.json(result);
     } catch (error) { return handleServerError(response, error); }
   });
 
@@ -249,6 +259,28 @@ export function registerServerRoutes(app) {
 }
 
 export function attachServerSocket(io, socket) {
+  socket.on("server:watch", async ({ serverId } = {}, ack) => {
+    const acknowledge = typeof ack === "function" ? ack : () => {};
+    const user = socket.data.accountUser;
+    if (!user || !isUuid(serverId)) return acknowledge({ ok: false, error: "Autenticacao necessaria." });
+    const server = await getServerForUser(serverId, user.id).catch(() => null);
+    if (!server) return acknowledge({ ok: false, error: "Servidor indisponivel." });
+    socket.data.serverUpdateRooms ||= new Set();
+    for (const room of socket.data.serverUpdateRooms) socket.leave(room);
+    const room = serverUpdatesKey(serverId);
+    socket.data.serverUpdateRooms.clear();
+    socket.data.serverUpdateRooms.add(room);
+    socket.join(room);
+    acknowledge({ ok: true });
+  });
+
+  socket.on("server:unwatch", ({ serverId } = {}) => {
+    if (!isUuid(serverId)) return;
+    const room = serverUpdatesKey(serverId);
+    socket.leave(room);
+    socket.data.serverUpdateRooms?.delete(room);
+  });
+
   socket.on("server:voice-join", async ({ serverId, channelId } = {}, ack) => {
     const acknowledge = typeof ack === "function" ? ack : () => {};
     const user = socket.data.accountUser;

@@ -170,9 +170,9 @@ Essa reducao usa recursos nativos do navegador e pode reduzir ruido de teclado, 
 - Imagens aceitas: PNG, JPEG, WebP e GIF.
 - Videos aceitos: MP4, WebM e MOV/QuickTime.
 - Limites por tipo: imagens ate 15 MB, videos ate 50 MB e outros arquivos ate 25 MB.
-- Uploads ficam localmente em `server/uploads` e sao servidos por `/uploads/...`.
+- Uploads ficam em `UPLOAD_DIR` quando essa variavel esta configurada; sem ela, o servidor usa `server/uploads`. Os arquivos sao servidos por `/uploads/...`.
 - O backend gera nomes aleatorios; o nome original e usado apenas para exibicao.
-- Salas, mensagens e uploads continuam temporarios; o PostgreSQL e usado apenas para contas e sessoes quando `DATABASE_URL` esta configurada.
+- Uploads de Sala Rapida continuam temporarios. Anexos de servidores e DMs so sobrevivem a reinicios em producao quando `UPLOAD_DIR` aponta para um disco persistente.
 
 ## Scripts
 
@@ -192,10 +192,12 @@ Configuracao para Render Web Service com a raiz do repositorio:
 Root Directory: (vazio)
 Build Command: npm run build
 Start Command: npm start
-Environment Variables: nenhuma obrigatoria
+Environment Variables: `UPLOAD_DIR` e opcional; em producao, aponte para o ponto de montagem de um disco persistente
 ```
 
 O servidor usa `process.env.PORT` e escuta em `0.0.0.0`. O cliente usa o backend local em `localhost:3001` durante o Vite e o proprio dominio quando publicado. Links de sala usam `window.location.origin`, portanto continuam validos no dominio HTTPS do Render e ao atualizar `/room/<codigo>`.
+
+No Render, monte um Persistent Disk e configure `UPLOAD_DIR` com o caminho desse disco, por exemplo `/var/data/echolive-uploads`. Sem disco persistente, o filesystem do servico e efemero e anexos antigos podem desaparecer em um novo deploy ou restart. Integracao com object storage ainda exige as credenciais e o provedor que serao escolhidos para producao.
 
 Para publicar no GitHub a partir da raiz:
 
@@ -213,7 +215,7 @@ No Render, crie `New > Web Service`, conecte o repositorio, escolha o plano Free
 ## Limitacoes atuais
 
 - Salas e mensagens ficam apenas em memoria; contas e sessoes podem ser persistentes no PostgreSQL.
-- Mensagens sao temporarias; os uploads ficam no disco local e devem ser limpos manualmente em uma rotina futura.
+- Uploads usam disco local por padrao e devem ser limpos manualmente em uma rotina futura; em producao, configure `UPLOAD_DIR` em um disco persistente.
 - Sem `DATABASE_URL`, o modo visitante funciona sem contas, senhas ou banco configurado.
 - Nicknames podem ser repetidos; o identificador real e `socket.id`.
 - Compartilhamento de tela substitui temporariamente a camera enviada aos outros participantes.

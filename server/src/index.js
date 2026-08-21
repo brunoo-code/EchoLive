@@ -53,7 +53,8 @@ const HOST = "0.0.0.0";
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || process.env.RENDER_EXTERNAL_URL || "http://localhost:5173";
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST_DIR = path.resolve(SERVER_DIR, "../../client/dist");
-const UPLOAD_DIR = path.resolve(SERVER_DIR, "../uploads");
+const configuredUploadDir = String(process.env.UPLOAD_DIR || "").trim();
+const UPLOAD_DIR = configuredUploadDir ? path.resolve(configuredUploadDir) : path.resolve(SERVER_DIR, "../uploads");
 mkdirSync(UPLOAD_DIR, { recursive: true });
 const UPLOAD_LIMITS = Object.freeze({ image: 15 * 1024 * 1024, video: 50 * 1024 * 1024, file: 25 * 1024 * 1024 });
 const MAX_UPLOAD_SIZE = UPLOAD_LIMITS.video;
@@ -254,9 +255,18 @@ app.get("/ice-config", (_request, response) => {
   response.json({ iceServers });
 });
 
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: CLIENT_ORIGIN,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
 registerAuthRoutes(app);
 registerSocialRoutes(app);
-registerServerRoutes(app);
+registerServerRoutes(app, io);
 
 if (existsSync(CLIENT_DIST_DIR)) {
   app.use("/assets", express.static(path.join(CLIENT_DIST_DIR, "assets")));
@@ -272,15 +282,6 @@ if (existsSync(CLIENT_DIST_DIR)) {
     });
   });
 }
-
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: CLIENT_ORIGIN,
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
 
 setRoomExpiryHandler(({ roomCode, participants, ttlMs }) => {
   io.to(roomCode).emit("room-expired", {

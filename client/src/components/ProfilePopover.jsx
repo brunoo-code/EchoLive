@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import Icon from "./Icon.jsx";
 import BrandMark from "./BrandMark.jsx";
@@ -6,6 +6,20 @@ import UserBadges from "./UserBadges.jsx";
 
 export default function ProfilePopover({ accountUser, profile, nickname, avatarUrl, isGuest = false, guestAvatarVariant = 0, isInVoice = false, voiceChannelName = "Geral", connectionQuality = "", onStatusChange, onEditProfile, onOpenSettings, onLogout, onCreateAccount, onClose }) {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const sourceStatus = accountUser?.status || profile?.status;
+  const normalizedSourceStatus = ["online", "dnd", "invisible"].includes(sourceStatus) ? sourceStatus : "online";
+  const [optimisticStatus, setOptimisticStatus] = useState(normalizedSourceStatus);
+
+  useEffect(() => {
+    setOptimisticStatus(normalizedSourceStatus);
+  }, [normalizedSourceStatus]);
+
+  function selectStatus(nextStatus) {
+    const previousStatus = optimisticStatus;
+    setOptimisticStatus(nextStatus);
+    setStatusMenuOpen(false);
+    Promise.resolve(onStatusChange?.(nextStatus)).catch(() => setOptimisticStatus(previousStatus));
+  }
 
   if (isGuest) {
     return <section className="profile-popover guest-profile-popover" role="dialog" aria-label="Perfil temporario">
@@ -19,15 +33,15 @@ export default function ProfilePopover({ accountUser, profile, nickname, avatarU
     </section>;
   }
 
-  const displayName = accountUser?.displayName || profile.displayName || nickname || "Usuario";
+  const displayName = accountUser?.displayName || profile?.displayName || nickname || "Usuario";
   const accountNickname = accountUser?.username || nickname || "nickname";
-  const currentStatus = ["online", "dnd", "invisible"].includes(accountUser?.status || profile.status) ? accountUser?.status || profile.status : "online";
-  const customStatus = accountUser?.customStatus || profile.customStatus || "";
-  const pronouns = accountUser?.pronouns || profile.pronouns || "";
-  const aboutMe = accountUser?.aboutMe || profile.aboutMe || "";
+  const currentStatus = optimisticStatus;
+  const customStatus = accountUser?.customStatus || profile?.customStatus || "";
+  const pronouns = accountUser?.pronouns || profile?.pronouns || "";
+  const aboutMe = accountUser?.aboutMe || profile?.aboutMe || "";
   const statusLabel = currentStatus === "dnd" ? "Nao perturbe" : currentStatus === "invisible" ? "Invisivel" : "Online";
 
-  return <section className="profile-popover" style={{ "--profile-accent": accountUser?.accentColor || profile.accentColor || "#22D3EE" }} role="dialog" aria-label="Menu do perfil">
+  return <section className="profile-popover" style={{ "--profile-accent": accountUser?.accentColor || profile?.accentColor || "#22D3EE" }} role="dialog" aria-label="Menu do perfil">
     <div className="profile-popover-banner" aria-hidden="true" />
     <div className="profile-popover-header">
       <div className="profile-popover-avatar">{avatarUrl ? <img src={avatarUrl} alt="" /> : displayName.slice(0, 1).toUpperCase()}<UserStatusBadge status={currentStatus} size="lg" /></div>
@@ -38,9 +52,9 @@ export default function ProfilePopover({ accountUser, profile, nickname, avatarU
     <div className="profile-status-menu">
       <button type="button" className="profile-status-trigger" onClick={() => setStatusMenuOpen((value) => !value)} aria-expanded={statusMenuOpen} aria-haspopup="menu"><UserStatusBadge status={currentStatus} size="sm" /><span>{statusLabel}</span><Icon name="chevron" size={14} /></button>
       {statusMenuOpen && <div className="profile-status-options" role="menu" aria-label="Status do perfil">
-        <button type="button" role="menuitemradio" aria-checked={currentStatus === "online"} className={currentStatus === "online" ? "is-selected" : ""} onClick={() => { onStatusChange("online"); setStatusMenuOpen(false); }}><UserStatusBadge status="online" size="sm" /><span>Online</span>{currentStatus === "online" && <Icon name="check" size={14} />}</button>
-        <button type="button" role="menuitemradio" aria-checked={currentStatus === "dnd"} className={currentStatus === "dnd" ? "is-selected" : ""} onClick={() => { onStatusChange("dnd"); setStatusMenuOpen(false); }}><UserStatusBadge status="dnd" size="sm" /><span>Nao perturbe</span>{currentStatus === "dnd" && <Icon name="check" size={14} />}</button>
-        <button type="button" role="menuitemradio" aria-checked={currentStatus === "invisible"} className={currentStatus === "invisible" ? "is-selected" : ""} onClick={() => { onStatusChange("invisible"); setStatusMenuOpen(false); }}><UserStatusBadge status="invisible" size="sm" /><span>Invisivel</span>{currentStatus === "invisible" && <Icon name="check" size={14} />}</button>
+        <button type="button" role="menuitemradio" aria-checked={currentStatus === "online"} className={currentStatus === "online" ? "is-selected" : ""} onClick={() => selectStatus("online")}><UserStatusBadge status="online" size="sm" /><span>Online</span>{currentStatus === "online" && <Icon name="check" size={14} />}</button>
+        <button type="button" role="menuitemradio" aria-checked={currentStatus === "dnd"} className={currentStatus === "dnd" ? "is-selected" : ""} onClick={() => selectStatus("dnd")}><UserStatusBadge status="dnd" size="sm" /><span>Nao perturbe</span>{currentStatus === "dnd" && <Icon name="check" size={14} />}</button>
+        <button type="button" role="menuitemradio" aria-checked={currentStatus === "invisible"} className={currentStatus === "invisible" ? "is-selected" : ""} onClick={() => selectStatus("invisible")}><UserStatusBadge status="invisible" size="sm" /><span>Invisivel</span>{currentStatus === "invisible" && <Icon name="check" size={14} />}</button>
       </div>}
     </div>
     <div className="profile-popover-actions"><button type="button" onClick={onEditProfile}><Icon name="edit" size={15} /><span>Editar perfil</span></button><button type="button" onClick={onOpenSettings}><Icon name="settings" size={15} /><span>Configuracoes</span></button>{accountUser && <button type="button" className="profile-logout-button" onClick={onLogout}><Icon name="leave" size={15} /><span>Sair da conta</span></button>}</div>
