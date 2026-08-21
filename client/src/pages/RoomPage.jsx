@@ -1141,7 +1141,11 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   }
 
   function toggleDeafen() {
-    setIsDeafened((current) => !current);
+    setIsDeafened((current) => {
+      const next = !current;
+      playUiSound(next ? "deafen-on" : "deafen-off", uiSounds);
+      return next;
+    });
   }
 
   function leaveVoiceChannel() {

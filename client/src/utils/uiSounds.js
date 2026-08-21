@@ -2,6 +2,7 @@ const UI_SOUND_VOLUME = 0.18;
 const PROFILES = {
   "mic-mute": [220, 150, 0.07], "mic-unmute": [420, 620, 0.08],
   "voice-join": [360, 560, 0.1], "voice-leave": [500, 280, 0.1],
+  "deafen-on": [260, 180, 0.07], "deafen-off": [300, 460, 0.07],
   "screen-start": [300, 720, 0.09], "screen-stop": [620, 300, 0.09],
   "message-send": [520, 680, 0.045], "message-received": [300, 390, 0.06],
   "dmReceived": [580, 760, 0.075],

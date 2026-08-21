@@ -18,7 +18,7 @@ function cleanImageDataUrl(value) {
 }
 
 function mapChannel(row) {
-  return { id: row.id, serverId: row.server_id, type: row.type, name: row.name, position: row.position };
+  return { id: row.id, serverId: row.server_id, type: row.type, name: row.name, position: row.position, isDefault: Number(row.position) === 0 };
 }
 
 function mapServer(row) {
@@ -109,7 +109,7 @@ export async function listServersForUser(userId) {
   const result = await query(
     `SELECT s.*, m.role,
             (SELECT COUNT(*)::int FROM server_members sm2 WHERE sm2.server_id = s.id) AS member_count,
-            COALESCE((SELECT json_agg(json_build_object('id', c.id, 'serverId', c.server_id, 'type', c.type, 'name', c.name, 'position', c.position) ORDER BY c.type, c.position, c.created_at)
+            COALESCE((SELECT json_agg(json_build_object('id', c.id, 'serverId', c.server_id, 'type', c.type, 'name', c.name, 'position', c.position, 'isDefault', c.position = 0) ORDER BY c.type, c.position, c.created_at)
                       FROM server_channels c WHERE c.server_id = s.id), '[]'::json) AS channels
      FROM servers s
      JOIN server_members m ON m.server_id = s.id AND m.user_id = $1
@@ -124,7 +124,7 @@ export async function getServerForUser(serverId, userId) {
   const result = await query(
     `SELECT s.*, m.role,
             (SELECT COUNT(*)::int FROM server_members sm2 WHERE sm2.server_id = s.id) AS member_count,
-            COALESCE((SELECT json_agg(json_build_object('id', c.id, 'serverId', c.server_id, 'type', c.type, 'name', c.name, 'position', c.position) ORDER BY c.type, c.position, c.created_at)
+            COALESCE((SELECT json_agg(json_build_object('id', c.id, 'serverId', c.server_id, 'type', c.type, 'name', c.name, 'position', c.position, 'isDefault', c.position = 0) ORDER BY c.type, c.position, c.created_at)
                       FROM server_channels c WHERE c.server_id = s.id), '[]'::json) AS channels
      FROM servers s
      JOIN server_members m ON m.server_id = s.id AND m.user_id = $2
@@ -283,8 +283,13 @@ export async function updateChannel(serverId, channelId, userId, input) {
 export async function deleteChannel(serverId, channelId, userId) {
   const current = await getServerForUser(serverId, userId);
   if (!current || !["owner", "admin"].includes(current.role)) return { error: "Sem permissao para apagar canais.", code: "FORBIDDEN" };
-  const result = await query("DELETE FROM server_channels WHERE id = $1 AND server_id = $2 AND name NOT IN ('geral', 'Geral') RETURNING id", [channelId, serverId]);
-  return result.rows[0] ? { ok: true } : { error: "Canal nao encontrado ou protegido.", code: "NOT_FOUND" };
+  return withTransaction(async (client) => {
+    const existing = await client.query("SELECT id, position FROM server_channels WHERE id = $1 AND server_id = $2 FOR UPDATE", [channelId, serverId]);
+    if (!existing.rows[0]) return { error: "Canal nao encontrado.", code: "NOT_FOUND" };
+    if (Number(existing.rows[0].position) === 0) return { error: "O canal padrao nao pode ser excluido.", code: "PROTECTED_CHANNEL" };
+    await client.query("DELETE FROM server_channels WHERE id = $1 AND server_id = $2", [channelId, serverId]);
+    return { ok: true };
+  });
 }
 
 export async function listServerMessages(serverId, channelId, userId, { limit = 50, before = "" } = {}) {

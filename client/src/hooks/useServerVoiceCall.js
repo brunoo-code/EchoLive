@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { createMixedAudioTrack, getDefaultScreenShareConstraints, requestInitialMedia, requestScreenShareStream, requestSingleKind, stopStream } from "../utils/media.js";
 import { createVoiceCallEngine } from "../utils/voiceCallEngine.js";
 import { getPeerConnectionConfig } from "../utils/webrtc.js";
+import { playUiSound } from "../utils/uiSounds.js";
 
-export default function useServerVoiceCall({ socket, serverId, channelId, identity, enabled, notify }) {
+export default function useServerVoiceCall({ socket, serverId, channelId, identity, enabled, notify, uiSounds = true }) {
   const [connected, setConnected] = useState(false);
   const [remoteParticipants, setRemoteParticipants] = useState([]);
   const [remoteStreams, setRemoteStreams] = useState({});
@@ -25,6 +26,8 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
   const audioMixContextRef = useRef(null);
   const iceConfigRef = useRef({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
   const mediaPromiseRef = useRef(null);
+  const uiSoundsRef = useRef(uiSounds);
+  uiSoundsRef.current = uiSounds;
 
   function teardownAudioMix() {
     audioMixContextRef.current?.close?.().catch(() => {});
@@ -160,9 +163,13 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
       if (config) iceConfigRef.current = config;
       socket.emit("server:voice-join", { serverId, channelId }, (result) => {
         if (!result?.ok && active) notify(result?.error || "Nao foi possivel entrar no canal de voz.");
+        if (result?.ok && active) playUiSound("voice-join", uiSoundsRef.current);
       });
     }).catch(() => {
-      if (active) socket.emit("server:voice-join", { serverId, channelId });
+      if (active) {
+        socket.emit("server:voice-join", { serverId, channelId });
+        playUiSound("voice-join", uiSoundsRef.current);
+      }
     });
 
     return () => {
@@ -189,6 +196,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     if (!track) return;
     track.enabled = !track.enabled;
     setMicEnabled(track.enabled);
+    playUiSound(track.enabled ? "mic-unmute" : "mic-mute", uiSoundsRef.current);
     socket?.emit("server:voice-media-status", {
       micEnabled: track.enabled,
       cameraEnabled: Boolean(cameraTrackRef.current?.enabled),
@@ -234,6 +242,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     engineRef.current?.replaceTrack("audio", audioTrackRef.current);
     setIsScreenSharing(false);
     setScreenStream(null);
+    playUiSound("screen-stop", uiSoundsRef.current);
     socket?.emit("screen-share-status", { isScreenSharing: false });
     socket?.emit("server:voice-media-status", {
       micEnabled: Boolean(audioTrackRef.current?.enabled),
@@ -267,6 +276,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
       engineRef.current?.replaceTrack("video", track);
       track.onended = () => { void stopScreenShare(); };
       setIsScreenSharing(true);
+      playUiSound("screen-start", uiSoundsRef.current);
       socket.emit("screen-share-status", { isScreenSharing: true });
       socket.emit("server:voice-media-status", {
         micEnabled: Boolean(audioTrackRef.current?.enabled),
@@ -277,7 +287,10 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
   }
 
   function leave() {
-    if (enabled) socket?.emit("server:voice-leave", { serverId, channelId });
+    if (enabled) {
+      socket?.emit("server:voice-leave", { serverId, channelId });
+      playUiSound("voice-leave", uiSoundsRef.current);
+    }
   }
 
   const localParticipant = identity ? {

@@ -87,6 +87,18 @@ function handleServerError(response, error) {
   return response.status(500).json({ error: "Nao foi possivel concluir a operacao." });
 }
 
+function handleChannelError(response, error, action) {
+  if (error?.code === "DATABASE_UNAVAILABLE") return handleServerError(response, error);
+  console.error(`[SERVER] channel ${action} failed:`, { code: error?.code, constraint: error?.constraint, table: error?.table, message: error?.message });
+  const knownErrors = {
+    "42P01": "A estrutura de canais ainda nao esta disponivel. Execute as migrations do servidor.",
+    "42703": "A estrutura de canais esta desatualizada. Execute as migrations do servidor.",
+    "23503": "O servidor ou canal informado nao esta mais disponivel. Recarregue a pagina.",
+    "23502": "O servidor nao conseguiu salvar todos os dados do canal."
+  };
+  return response.status(500).json({ error: knownErrors[error?.code] || `Nao foi possivel ${action} o canal.`, code: "CHANNEL_OPERATION_FAILED" });
+}
+
 function requireUuid(value, response, message = "Identificador invalido.") {
   if (!isUuid(value)) {
     response.status(400).json({ error: message, code: "INVALID_ID" });
@@ -173,7 +185,7 @@ export function registerServerRoutes(app, io = null) {
       if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result);
       io?.to(serverUpdatesKey(request.params.serverId)).emit("server:channel-created", { serverId: request.params.serverId, channel: result.channel });
       return response.status(201).json(result);
-    } catch (error) { return handleServerError(response, error); }
+    } catch (error) { return handleChannelError(response, error, "criar"); }
   });
 
   app.patch("/api/servers/:serverId/channels/:channelId", optionalAuth, requireAuth, async (request, response) => {
@@ -183,17 +195,17 @@ export function registerServerRoutes(app, io = null) {
       if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : 400).json(result);
       io?.to(serverUpdatesKey(request.params.serverId)).emit("server:channel-updated", { serverId: request.params.serverId, channel: result.channel });
       return response.json(result);
-    } catch (error) { return handleServerError(response, error); }
+    } catch (error) { return handleChannelError(response, error, "editar"); }
   });
 
   app.delete("/api/servers/:serverId/channels/:channelId", optionalAuth, requireAuth, async (request, response) => {
     if (!requireUuid(request.params.serverId, response) || !requireUuid(request.params.channelId, response)) return;
     try {
       const result = await deleteChannel(request.params.serverId, request.params.channelId, request.user.id);
-      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : 404).json(result);
+      if (result.error) return response.status(result.code === "FORBIDDEN" ? 403 : result.code === "PROTECTED_CHANNEL" ? 400 : 404).json(result);
       io?.to(serverUpdatesKey(request.params.serverId)).emit("server:channel-deleted", { serverId: request.params.serverId, channelId: request.params.channelId });
       return response.json(result);
-    } catch (error) { return handleServerError(response, error); }
+    } catch (error) { return handleChannelError(response, error, "excluir"); }
   });
 
   app.get("/api/servers/:serverId/channels/:channelId/messages", optionalAuth, requireAuth, async (request, response) => {

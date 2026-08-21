@@ -662,10 +662,21 @@ h2 {
 .profile-status-trigger .menu-status-dot,
 .profile-status-options .menu-status-dot {
   position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 8px;
   height: 8px;
   flex: 0 0 auto;
   border: 0;
+}
+.profile-status-trigger .menu-status-dot.user-status-badge--dnd::after,
+.profile-status-options .menu-status-dot.user-status-badge--dnd::after {
+  position: static;
+  display: block;
+  width: 5px;
+  height: 2px;
+  transform: none;
 }
 .profile-popover-actions { padding-top: 8px; border-top: 1px solid var(--border); }
 

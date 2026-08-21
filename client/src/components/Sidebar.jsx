@@ -252,7 +252,7 @@ function ServerChannelRow({ channel, selected, connected, count = "", canManage,
     {canManage && <button type="button" className="server-channel-actions" onClick={onToggleMenu} title={`Ações de ${channel.name}`} aria-label={`Ações de ${channel.name}`} aria-haspopup="menu" aria-expanded={menuOpen}><Icon name="more" size={15} /></button>}
     {canManage && menuOpen && <div className="server-channel-context-menu" role="menu">
       <button type="button" role="menuitem" onClick={onRename}><Icon name="edit" size={14} />Renomear canal</button>
-      <button type="button" role="menuitem" className="danger-menu-item" onClick={onDelete}><Icon name="trash" size={14} />Excluir canal</button>
+      <button type="button" role="menuitem" className={channel.isDefault ? "is-disabled" : "danger-menu-item"} onClick={channel.isDefault ? undefined : onDelete} disabled={channel.isDefault} title={channel.isDefault ? "O canal padrão não pode ser excluído" : "Excluir canal"}><Icon name="trash" size={14} />{channel.isDefault ? "Canal padrão" : "Excluir canal"}</button>
     </div>}
   </div>;
 }
