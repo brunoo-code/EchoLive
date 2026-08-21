@@ -258,7 +258,7 @@ export async function createChannel(serverId, userId, input) {
   const validation = validateChannelInput(input || {});
   if (validation.error) return { error: validation.error };
   try {
-    const result = await query("INSERT INTO server_channels (server_id, type, name, position, is_default) VALUES ($1, $2, $3, COALESCE((SELECT MAX(position) + 1 FROM server_channels WHERE server_id = $1 AND type = $2), 0), FALSE) RETURNING *", [serverId, validation.value.type, validation.value.name]);
+    const result = await query("INSERT INTO server_channels (server_id, type, name, position, is_default) VALUES ($1, $2, $3, COALESCE((SELECT MAX(position) + 1 FROM server_channels WHERE server_id = $1 AND type = $4), 0), FALSE) RETURNING *", [serverId, validation.value.type, validation.value.name, validation.value.type]);
     return { channel: mapChannel(result.rows[0]) };
   } catch (error) {
     if (error.code === "23505") return { error: "Ja existe um canal com esse nome.", code: "CHANNEL_EXISTS" };

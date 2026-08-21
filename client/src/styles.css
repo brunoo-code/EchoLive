@@ -8606,7 +8606,7 @@ video.screen-video {
   margin: -14px -14px 12px;
   border-radius: 9px 9px 0 0;
   border-bottom-color: rgba(255,255,255,.06);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--profile-accent, #67d4e5) 42%, #27303a), color-mix(in srgb, var(--profile-accent, #67d4e5) 12%, #15151a) 72%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--profile-accent, #67d4e5) 24%, #27303a), color-mix(in srgb, var(--profile-accent, #67d4e5) 8%, #15151a) 72%);
 }
 .room-page > .profile-popover .profile-popover-header,
 .social-page > .profile-popover .profile-popover-header { align-items: flex-end; }
@@ -8702,8 +8702,17 @@ video.screen-video {
 .room-page .sidebar-call-toolbar { gap: 5px; margin: 5px 0 3px; }
 .room-page .sidebar-call-toolbar .control-icon-button,
 .room-page .sidebar-call-button { height: 32px; min-height: 32px; border-radius: 6px; }
-.room-page .sidebar-user-footer { gap: 6px; margin-top: 5px; }
+.room-page .sidebar-user-footer {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  margin-top: 4px;
+  padding-top: 5px;
+  padding-bottom: 6px;
+}
 .room-page .sidebar-user-summary { min-height: 48px; padding: 6px 7px; border-radius: 7px; }
+.room-page .sidebar-user-avatar { width: 32px; height: 32px; flex-basis: 32px; }
+.room-page .sidebar-user-controls { grid-template-columns: repeat(2, 32px); gap: 3px; }
+.room-page .sidebar-user-controls button { width: 32px; height: 32px; min-height: 32px; }
 .room-page .call-view-controls button,
 .room-page .call-members-toggle { min-height: 28px; }
 .room-page .screen-share-state { border-color: rgba(255, 255, 255, .12); color: #a9e7ef; }
