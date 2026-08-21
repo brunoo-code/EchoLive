@@ -1,4 +1,6 @@
 import ParticipantCard from "./ParticipantCard.jsx";
+import ControlsBar from "./ControlsBar.jsx";
+import Icon from "./Icon.jsx";
 
 export default function CallMediaView({
   participants = [],
@@ -17,7 +19,19 @@ export default function CallMediaView({
   screenShareLabel = "",
   volumeById = {},
   onVolumeChange,
-  notify
+  notify,
+  micEnabled = false,
+  onToggleMicrophone,
+  cameraEnabled = false,
+  onToggleCamera,
+  isScreenSharing = false,
+  onToggleScreenShare,
+  onToggleDeafen,
+  onLeaveVoice,
+  membersVisible = false,
+  onToggleMembers,
+  streamPreset = "720p30",
+  onStreamPresetChange
 }) {
   const callParticipants = participants
     .filter((participant) => participant && participant.inRoom !== false)
@@ -58,44 +72,68 @@ export default function CallMediaView({
 
   return (
     <section className="call-stage channel-view">
-      <header className="room-header">
-        <div>
-          <p className="eyebrow">Voz</p>
-          <p className="call-context-line">{channelName}</p>
+      <header className="room-header call-stage-header">
+        <div className="call-stage-title">
+          <span className="call-stage-icon"><Icon name="voice" size={17} /></span>
+          <div>
+            <p className="eyebrow">Voz</p>
+            <p className="call-context-line">{channelName}</p>
+          </div>
+          <span className="call-stage-count">{countLabel}</span>
         </div>
         <div className="room-meta">
-          <span>Participantes: {countLabel}</span>
-          <div className="call-view-controls" aria-label="Modo de visualizacao">
+          <div className="call-view-controls" aria-label="Modo de visualização">
             <button type="button" className={viewMode === "grid" ? "is-selected" : ""} onClick={() => onViewModeChange?.("grid")} aria-pressed={viewMode === "grid"}>Grade</button>
             <button type="button" className={viewMode === "focus" ? "is-selected" : ""} onClick={() => { if (!hasVisualMedia) return; onViewModeChange?.("focus"); if (!focusedMediaId) onFocusParticipant?.(focusedParticipant?.socketId || ""); }} aria-pressed={viewMode === "focus"} disabled={!hasVisualMedia}>Foco</button>
           </div>
+          <button type="button" className={`call-members-toggle ${membersVisible ? "is-selected" : ""}`} onClick={onToggleMembers} aria-pressed={membersVisible} title={membersVisible ? "Ocultar membros" : "Mostrar membros"}>
+            <Icon name="user" size={16} />
+            <span>Membros</span>
+          </button>
         </div>
       </header>
 
-      {isJoining && <p className="status-line">Entrando na sala...</p>}
-      {isDisconnected && <p className="status-line danger">Conexao com o servidor perdida.</p>}
+      <div className="call-stage-body">
+        {isJoining && <p className="status-line">Entrando na sala...</p>}
+        {isDisconnected && <p className="status-line danger">Conexão com o servidor perdida.</p>}
 
-      {!isInVoice ? (
-        <section className="voice-empty-surface" aria-label="Canal de voz vazio" />
-      ) : callParticipants.length > 0 ? (
-        viewMode === "focus" && hasVisualMedia && focusedParticipant ? (
-          <section className="focus-layout">
-            <div className="focus-main">{renderParticipantCard(focusedParticipant)}</div>
-            <div className="focus-thumbnails">
-              {callParticipants.filter((participant) => participant.socketId !== focusedParticipant.socketId).map((participant) => renderParticipantCard(participant, true))}
-            </div>
-          </section>
+        {!isInVoice ? (
+          <section className="voice-empty-surface" aria-label="Canal de voz vazio" />
+        ) : callParticipants.length > 0 ? (
+          viewMode === "focus" && hasVisualMedia && focusedParticipant ? (
+            <section className="focus-layout">
+              <div className="focus-main">{renderParticipantCard(focusedParticipant)}</div>
+              <div className="focus-thumbnails">
+                {callParticipants.filter((participant) => participant.socketId !== focusedParticipant.socketId).map((participant) => renderParticipantCard(participant, true))}
+              </div>
+            </section>
+          ) : (
+            <section className={`participants-grid count-${callParticipants.length} ${callParticipants.some((participant) => participant.isScreenSharing) ? "has-sharing" : ""}`}>
+              {callParticipants.map((participant) => renderParticipantCard(participant))}
+            </section>
+          )
         ) : (
-          <section className={`participants-grid count-${callParticipants.length} ${callParticipants.some((participant) => participant.isScreenSharing) ? "has-sharing" : ""}`}>
-            {callParticipants.map((participant) => renderParticipantCard(participant))}
+          <section className="voice-empty-state" aria-label="Chamada sem participantes">
+            <strong>Você está na voz</strong>
+            <span>Ative a câmera ou aguarde alguém entrar.</span>
           </section>
-        )
-      ) : (
-        <section className="voice-empty-state" aria-label="Chamada sem participantes">
-          <strong>Você está na voz</strong>
-          <span>Ative a câmera ou aguarde alguém entrar.</span>
-        </section>
-      )}
+        )}
+      </div>
+
+      <ControlsBar
+        isScreenSharing={isScreenSharing}
+        onToggleScreenShare={onToggleScreenShare}
+        streamPreset={streamPreset}
+        screenShareLabel={screenShareLabel}
+        onStreamPresetChange={onStreamPresetChange}
+        micEnabled={micEnabled}
+        onToggleMicrophone={onToggleMicrophone}
+        cameraEnabled={cameraEnabled}
+        onToggleCamera={onToggleCamera}
+        isDeafened={isDeafened}
+        onToggleDeafen={onToggleDeafen}
+        onLeaveVoice={onLeaveVoice}
+      />
     </section>
   );
 }

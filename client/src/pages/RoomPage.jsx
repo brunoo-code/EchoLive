@@ -117,6 +117,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const [isRoomExpired, setIsRoomExpired] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState("voice-general");
   const [activeContentView, setActiveContentView] = useState("media");
+  const [isMemberPanelOpen, setIsMemberPanelOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
   const [focusedMediaId, setFocusedMediaId] = useState("");
@@ -1462,7 +1463,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const screenShareLabel = getActualScreenLabel(screenShareSettings, streamPreset);
 
   return (
-    <main className="page room-page app-shell">
+    <main className={`page room-page app-shell ${activeContentView === "media" && !isMemberPanelOpen ? "call-members-collapsed" : ""}`}>
       <ToastStack toasts={toasts} />
       {debugRtc && (
         <aside className="rtc-debug-panel" aria-label="Diagnostico WebRTC">
@@ -1522,7 +1523,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       />
 
       <section className="central-stage">
-        {activeContentView === "media" ? <CallMediaView participants={voiceParticipants} channelName="Geral" participantCount={currentParticipantCount} maxParticipants={maxParticipants} isInVoice={isInVoice} isJoining={joinState === "joining"} isDisconnected={joinState === "disconnected"} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} outputDeviceId={selectedOutputId} screenShareLabel={screenShareLabel} onVolumeChange={changeRemoteVolume} notify={notify} /> : <section className="chat-stage channel-view">
+        {activeContentView === "media" ? <CallMediaView participants={voiceParticipants} channelName="Geral" participantCount={currentParticipantCount} maxParticipants={maxParticipants} isInVoice={isInVoice} isJoining={joinState === "joining"} isDisconnected={joinState === "disconnected"} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} outputDeviceId={selectedOutputId} screenShareLabel={screenShareLabel} onVolumeChange={changeRemoteVolume} notify={notify} micEnabled={micEnabled} onToggleMicrophone={toggleMicrophone} cameraEnabled={cameraEnabled} onToggleCamera={toggleCamera} isScreenSharing={isScreenSharing} onToggleScreenShare={handleToggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={leaveVoiceChannel} membersVisible={isMemberPanelOpen} onToggleMembers={() => setIsMemberPanelOpen((value) => !value)} streamPreset={streamPreset} onStreamPresetChange={setStreamPreset} /> : <section className="chat-stage channel-view">
           {isScreenSharing && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name="screenShare" size={15} /><span>Transmissao ativa</span><strong>Ver transmissao</strong></button>}
           <ChatPanel
               socket={socketInstance}

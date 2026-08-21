@@ -19,9 +19,17 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
       ? "Voce"
       : participant?.inRoom
         ? "Em voz na sala"
-        : status === "offline"
-          ? "Offline"
-          : "Online";
+          : status === "offline"
+            ? "Offline"
+            : "Online";
+  const roleLabel = participant?.role === "owner"
+    ? "Proprietario"
+    : participant?.role === "moderator"
+      ? "Moderador"
+      : participant?.role === "member"
+        ? "Membro"
+        : participant?.role || "";
+  const voiceLabel = participant?.voiceChannelName || participant?.inVoiceChannelName || "";
 
   useLayoutEffect(() => {
     const node = popoverRef.current;
@@ -81,6 +89,10 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
         </div>
         <div className="social-user-popover-meta"><span className={isGuest ? "visitor-badge" : "social-presence-label"}>{isGuest ? "Visitante" : isOfficial ? "Conta oficial" : status === "offline" ? "Offline" : "Online"}</span></div>
         <p className={`social-user-popover-presence ${status === "offline" ? "is-offline" : ""}`}><i className="online-indicator" aria-hidden="true" />{presenceLabel}</p>
+        {(voiceLabel || roleLabel) && <div className="social-user-popover-details">
+          {voiceLabel && <span><Icon name="voice" size={14} />{voiceLabel}</span>}
+          {roleLabel && <span><Icon name="user" size={14} />{roleLabel}</span>}
+        </div>}
         <div className="social-user-popover-actions">
           {!isGuest && !isOfficial && <button type="button" className="primary-button" onClick={() => onMessage?.(participant)}><Icon name="chat" size={15} />Mensagem</button>}
           {!isGuest && <button type="button" className="secondary-button" onClick={() => onViewProfile?.(participant)}><Icon name="account" size={15} />Ver perfil</button>}

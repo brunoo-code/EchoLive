@@ -327,7 +327,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
             <button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}><Icon name="smile" size={16} /></button>
             {false && <button type="button" className="composer-icon-button" onClick={() => { setIsStickerPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsEmojiPickerOpen(false); }} disabled={isSending} title="Abrir figurinhas do Eko" aria-label="Abrir figurinhas do Eko" aria-expanded={isStickerPickerOpen}><Icon name="sticker" size={16} /></button>}
             <button className="send-button" type="submit" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}>
-              {isSending ? "Enviando" : "Enviar"}
+              <Icon name="send" size={15} />
             </button>
           </div>
           {isEmojiPickerOpen && <div className="composer-popover"><EmojiPicker onSelect={insertEmoji} /></div>}
