@@ -3,10 +3,11 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL is required to run migrations.");
-  process.exitCode = 1;
-} else {
+export async function runMigrations() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required to run migrations.");
+  }
+
   const { Pool } = await import("pg");
   const directory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../migrations");
   const pool = new Pool({
@@ -42,5 +43,14 @@ if (!process.env.DATABASE_URL) {
     }
   } finally {
     await pool.end();
+  }
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try {
+    await runMigrations();
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
   }
 }

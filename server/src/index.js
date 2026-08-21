@@ -19,6 +19,7 @@ import {
 } from "./social.js";
 import { areSocketsInSameServerVoice, attachServerSocket, getServerVoiceRoom, registerServerRoutes } from "./serverRoutes.js";
 import { checkDatabase, getDatabaseError, isDatabaseConfigured } from "./db/pool.js";
+import { runMigrations } from "./db/migrate.js";
 import { getConversationForUser } from "./db/social.js";
 import { getServerForUser, isUuid } from "./db/servers.js";
 import { markRoomActivityLeft, recordRoomActivity } from "./db/roomActivity.js";
@@ -719,8 +720,13 @@ httpServer.listen(PORT, HOST, async () => {
   }
 
   if (await checkDatabase()) {
-    console.log("[DB] PostgreSQL conectado.");
-    startSessionCleanup();
+    try {
+      await runMigrations();
+      console.log("[DB] PostgreSQL conectado; migrations verificadas.");
+      startSessionCleanup();
+    } catch (error) {
+      console.log(`[DB] migrations indisponiveis: ${error.message}`);
+    }
     return;
   }
 

@@ -12,7 +12,7 @@ export default function PresenceMenu({ value, onChange, placement = "below", cla
   useLayoutEffect(() => {
     if (!open || placement !== "side") return;
     const rect = rootRef.current?.getBoundingClientRect();
-    setOpensLeft(Boolean(rect && window.innerWidth - rect.right < 250 && rect.left >= 250));
+    setOpensLeft(Boolean(rect && window.innerWidth - rect.right < 258 && rect.left >= 258));
   }, [open, placement]);
 
   useEffect(() => {

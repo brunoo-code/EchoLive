@@ -297,7 +297,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
       serverSocket.off("server:channel-deleted", handleChannelDeleted);
       serverSocket.off("server:deleted", handleServerDeleted);
     };
-  }, [serverId, serverSocket]);
+  }, [serverId, serverSocket, voiceViewChannelId, onNavigateSocial]);
 
   useEffect(() => {
     if (!serverId || !activeChannel?.id || activeChannel.type !== "text" || !serverSocket) return undefined;

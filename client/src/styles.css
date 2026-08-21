@@ -8686,6 +8686,10 @@ video.screen-video {
 }
 .profile-status-options button { min-height: 36px; padding: 0 9px; font-size: .76rem; }
 .profile-status-options button .ui-icon:last-child { margin-left: auto; }
+.profile-status-trigger > span:not(.user-status-badge),
+.profile-status-options button > span:not(.user-status-badge) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-status-options { max-width: calc(100vw - 24px); }
+.profile-status-options button { overflow: hidden; }
 .presence-menu--side.opens-left .profile-status-options { right: calc(100% + 8px); left: auto; }
 .presence-menu--below .profile-status-options { top: calc(100% + 6px); right: 0; left: 0; width: 100%; }
 .settings-presence-field { position: relative; z-index: 4; }
