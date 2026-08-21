@@ -34,6 +34,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const [fileAccept, setFileAccept] = useState(ALL_ACCEPT);
   const fileInputRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -118,6 +119,15 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
   }
 
   useEffect(() => () => stopTyping(), [socket, isReady]);
+
+  useEffect(() => {
+    if (!lightboxImage) return undefined;
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setLightboxImage(null);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxImage]);
 
   function validateFile(file) {
     if (!file) {
@@ -254,9 +264,9 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
               {message.attachment && (
                 <div className="message-attachment">
                   {message.attachment.type === "image" ? (
-                    <a href={`${SERVER_URL}${message.attachment.url}`} target="_blank" rel="noreferrer">
+                    <button type="button" className="chat-image-button" onClick={() => setLightboxImage({ source: `${SERVER_URL}${message.attachment.url}`, alt: message.attachment.name || "Imagem anexada" })}>
                       <img src={`${SERVER_URL}${message.attachment.url}`} alt={message.attachment.name || "Imagem anexada"} />
-                    </a>
+                    </button>
                   ) : message.attachment.type === "video" ? (
                     <video controls preload="metadata" src={`${SERVER_URL}${message.attachment.url}`} />
                   ) : (
@@ -314,7 +324,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           />
           {draft.length >= 3400 && <span className="message-counter">{draft.length} / 4000</span>}
           <div className="composer-actions">
-            <button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}>😊</button>
+            <button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}><Icon name="smile" size={16} /></button>
             {false && <button type="button" className="composer-icon-button" onClick={() => { setIsStickerPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsEmojiPickerOpen(false); }} disabled={isSending} title="Abrir figurinhas do Eko" aria-label="Abrir figurinhas do Eko" aria-expanded={isStickerPickerOpen}><Icon name="sticker" size={16} /></button>}
             <button className="send-button" type="submit" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}>
               {isSending ? "Enviando" : "Enviar"}
@@ -327,6 +337,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           </div>}
         </ChatComposerRow>
       </ChatComposerFrame>
+      {lightboxImage && <div className="dm-lightbox chat-lightbox" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLightboxImage(null); }}><button type="button" className="icon-button dm-lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Fechar imagem" title="Fechar"><Icon name="close" size={20} /></button><img src={lightboxImage.source} alt={lightboxImage.alt} /></div>}
     </section>
   );
 }

@@ -82,7 +82,7 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
         <div className="social-user-popover-meta"><span className={isGuest ? "visitor-badge" : "social-presence-label"}>{isGuest ? "Visitante" : isOfficial ? "Conta oficial" : status === "offline" ? "Offline" : "Online"}</span></div>
         <p className={`social-user-popover-presence ${status === "offline" ? "is-offline" : ""}`}><i className="online-indicator" aria-hidden="true" />{presenceLabel}</p>
         <div className="social-user-popover-actions">
-          {!isGuest && !isOfficial && <button type="button" className="primary-button" onClick={() => onMessage?.(participant)}><Icon name="message" size={15} />Mensagem</button>}
+          {!isGuest && !isOfficial && <button type="button" className="primary-button" onClick={() => onMessage?.(participant)}><Icon name="chat" size={15} />Mensagem</button>}
           {!isGuest && <button type="button" className="secondary-button" onClick={() => onViewProfile?.(participant)}><Icon name="account" size={15} />Ver perfil</button>}
         </div>
       </div>

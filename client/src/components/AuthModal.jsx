@@ -15,6 +15,8 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeField, setActiveField] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -22,6 +24,8 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
       setError("");
       setFieldErrors({});
       setActiveField("");
+      setShowPassword(false);
+      setShowConfirmation(false);
     }
   }, [initialMode, open]);
 
@@ -100,12 +104,12 @@ export default function AuthModal({ open, initialMode = "login", onClose }) {
         {isRegister && <div className="auth-section-heading auth-security-heading"><strong>Seguranca</strong><small>Uma senha so sua.</small></div>}
         <label className="field">
           <span>Senha</span>
-          <input type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={8} maxLength={128} value={password} onFocus={() => setActiveField("password")} onBlur={() => setActiveField("")} onChange={(event) => { setPassword(event.target.value); setFieldErrors((current) => ({ ...current, password: "" })); }} placeholder="Minimo de 8 caracteres" aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? "auth-password-error" : undefined} />
+          <span className="auth-password-wrap"><input type={showPassword ? "text" : "password"} autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={8} maxLength={128} value={password} onFocus={() => setActiveField("password")} onBlur={() => setActiveField("")} onChange={(event) => { setPassword(event.target.value); setFieldErrors((current) => ({ ...current, password: "" })); }} placeholder="Minimo de 8 caracteres" aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? "auth-password-error" : undefined} /><button type="button" className="auth-password-toggle" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} title={showPassword ? "Ocultar senha" : "Mostrar senha"}><Icon name={showPassword ? "eyeOff" : "eye"} size={16} /></button></span>
           {fieldErrors.password && <small id="auth-password-error" className="field-error">{fieldErrors.password}</small>}
         </label>
         {isRegister && <label className="field">
           <span>Confirmar senha</span>
-          <input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={confirmation} onFocus={() => setActiveField("confirmation")} onBlur={() => setActiveField("")} onChange={(event) => { setConfirmation(event.target.value); setFieldErrors((current) => ({ ...current, confirmation: "" })); }} aria-invalid={Boolean(fieldErrors.confirmation)} aria-describedby={fieldErrors.confirmation ? "auth-confirmation-error" : undefined} />
+          <span className="auth-password-wrap"><input type={showConfirmation ? "text" : "password"} autoComplete="new-password" minLength={8} maxLength={128} value={confirmation} onFocus={() => setActiveField("confirmation")} onBlur={() => setActiveField("")} onChange={(event) => { setConfirmation(event.target.value); setFieldErrors((current) => ({ ...current, confirmation: "" })); }} aria-invalid={Boolean(fieldErrors.confirmation)} aria-describedby={fieldErrors.confirmation ? "auth-confirmation-error" : undefined} /><button type="button" className="auth-password-toggle" onClick={() => setShowConfirmation((current) => !current)} aria-label={showConfirmation ? "Ocultar confirmação" : "Mostrar confirmação"} title={showConfirmation ? "Ocultar confirmação" : "Mostrar confirmação"}><Icon name={showConfirmation ? "eyeOff" : "eye"} size={16} /></button></span>
           {fieldErrors.confirmation && <small id="auth-confirmation-error" className="field-error">{fieldErrors.confirmation}</small>}
         </label>}
         {error && <p className="auth-error" role="alert">{error}</p>}
