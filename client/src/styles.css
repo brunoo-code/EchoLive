@@ -6769,7 +6769,7 @@ video.screen-video {
 .server-message-reactions small { color: var(--room-muted, #91a0aa); font-size: .61rem; }
 .server-message-deleted { color: var(--room-muted, #91a0aa) !important; font-style: italic; }
 .server-reply-ref { display: block; margin-top: 4px; }
-.server-welcome { display: grid; align-content: end; min-height: 100%; padding: 8px 0 10px; color: var(--room-muted, #91a0aa); }
+.server-welcome { display: grid; align-content: start; min-height: 100%; padding: 72px 18px 24px; color: var(--room-muted, #91a0aa); }
 .server-welcome .ui-icon { color: var(--echo-cyan, #67d4e5); }
 .server-welcome h2 { margin: 12px 0 4px; color: var(--room-text, #ecf1f5); font-size: 1.2rem; }
 .server-welcome p { margin: 0; font-size: .78rem; }
@@ -8384,13 +8384,13 @@ video.screen-video {
   width: fit-content;
   max-width: 100%;
   min-height: 54px;
-  gap: 7px;
+  gap: 5px;
   margin: 0 auto;
   padding: 6px;
   border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 10px;
+  border-radius: 20px;
   background: #17161c;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, .22);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
 }
 .room-page .call-controls .screen-share-control,
 .room-page .call-controls .screen-options-control { position: relative; display: flex; min-width: 0; }
@@ -8401,7 +8401,7 @@ video.screen-video {
 .room-page .control-icon-button.is-danger { border-color: rgba(229, 98, 108, .26); color: #f08088; background: rgba(229, 98, 108, .11); }
 .room-page .call-controls .control-icon-button.is-danger { width: 46px; height: 46px; flex-basis: 46px; border-radius: 50%; }
 .room-page .control-icon-button.is-danger:hover { color: #fff; background: #c84955; }
-.room-page .screen-share-state { position: absolute; top: -8px; right: 5px; max-width: 110px; overflow: hidden; padding: 2px 5px; border: 1px solid rgba(103, 212, 229, .25); border-radius: 4px; color: #67d4e5; background: #111115; font-size: .54rem; text-overflow: ellipsis; white-space: nowrap; }
+.room-page .call-controls .screen-share-state { display: none; }
 .room-page .screen-preset-menu { right: 0; bottom: calc(100% + 9px); left: auto; z-index: 30; width: 218px; padding: 6px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 8px; background: #1b1b20; box-shadow: 0 16px 30px rgba(0, 0, 0, .35); }
 .room-page .screen-preset-menu .menu-kicker { margin: 4px 7px 5px; color: #8f8c98; font-size: .62rem; font-weight: 700; }
 .room-page .screen-preset-menu button { display: grid; width: 100%; gap: 2px; padding: 8px; border: 0; border-radius: 5px; color: #c4c1ca; background: transparent; text-align: left; font: inherit; font-size: .68rem; cursor: pointer; }
@@ -8447,6 +8447,21 @@ video.screen-video {
 .room-page .call-pip-preview .participant-topline,
 .room-page .call-pip-preview .participant-actions { display: none; }
 .room-page .call-pip-preview .video-frame { height: 100%; min-height: 0; background: #0b0b0e; }
+.room-page .connected-voice-preview { min-width: 0; margin-bottom: 6px; }
+.room-page .call-pip-preview.is-sidebar {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  grid-template-rows: 28px minmax(0, 1fr);
+  border-color: rgba(255, 255, 255, .1);
+  border-radius: 7px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .28);
+}
+.room-page .call-pip-preview.is-sidebar .call-pip-header { min-height: 28px; padding-inline: 8px 5px; font-size: .62rem; }
+.room-page .call-pip-preview.is-sidebar .call-pip-actions button { width: 22px; height: 22px; }
 .room-page .chat-composer { min-height: 54px; margin: 8px 10px; padding: 4px 8px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 8px; background: #2a2831; }
 .room-page .composer-row { min-height: 36px; gap: 5px; }
 .room-page .message-input { min-height: 34px; color: #e9e8ed; }
@@ -8474,7 +8489,7 @@ video.screen-video {
 .room-page .server-message-attachment video { display: block; max-width: min(520px, 100%); max-height: 440px; border-radius: 6px; object-fit: contain; }
 .room-page .server-message-attachment > span { display: block; margin-top: 4px; color: #77747f; font-size: .61rem; }
 
-.room-page > .profile-popover { position: fixed; z-index: 60; left: calc(var(--shell-rail-size) + 10px); bottom: 64px; width: min(320px, calc(100vw - var(--shell-rail-size) - 24px)); max-height: calc(100vh - 84px); overflow-y: auto; border-color: rgba(255, 255, 255, .12); border-radius: 9px; background: #1b1b20; box-shadow: 0 18px 40px rgba(0, 0, 0, .45); }
+.room-page > .profile-popover { position: fixed; z-index: 60; left: calc(var(--shell-rail-size) + 10px); bottom: 64px; width: min(320px, calc(100vw - var(--shell-rail-size) - 24px)); max-height: calc(100vh - 84px); overflow: visible; border-color: rgba(255, 255, 255, .12); border-radius: 9px; background: #1b1b20; box-shadow: 0 18px 40px rgba(0, 0, 0, .45); }
 
 .social-page {
   --social-rail-size: 68px;
@@ -8551,8 +8566,8 @@ video.screen-video {
 /* Shared interaction details for the canonical desktop contract. */
 .room-page > .profile-popover,
 .social-page > .profile-popover {
-  width: min(320px, calc(100vw - 92px));
-  padding: 16px;
+  width: min(306px, calc(100vw - 92px));
+  padding: 14px;
   border-radius: 9px;
 }
 .social-page > .profile-popover {
@@ -8561,8 +8576,8 @@ video.screen-video {
 }
 .room-page > .profile-popover .profile-popover-banner,
 .social-page > .profile-popover .profile-popover-banner {
-  height: 94px;
-  margin: -16px -16px 14px;
+  height: 90px;
+  margin: -14px -14px 12px;
   border-radius: 9px 9px 0 0;
   border-bottom-color: rgba(255,255,255,.06);
   background: linear-gradient(135deg, color-mix(in srgb, var(--profile-accent, #67d4e5) 42%, #27303a), color-mix(in srgb, var(--profile-accent, #67d4e5) 12%, #15151a) 72%);
@@ -8571,9 +8586,9 @@ video.screen-video {
 .social-page > .profile-popover .profile-popover-header { align-items: flex-end; }
 .room-page > .profile-popover .profile-popover-avatar,
 .social-page > .profile-popover .profile-popover-avatar {
-  width: 74px;
-  height: 74px;
-  margin-top: -38px;
+  width: 70px;
+  height: 70px;
+  margin-top: -35px;
   border: 4px solid #1b1b20;
 }
 .room-page > .profile-popover .profile-popover-identity > strong,
@@ -8624,7 +8639,14 @@ video.screen-video {
 }
 .profile-status-options button { min-height: 36px; padding: 0 9px; font-size: .76rem; }
 .profile-status-options button .ui-icon:last-child { margin-left: auto; }
-.room-page .connected-voice { gap: 3px; padding: 8px 9px; border-radius: 7px; }
+.presence-menu--side.opens-left .profile-status-options { right: calc(100% + 8px); left: auto; }
+.presence-menu--below .profile-status-options { top: calc(100% + 6px); right: 0; left: 0; width: 100%; }
+.settings-presence-field { position: relative; z-index: 4; }
+.profile-status-error { display: block; margin-top: 6px; color: #f39aa1; font-size: .68rem; }
+.profile-popover-actions .profile-edit-primary { justify-content: center; margin-top: 4px; color: #071015; background: var(--profile-accent, #67d4e5); font-weight: 700; }
+.profile-popover-actions .profile-edit-primary:hover,
+.profile-popover-actions .profile-edit-primary:focus-visible { color: #071015; background: color-mix(in srgb, var(--profile-accent, #67d4e5) 86%, white); }
+.room-page .connected-voice { display: grid; gap: 3px; padding: 8px 9px; border-radius: 7px; }
 .room-page .sidebar-lower-region { padding-top: 9px; }
 .room-page .sidebar-call-toolbar { gap: 5px; margin: 5px 0 3px; }
 .room-page .sidebar-call-toolbar .control-icon-button,
@@ -8675,8 +8697,8 @@ video.screen-video {
 
 .settings-modal {
   grid-template-rows: 60px minmax(0, 1fr) auto;
-  width: min(1120px, calc(100vw - 40px));
-  height: min(760px, calc(100vh - 40px));
+  width: min(1160px, 92vw);
+  height: min(800px, 90vh);
 }
 
 .settings-modal .settings-layout {
@@ -8966,6 +8988,16 @@ video.screen-video {
   border: 0;
 }
 
+.settings-preview-custom-status {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: #aaa7b1;
+  font-size: .75rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .settings-preview-about {
   margin-top: 6px;
   padding-top: 10px;
@@ -9012,8 +9044,8 @@ video.screen-video {
 .server-settings-modal {
   display: grid;
   grid-template-rows: 64px minmax(0, 1fr) auto;
-  width: min(1120px, 90vw);
-  height: min(780px, 88vh);
+  width: min(1160px, 92vw);
+  height: min(800px, 90vh);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, .11);
   border-radius: 10px;
@@ -9213,7 +9245,7 @@ video.screen-video {
 
 .server-channel-modal form {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   padding: 0 20px 18px;
 }
 
@@ -9221,6 +9253,20 @@ video.screen-video {
   width: 100%;
   min-height: 38px;
 }
+
+.server-channel-type { display: grid; gap: 6px; margin: 0 0 5px; padding: 0; border: 0; }
+.server-channel-type legend { margin-bottom: 7px; color: #bcb9c3; font-size: .68rem; font-weight: 700; text-transform: uppercase; }
+.server-channel-type label { display: grid; grid-template-columns: 34px minmax(0, 1fr) 18px; min-height: 52px; align-items: center; gap: 9px; padding: 6px 10px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 7px; color: #c8c5cf; background: #242329; cursor: pointer; }
+.server-channel-type label:hover,
+.server-channel-type label.is-selected { border-color: rgba(103, 212, 229, .32); background: #2a2930; }
+.server-channel-type input { position: absolute; opacity: 0; pointer-events: none; }
+.server-channel-type-icon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 6px; color: #aaa7b2; background: #17161c; }
+.server-channel-type label.is-selected .server-channel-type-icon { color: #67d4e5; }
+.server-channel-type label > span:nth-of-type(2) { display: grid; min-width: 0; gap: 2px; }
+.server-channel-type strong { font-size: .78rem; }
+.server-channel-type small { overflow: hidden; color: #8f8c98; font-size: .65rem; text-overflow: ellipsis; white-space: nowrap; }
+.server-channel-type label > i { display: block; width: 14px; height: 14px; border: 2px solid #77747f; border-radius: 50%; }
+.server-channel-type label.is-selected > i { border: 4px solid #67d4e5; }
 
 .server-channel-delete-modal > p,
 .server-channel-delete-modal > .field-error {

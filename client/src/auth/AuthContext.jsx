@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { SERVER_URL } from "../utils/webrtc.js";
+import { normalizePresence } from "../utils/presence.js";
 
 const AuthContext = createContext(null);
 
@@ -38,6 +39,7 @@ export function AuthProvider({ children }) {
   const [status, setStatus] = useState("loading");
   const [user, setUser] = useState(null);
   const [availability, setAvailability] = useState("unknown");
+  const profileMutationRef = useRef(0);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -89,14 +91,27 @@ export function AuthProvider({ children }) {
   }, []);
 
   const updateProfile = useCallback(async (profile) => {
-    const data = await request("/api/users/me", {
-      method: "PATCH",
-      body: JSON.stringify(profile)
-    });
-    setUser(data.user);
-    setStatus("authenticated");
-    return data.user;
-  }, []);
+    const mutationId = profileMutationRef.current + 1;
+    profileMutationRef.current = mutationId;
+    const previousUser = user;
+    const normalizedProfile = profile.status
+      ? { ...profile, status: normalizePresence(profile.status) }
+      : profile;
+    setUser((current) => current ? { ...current, ...normalizedProfile } : current);
+
+    try {
+      const data = await request("/api/users/me", {
+        method: "PATCH",
+        body: JSON.stringify(normalizedProfile)
+      });
+      if (profileMutationRef.current === mutationId) setUser(data.user);
+      setStatus("authenticated");
+      return data.user;
+    } catch (error) {
+      if (profileMutationRef.current === mutationId) setUser(previousUser);
+      throw error;
+    }
+  }, [user]);
 
   const value = useMemo(() => ({
     availability,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import UserBadges from "./UserBadges.jsx";
+import PresenceMenu from "./PresenceMenu.jsx";
 import Icon from "./Icon.jsx";
 
 const sections = ["profile", "account", "voice", "appearance", "preferences"];
@@ -56,7 +57,7 @@ export default function SettingsModal({ initialSection = "profile", availableSec
 
   const isDirty = useMemo(() => profileSignature(draft) !== profileSignature(savedProfile), [draft, savedProfile]);
   const displayName = draft.displayName.trim() || "Nome de exibicao";
-  const statusLabel = draft.status === "dnd" ? "Nao perturbe" : draft.status === "invisible" ? "Invisivel" : "Online";
+  const statusLabel = draft.status === "dnd" ? "Não perturbe" : draft.status === "invisible" ? "Invisível" : "Online";
 
   function requestClose() {
     if (isDirty && !window.confirm("Descartar alteracoes nao salvas?")) return;
@@ -165,7 +166,7 @@ export default function SettingsModal({ initialSection = "profile", availableSec
               <div className="profile-photo-actions"><div className="profile-edit-avatar">{draft.avatarUrl ? <img src={draft.avatarUrl} alt="" /> : displayName.slice(0, 1).toUpperCase()}<UserStatusBadge status={draft.status} size="lg" /></div><div><label className="secondary-button profile-upload"><Icon name="image" size={15} />Alterar avatar<input type="file" accept="image/png,image/jpeg,image/webp" onChange={selectAvatar} /></label>{draft.avatarUrl && <button type="button" className="text-button" onClick={() => update("avatarUrl", "")}>Remover</button>}<small>PNG, JPEG ou WebP. Maximo 2 MB.</small></div></div>
               <div className="settings-profile-grid"><label className="field"><span>Nome de exibicao</span><input maxLength={40} value={draft.displayName} onChange={(event) => update("displayName", event.target.value)} /></label><label className="field"><span>Pronomes</span><input maxLength={40} placeholder="Opcional" value={draft.pronouns} onChange={(event) => update("pronouns", event.target.value)} /></label></div>
               <div className="settings-readonly"><span>Nome de usuario</span><strong>@{draft.username || "username"}</strong></div>
-              <label className="field"><span>Status</span><select value={draft.status} onChange={(event) => update("status", event.target.value)}><option value="online">Online</option><option value="dnd">Nao perturbe</option><option value="invisible">Invisivel</option></select></label>
+              <div className="field settings-presence-field"><span>Status</span><PresenceMenu value={draft.status} onChange={(value) => update("status", value)} label="Status da conta" /></div>
               <label className="field"><span>Status personalizado</span><input maxLength={80} placeholder="O que esta acontecendo?" value={draft.customStatus} onChange={(event) => update("customStatus", event.target.value)} /><small>{draft.customStatus.length}/80</small></label>
               <label className="field"><span>Sobre mim</span><textarea maxLength={300} rows={5} placeholder="Conte um pouco sobre voce" value={draft.aboutMe} onChange={(event) => update("aboutMe", event.target.value)} /><small>{draft.aboutMe.length}/300</small></label>
               <label className="field settings-profile-accent"><span>Cor do perfil</span><div><input type="color" value={draft.accentColor} onChange={(event) => update("accentColor", event.target.value)} /><code>{draft.accentColor.toUpperCase()}</code></div></label>
@@ -181,7 +182,7 @@ export default function SettingsModal({ initialSection = "profile", availableSec
         </main>
         <aside className="settings-profile-preview" style={{ "--profile-accent": draft.accentColor }} aria-label="Preview do perfil">
           <span className="section-label">PREVIEW</span>
-          <div className="settings-preview-card"><div className="settings-preview-cover" /><div className="settings-preview-body"><div className="settings-preview-avatar">{draft.avatarUrl ? <img src={draft.avatarUrl} alt="" /> : displayName.slice(0, 1).toUpperCase()}<UserStatusBadge status={draft.status} size="lg" /></div><h3>{displayName}</h3><div className="settings-preview-user"><span>@{draft.username || "username"}</span><UserBadges badges={draft.badges} /></div>{draft.pronouns && <small>{draft.pronouns}</small>}<div className="settings-preview-status"><UserStatusBadge status={draft.status} size="sm" /><span>{draft.customStatus || statusLabel}</span></div>{draft.aboutMe && <div className="settings-preview-about"><strong>Sobre mim</strong><p>{draft.aboutMe}</p></div>}</div></div>
+          <div className="settings-preview-card"><div className="settings-preview-cover" /><div className="settings-preview-body"><div className="settings-preview-avatar">{draft.avatarUrl ? <img src={draft.avatarUrl} alt="" /> : displayName.slice(0, 1).toUpperCase()}<UserStatusBadge status={draft.status} size="lg" /></div><h3>{displayName}</h3><div className="settings-preview-user"><span>@{draft.username || "username"}</span><UserBadges badges={draft.badges} /></div>{draft.pronouns && <small>{draft.pronouns}</small>}<div className="settings-preview-status"><UserStatusBadge status={draft.status} size="sm" /><span>{statusLabel}</span></div>{draft.customStatus && <p className="settings-preview-custom-status">{draft.customStatus}</p>}{draft.aboutMe && <div className="settings-preview-about"><strong>Sobre mim</strong><p>{draft.aboutMe}</p></div>}</div></div>
         </aside>
       </div>
       {active === "profile" && isPersistentProfile && (isDirty || saveState === "saved") && <footer className={`settings-unsaved-bar ${saveState === "saved" && !isDirty ? "is-saved" : ""}`}><span>{saveState === "saved" && !isDirty ? "Alteracoes salvas." : "Voce tem alteracoes nao salvas."}</span><div>{isDirty && <button type="button" className="text-button" onClick={discardProfileChanges} disabled={saveState === "saving"}>Redefinir</button>}<button type="button" className="primary-button" onClick={saveProfile} disabled={!isDirty || saveState === "saving"}>{saveState === "saving" ? "Salvando..." : "Salvar alteracoes"}</button></div></footer>}

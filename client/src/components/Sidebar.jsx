@@ -4,6 +4,7 @@ import Icon from "./Icon.jsx";
 import ControlsBar from "./ControlsBar.jsx";
 import UserAvatar from "./UserAvatar.jsx";
 import { useEffect, useRef, useState } from "react";
+import { presenceLabel } from "../utils/presence.js";
 
 export default function Sidebar({
   roomCode,
@@ -65,7 +66,8 @@ export default function Sidebar({
   canDeleteServer = false,
   onCreateServerChannel,
   onRenameServerChannel,
-  onDeleteServerChannel
+  onDeleteServerChannel,
+  voicePreview = null
 }) {
   const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
   const [isServerMenuOpen, setIsServerMenuOpen] = useState(false);
@@ -180,24 +182,17 @@ export default function Sidebar({
       </section>}
 
       <div className="sidebar-lower-region">
-        {isInVoice && <section className="connected-voice is-connected" aria-label="Status da voz">
+        {isInVoice && <section className={`connected-voice is-connected ${voicePreview ? "has-preview" : ""}`} aria-label="Status da voz">
+          {voicePreview && <div className="connected-voice-preview">{voicePreview}</div>}
           <div className="connected-voice-heading"><span className="voice-state-icon" aria-hidden="true"><Icon name={isInVoice ? "voice" : "headphones"} size={16} /></span><span className="connected-voice-copy"><strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong><span className="connected-voice-channel">{voiceChannelName}</span></span>{isInVoice && connectionQuality && <span className="connection-quality" title={`Qualidade da conexao: ${connectionQuality}`}><Icon name="signal" size={14} />{connectionQuality}</span>}{isInVoice ? <button type="button" className="connected-voice-action" onClick={onLeaveVoice} data-tooltip="Desconectar" aria-label="Desconectar"><Icon name="phoneDisconnect" size={16} /></button> : <button type="button" className="connected-voice-action" onClick={onJoinVoice} data-tooltip="Entrar na voz" aria-label="Entrar na voz"><Icon name="voice" size={15} /></button>}</div>
+          <div className="sidebar-call-toolbar" aria-label="Controles da chamada">
+            <button type="button" className={`sidebar-call-button ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} data-tooltip={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-pressed={cameraEnabled}>
+              <span className="camera-control-icon" aria-hidden="true"><Icon name={cameraEnabled ? "camera" : "cameraOff"} size={15} /></span>
+              <span>Camera</span>
+            </button>
+            <ControlsBar compact isScreenSharing={isScreenSharing} onToggleScreenShare={onToggleScreenShare} streamPreset={streamPreset} screenShareLabel={screenShareLabel} onStreamPresetChange={onStreamPresetChange} />
+          </div>
         </section>}
-
-        {isInVoice && <div className="sidebar-call-toolbar" aria-label="Controles da chamada">
-          <button type="button" className={`sidebar-call-button ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} data-tooltip={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-pressed={cameraEnabled}>
-            <span className="camera-control-icon" aria-hidden="true"><Icon name={cameraEnabled ? "camera" : "cameraOff"} size={15} /></span>
-            <span>Camera</span>
-          </button>
-          <ControlsBar
-            compact
-            isScreenSharing={isScreenSharing}
-            onToggleScreenShare={onToggleScreenShare}
-            streamPreset={streamPreset}
-            screenShareLabel={screenShareLabel}
-            onStreamPresetChange={onStreamPresetChange}
-          />
-        </div>}
 
         <footer className="sidebar-user-footer">
         <button type="button" className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
@@ -207,7 +202,7 @@ export default function Sidebar({
           </span>
           <div>
             <strong title={nickname}>{nickname}</strong>
-            <span title={customStatus || status}>{isGuest ? "Visitante" : customStatus || (isInVoice ? "Em chamada" : status)}</span>
+            <span title={isGuest ? "Visitante" : presenceLabel(status)}>{isGuest ? "Visitante" : presenceLabel(status)}</span>
           </div>
         </button>
         <div className="sidebar-user-controls" aria-label="Controles do usuario">

@@ -1249,18 +1249,25 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   }
 
   async function saveProfile(nextProfile) {
+    const previousProfile = profile;
     const next = { ...profile, ...nextProfile };
+    setProfile(next);
     let canonical = next;
-    if (accountUser) {
-      canonical = await updateAccountProfile({
-        displayName: next.displayName,
-        avatarUrl: next.avatarUrl,
-        pronouns: next.pronouns,
-        aboutMe: next.aboutMe,
-        accentColor: next.accentColor,
-        customStatus: next.customStatus,
-        status: next.status
-      });
+    try {
+      if (accountUser) {
+        canonical = await updateAccountProfile({
+          displayName: next.displayName,
+          avatarUrl: next.avatarUrl,
+          pronouns: next.pronouns,
+          aboutMe: next.aboutMe,
+          accentColor: next.accentColor,
+          customStatus: next.customStatus,
+          status: next.status
+        });
+      }
+    } catch (error) {
+      setProfile(previousProfile);
+      throw error;
     }
     const localProfile = { ...next, ...canonical, nickname: canonical.displayName || next.nickname };
     setProfile(localProfile);
@@ -1285,10 +1292,18 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     onNavigateRoom?.(nextCode);
   }
 
-  function openProfilePopover() { setIsSettingsOpen(false); setIsProfilePopoverOpen(true); }
+  function openProfilePopover() {
+    setIsSettingsOpen(false);
+    setSelectedParticipantProfile(null);
+    setIsProfilePopoverOpen((open) => !open);
+  }
   function openParticipantProfile(participant, anchorRect) {
     setIsProfilePopoverOpen(false);
-    setSelectedParticipantProfile({ participant, anchorRect });
+    const participantKey = participant?.userId || participant?.socketId || participant?.id;
+    setSelectedParticipantProfile((current) => {
+      const currentKey = current?.participant?.userId || current?.participant?.socketId || current?.participant?.id;
+      return currentKey && currentKey === participantKey ? null : { participant, anchorRect };
+    });
   }
   function handleSelectChannel(channel) {
     setSelectedChannel(channel);
@@ -1305,8 +1320,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   }
 
   useEffect(() => {
-    if (isScreenSharing || cameraEnabled) setIsPipDismissed(false);
-  }, [cameraEnabled, isScreenSharing]);
+    if (isScreenSharing) setIsPipDismissed(false);
+  }, [isScreenSharing]);
   function openProfileSettings() { setIsProfilePopoverOpen(false); setSettingsInitialSection("profile"); setIsSettingsOpen(true); }
   function openSettings() { setIsProfilePopoverOpen(false); setSettingsInitialSection("profile"); setIsSettingsOpen(true); }
 
@@ -1502,6 +1517,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   ).sort(
     (left, right) => Number(right.isScreenSharing) - Number(left.isScreenSharing)
   );
+  const sharedParticipant = callParticipants.find((participant) => participant.isScreenSharing && participant.stream);
   const screenShareLabel = getActualScreenLabel(screenShareSettings, streamPreset);
 
   return (
@@ -1553,6 +1569,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         isDeafened={isDeafened}
         isSpeaking={isSpeaking}
         avatarUrl={localAvatarUrl}
+        voicePreview={isInVoice && activeContentView === "text" && sharedParticipant && !isPipDismissed ? <MediaPip variant="sidebar" participant={sharedParticipant} onOpen={() => setActiveContentView("media")} onClose={() => setIsPipDismissed(true)} isDeafened={isDeafened} outputDeviceId={selectedOutputId} screenShareLabel={screenShareLabel} volume={sharedParticipant.volume} onVolumeChange={(volume) => changeRemoteVolume(sharedParticipant.socketId, volume)} notify={notify} /> : null}
         onProfileClick={openProfilePopover}
         onOpenUserSettings={openSettings}
         onToggleMicrophone={toggleMicrophone}
@@ -1567,7 +1584,6 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
 
       <section className="central-stage">
         {activeContentView === "media" ? <CallMediaView participants={voiceParticipants} channelName="Geral" participantCount={currentParticipantCount} maxParticipants={maxParticipants} isInVoice={isInVoice} isJoining={joinState === "joining"} isDisconnected={joinState === "disconnected"} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} outputDeviceId={selectedOutputId} screenShareLabel={screenShareLabel} onVolumeChange={changeRemoteVolume} notify={notify} micEnabled={micEnabled} onToggleMicrophone={toggleMicrophone} cameraEnabled={cameraEnabled} onToggleCamera={toggleCamera} isScreenSharing={isScreenSharing} onToggleScreenShare={handleToggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={leaveVoiceChannel} membersVisible={isMemberPanelOpen} onToggleMembers={() => setIsMemberPanelOpen((value) => !value)} streamPreset={streamPreset} onStreamPresetChange={setStreamPreset} /> : <section className="chat-stage channel-view">
-          {isInVoice && callParticipants[0] && !isPipDismissed && <MediaPip participant={callParticipants[0]} onOpen={() => setActiveContentView("media")} onClose={() => setIsPipDismissed(true)} isDeafened={isDeafened} outputDeviceId={selectedOutputId} screenShareLabel={screenShareLabel} volume={callParticipants[0].volume} onVolumeChange={(volume) => changeRemoteVolume(callParticipants[0].socketId, volume)} notify={notify} />}
           <ChatPanel
               socket={socketInstance}
               socketId={selfId}

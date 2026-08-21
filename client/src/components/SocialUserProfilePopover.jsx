@@ -22,7 +22,7 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
           : status === "offline"
             ? "Offline"
             : status === "dnd"
-              ? "Nao perturbe"
+              ? "Não perturbe"
               : "Online";
   const roleLabel = participant?.role === "owner"
     ? "Proprietario"
@@ -56,7 +56,12 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
 
   useEffect(() => {
     function handlePointerDown(event) {
-      if (!popoverRef.current?.contains(event.target)) onClose?.();
+      const pointIsInsideAnchor = anchorRect
+        && event.clientX >= anchorRect.left
+        && event.clientX <= anchorRect.right
+        && event.clientY >= anchorRect.top
+        && event.clientY <= anchorRect.bottom;
+      if (!popoverRef.current?.contains(event.target) && !pointIsInsideAnchor) onClose?.();
     }
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose?.();
@@ -74,7 +79,7 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
       window.removeEventListener("resize", handleViewportChange);
       window.removeEventListener("scroll", handleViewportChange, true);
     };
-  }, [onClose]);
+  }, [anchorRect, onClose]);
 
   if (!participant) return null;
   return createPortal(
@@ -90,7 +95,7 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
           <div className="social-user-popover-username"><span>@{username}</span><UserBadges user={participant} isGuest={participant?.isGuest} badges={participant.badges} /></div>
           {participant?.pronouns && <small>{participant.pronouns}</small>}
         </div>
-        <div className="social-user-popover-meta"><span className={isGuest ? "visitor-badge" : "social-presence-label"}>{isGuest ? "Visitante" : isOfficial ? "Conta oficial" : status === "offline" ? "Offline" : status === "dnd" ? "Nao perturbe" : "Online"}</span></div>
+        <div className="social-user-popover-meta"><span className={isGuest ? "visitor-badge" : "social-presence-label"}>{isGuest ? "Visitante" : isOfficial ? "Conta oficial" : status === "offline" ? "Offline" : status === "dnd" ? "Não perturbe" : "Online"}</span></div>
         <p className={`social-user-popover-presence ${status === "offline" ? "is-offline" : ""}`}><i className="online-indicator" aria-hidden="true" />{presenceLabel}</p>
         {(voiceLabel || roleLabel) && <div className="social-user-popover-details">
           {voiceLabel && <span><Icon name="voice" size={14} />{voiceLabel}</span>}

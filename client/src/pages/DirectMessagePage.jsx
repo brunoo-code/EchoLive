@@ -13,6 +13,7 @@ import { SERVER_URL } from "../utils/webrtc.js";
 import { UPLOAD_MIME_TYPES, validateUploadFile } from "../utils/uploadLimits.js";
 import { linkifyMessage } from "../utils/linkifyMessage.js";
 import { playUiSound } from "../utils/uiSounds.js";
+import { publicPresence } from "../utils/presence.js";
 
 const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
 const FILE_ACCEPT = "application/pdf,application/zip,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,.docx,.xlsx,.pptx";
@@ -334,13 +335,13 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     });
   }
 
-  const openSidebarProfile = (profileUser, anchorRect) => setProfilePopover({
+  const openSidebarProfile = (profileUser, anchorRect) => setProfilePopover((current) => current?.user?.id === profileUser.id ? null : ({
     user: {
       ...profileUser,
-      status: profileUser.id === user?.id ? user.status : onlineUserIds.has(profileUser.id) ? (profileUser.status === "dnd" ? "dnd" : "online") : "offline"
+      status: profileUser.id === user?.id ? user.status : onlineUserIds.has(profileUser.id) ? publicPresence(profileUser.status) : "offline"
     },
     anchorRect
-  });
+  }));
   const sidebarProps = { activeTab: "friends", onTabChange: onNavigateFriends, conversations, onlineUserIds, user, onHome: onNavigateHome, onOpenConversation: onNavigateDm, onOpenSettings: onOpenAccountSettings, onHideConversation: async (id) => { await hideConversation(id); onNavigateFriends(); }, activeConversationId: conversationId, socialStatus };
   if (conversationStatus === "loading") return <main className="page social-page"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
   if (conversationStatus === "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
@@ -352,9 +353,9 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     <SocialSidebar {...sidebarProps} onOpenProfile={openSidebarProfile} />
     <section className="dm-content">
       <header className={`dm-header ${isOfficial ? "is-official" : ""}`}>
-        <button type="button" className="dm-header-profile" onClick={(event) => setProfilePopover({ user: { ...otherUser, status: isOnline ? (otherUser.status === "dnd" ? "dnd" : "online") : "offline" }, anchorRect: event.currentTarget.getBoundingClientRect() })}>
+        <button type="button" className="dm-header-profile" onClick={(event) => openSidebarProfile({ ...otherUser, status: isOnline ? publicPresence(otherUser.status) : "offline" }, event.currentTarget.getBoundingClientRect())}>
           <Avatar user={otherUser} size={38} />
-          <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? otherUser.status === "dnd" ? "Nao perturbe" : "Online" : "Offline"}`}</small></span>
+          <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline && publicPresence(otherUser.status) === "dnd" ? "Não perturbe" : isOnline && publicPresence(otherUser.status) === "online" ? "Online" : "Offline"}`}</small></span>
         </button>
       </header>
       <div ref={messagesRef} className="dm-messages" onScroll={handleMessagesScroll}>

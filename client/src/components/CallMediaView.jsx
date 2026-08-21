@@ -11,7 +11,8 @@ export function MediaPip({
   screenShareLabel = "",
   volume = 100,
   onVolumeChange,
-  notify
+  notify,
+  variant = "floating"
 }) {
   if (!participant) return null;
 
@@ -21,7 +22,7 @@ export function MediaPip({
   }
 
   return (
-    <aside className="call-pip-preview" aria-label="Midia da chamada em andamento" onClick={openFromPreview}>
+    <aside className={`call-pip-preview ${variant === "sidebar" ? "is-sidebar" : "is-floating"}`} aria-label="Midia da chamada em andamento" onClick={openFromPreview}>
       <header className="call-pip-header">
         <span>{participant.isScreenSharing ? "Compartilhamento ativo" : "Câmera ativa"}</span>
         <div className="call-pip-actions">

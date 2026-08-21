@@ -49,7 +49,7 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
     <div className="social-sidebar-footer">
       <button type="button" className="social-sidebar-user" onClick={(event) => onOpenProfile?.(user, event.currentTarget.getBoundingClientRect())} aria-label="Abrir perfil">
         <Avatar user={user} size={36} />
-        <span><strong>{user?.displayName || user?.username}</strong><small><i className={user?.status === "dnd" ? "dnd-dot" : user?.status === "invisible" ? "invisible-dot" : "online-dot"} />{user?.customStatus || (user?.status === "dnd" ? "Nao perturbe" : user?.status === "invisible" ? "Invisivel" : "Online")}</small></span>
+        <span><strong>{user?.displayName || user?.username}</strong><small><i className={user?.status === "dnd" ? "dnd-dot" : user?.status === "invisible" ? "invisible-dot" : "online-dot"} />{user?.customStatus || (user?.status === "dnd" ? "Não perturbe" : user?.status === "invisible" ? "Invisível" : "Online")}</small></span>
       </button>
       <button type="button" className="social-sidebar-settings" onClick={onOpenSettings} title="Configuracoes" aria-label="Abrir configuracoes"><Icon name="settings" size={17} /></button>
     </div>
