@@ -10,9 +10,15 @@ import { SocialProvider } from "./social/SocialContext.jsx";
 import { ServerProvider } from "./servers/ServerContext.jsx";
 import { useSocial } from "./social/SocialContext.jsx";
 import { useServers } from "./servers/ServerContext.jsx";
+import { useAuth } from "./auth/AuthContext.jsx";
 import QuickSwitcher from "./components/QuickSwitcher.jsx";
+import SettingsModal from "./components/SettingsModal.jsx";
 
 const BUILD_ID = import.meta.env.VITE_BUILD_ID || "8.0.3";
+const THEME_KEY = "echolive.theme";
+const ACCENT_KEY = "echolive.accentColor";
+const UI_SOUNDS_KEY = "echolive.uiSounds";
+const CONFIRM_LEAVE_KEY = "echolive.confirmLeaveRoom";
 
 function getRoute() {
   const pathname = window.location.pathname;
@@ -36,6 +42,12 @@ export default function App() {
 function AppContent() {
   const [route, setRoute] = useState(getRoute);
   const [isQuickSwitcherOpen, setIsQuickSwitcherOpen] = useState(false);
+  const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "dark");
+  const [accentColor, setAccentColor] = useState(() => localStorage.getItem(ACCENT_KEY) || "#22d3ee");
+  const [uiSounds, setUiSounds] = useState(() => localStorage.getItem(UI_SOUNDS_KEY) !== "false");
+  const [confirmLeaveRoom, setConfirmLeaveRoom] = useState(() => localStorage.getItem(CONFIRM_LEAVE_KEY) !== "false");
+  const { user, updateProfile } = useAuth();
   const { servers } = useServers();
   const { conversations, friends } = useSocial();
 
@@ -52,6 +64,28 @@ function AppContent() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const safeColor = /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor.toLowerCase() : "#22d3ee";
+    const root = document.documentElement;
+    root.style.setProperty("--accent", safeColor);
+    root.style.setProperty("--accent-soft", `${safeColor}1f`);
+    root.style.setProperty("--accent-border", `${safeColor}66`);
+    localStorage.setItem(ACCENT_KEY, safeColor);
+  }, [accentColor]);
+
+  useEffect(() => {
+    localStorage.setItem(UI_SOUNDS_KEY, String(uiSounds));
+  }, [uiSounds]);
+
+  useEffect(() => {
+    localStorage.setItem(CONFIRM_LEAVE_KEY, String(confirmLeaveRoom));
+  }, [confirmLeaveRoom]);
 
   useEffect(() => {
     function handleQuickSwitcherShortcut(event) {
@@ -107,17 +141,25 @@ function AppContent() {
     setRoute({ name: "dm", conversationId, initialConversation });
   }
 
+  function openAccountSettings() {
+    setTheme(localStorage.getItem(THEME_KEY) || "dark");
+    setAccentColor(localStorage.getItem(ACCENT_KEY) || "#22d3ee");
+    setUiSounds(localStorage.getItem(UI_SOUNDS_KEY) !== "false");
+    setConfirmLeaveRoom(localStorage.getItem(CONFIRM_LEAVE_KEY) !== "false");
+    setIsAccountSettingsOpen(true);
+  }
+
   let content;
   if (route.name === "room") {
     content = <RoomPage roomCode={route.roomCode} onBack={navigateToHome} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateDm={navigateToDm} onNavigateServer={navigateToServer} />;
   } else if (route.name === "server" || route.name === "servers") {
-    content = <ServerPage serverId={route.serverId || ""} onNavigateHome={navigateToHome} onNavigateSocial={navigateToSocial} onNavigateServer={navigateToServer} />;
+    content = <ServerPage serverId={route.serverId || ""} onNavigateHome={navigateToHome} onNavigateSocial={navigateToSocial} onNavigateServer={navigateToServer} onOpenAccountSettings={openAccountSettings} />;
   } else if (route.name === "invite") {
     content = <ServerInvitePage code={route.code} onNavigateHome={navigateToHome} onNavigateServer={navigateToServer} />;
   } else if (route.name === "social") {
-    content = <SocialPage onNavigateHome={navigateToHome} onNavigateDm={navigateToDm} />;
+    content = <SocialPage onNavigateHome={navigateToHome} onNavigateDm={navigateToDm} onOpenAccountSettings={openAccountSettings} />;
   } else if (route.name === "dm") {
-    content = <DirectMessagePage conversationId={route.conversationId} initialConversation={route.initialConversation} onNavigateHome={navigateToHome} onNavigateFriends={navigateToSocial} onNavigateDm={navigateToDm} />;
+    content = <DirectMessagePage conversationId={route.conversationId} initialConversation={route.initialConversation} onNavigateHome={navigateToHome} onNavigateFriends={navigateToSocial} onNavigateDm={navigateToDm} onOpenAccountSettings={openAccountSettings} />;
   } else {
     content = <HomePage onRoomCreated={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateServers={navigateToServers} />;
   }
@@ -125,5 +167,20 @@ function AppContent() {
   return <>
     {content}
     <QuickSwitcher open={isQuickSwitcherOpen} onClose={() => setIsQuickSwitcherOpen(false)} onNavigateRoom={navigateToRoom} onNavigateSocial={navigateToSocial} onNavigateServers={navigateToServers} onNavigateServer={navigateToServer} onNavigateDm={navigateToDm} servers={servers} friends={friends} conversations={conversations} />
+    {isAccountSettingsOpen && user && <SettingsModal
+      availableSections={["profile", "account", "appearance", "preferences"]}
+      theme={theme}
+      onThemeChange={setTheme}
+      accentColor={accentColor}
+      onAccentChange={setAccentColor}
+      uiSounds={uiSounds}
+      onUiSoundsChange={setUiSounds}
+      confirmLeaveRoom={confirmLeaveRoom}
+      onConfirmLeaveChange={setConfirmLeaveRoom}
+      profile={user}
+      onProfileChange={updateProfile}
+      isPersistentProfile
+      onClose={() => setIsAccountSettingsOpen(false)}
+    />}
   </>;
 }

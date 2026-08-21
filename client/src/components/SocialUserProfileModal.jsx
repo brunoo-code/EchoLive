@@ -88,13 +88,14 @@ export default function SocialUserProfileModal({ userId, initialUser, onClose, o
 
   if (!person) return null;
   return <div className="social-profile-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose?.(); }}>
-    <section className="social-profile-modal" role="dialog" aria-modal="true" aria-label={`Perfil de ${person.displayName || person.username}`}>
+    <section className="social-profile-modal" style={{ "--profile-accent": person.accentColor || "#22D3EE" }} role="dialog" aria-modal="true" aria-label={`Perfil de ${person.displayName || person.username}`}>
       <button type="button" className="icon-button social-profile-modal-close" onClick={onClose} aria-label="Fechar perfil" title="Fechar"><Icon name="close" size={18} /></button>
       <aside className="social-profile-identity">
         <Avatar user={person} size={108} />
-        <div className="social-profile-name"><h2>{person.displayName || person.username}</h2><span>@{person.username}</span><UserBadges user={person} badges={person.badges} /><span className="social-profile-badge-note">Insígnias da conta</span></div>
-        <p className="social-profile-presence"><i className={person.status === "online" ? "is-online" : ""} />{person.status === "online" ? "Online" : "Offline"}</p>
-        {person.bio && <p className="social-profile-bio">{person.bio}</p>}
+        <div className="social-profile-name"><h2>{person.displayName || person.username}</h2><span>@{person.username}</span>{person.pronouns && <small>{person.pronouns}</small>}<UserBadges user={person} badges={person.badges} /><span className="social-profile-badge-note">Insignias da conta</span></div>
+        <p className="social-profile-presence"><i className={["online", "dnd"].includes(person.status) ? "is-online" : ""} />{person.status === "dnd" ? "Nao perturbe" : person.status === "online" ? "Online" : "Offline"}</p>
+        {person.customStatus && <p className="social-profile-custom-status">{person.customStatus}</p>}
+        {person.aboutMe && <div className="social-profile-about"><span className="section-label">SOBRE MIM</span><p>{person.aboutMe}</p></div>}
         {!isSelf && !person.isOfficial && person.accountType !== "system" && <div className="social-profile-actions"><button type="button" className="primary-button" onClick={handleMessage} disabled={working}><Icon name="chat" size={15} />Mensagem</button>{relationship?.status !== "pending" && <button type="button" className="secondary-button" onClick={handleFriendAction} disabled={working}>{isFriend ? "Remover amigo" : "Adicionar amigo"}</button>}{isFriend && <span className="social-profile-relationship is-friend"><Icon name="check" size={12} />Amigos</span>}{relationship?.status === "pending" && <span className="social-profile-relationship">Pedido pendente</span>}</div>}
         {!isSelf && !person.isOfficial && person.accountType !== "system" && removeConfirmOpen && <div className="social-profile-remove-confirm"><strong>Remover esta amizade?</strong><span>Você poderá enviar um novo pedido depois.</span><div><button type="button" className="primary-button danger" onClick={confirmRemoveFriend} disabled={working}>Remover</button><button type="button" className="secondary-button" onClick={() => setRemoveConfirmOpen(false)} disabled={working}>Cancelar</button></div></div>}
         {error && <p className="social-feedback is-error">{error}</p>}

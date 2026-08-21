@@ -34,6 +34,7 @@ export default function Sidebar({
   isSpeaking,
   avatarUrl,
   onProfileClick,
+  onOpenUserSettings,
   onToggleMicrophone,
   onToggleCamera,
   onToggleScreenShare,
@@ -44,6 +45,7 @@ export default function Sidebar({
   onLeaveRoom,
   variant = "room",
   serverName = "",
+  serverIconUrl = "",
   serverTextChannels = [],
   serverVoiceChannels = [],
   serverActiveChannelId = "",
@@ -80,7 +82,7 @@ export default function Sidebar({
   return (
     <aside className="app-sidebar" aria-label={isServer ? "Navegacao do servidor" : "Informacoes da sala"}>
       <div className={`brand-block ${isServer ? "server-brand-block" : ""}`}>
-        <div className="brand-mark" aria-hidden="true"><BrandMark size={30} /></div>
+        <div className={`brand-mark ${isServer && serverIconUrl ? "has-server-icon" : ""}`} aria-hidden="true">{isServer && serverIconUrl ? <img src={serverIconUrl} alt="" /> : <BrandMark size={30} />}</div>
         <div>
           <strong>{isServer ? serverName || "Seus servidores" : "EchoLive"}</strong>
           <span>{isServer ? "Servidor permanente" : "Sua call privada"}</span>
@@ -89,7 +91,7 @@ export default function Sidebar({
       </div>
       {isServer && isServerMenuOpen && <div className="server-context-menu" role="menu">
         {onServerInvite && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerInvite(); }}><Icon name="account" size={15} />Convidar pessoas</button>}
-        {canManageServer && onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings(); }}><Icon name="settings" size={15} />Configurações do servidor</button>}
+        {onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings(); }}><Icon name="settings" size={15} />{canManageServer ? "Configuracoes do servidor" : "Perfil neste servidor"}</button>}
         {(onServerInvite || canManageServer) && <div className="server-menu-divider" />}
         {onServerLeave && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerLeave(); }}><Icon name="leave" size={15} />Sair do servidor</button>}
         {canDeleteServer && onServerDelete && <button type="button" role="menuitem" className="danger-menu-item" onClick={() => { setIsServerMenuOpen(false); onServerDelete(); }}><Icon name="trash" size={15} />Excluir servidor</button>}
@@ -152,9 +154,9 @@ export default function Sidebar({
       </section>}
 
       <div className="sidebar-lower-region">
-        <section className={`connected-voice ${isInVoice ? "is-connected" : "is-away"}`} aria-label="Status da voz">
+        {isInVoice && <section className="connected-voice is-connected" aria-label="Status da voz">
           <div className="connected-voice-heading"><span className="voice-state-icon" aria-hidden="true"><Icon name={isInVoice ? "voice" : "headphones"} size={16} /></span><span className="connected-voice-copy"><strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong><span className="connected-voice-channel">{voiceChannelName}</span></span>{isInVoice && connectionQuality && <span className="connection-quality" title={`Qualidade da conexao: ${connectionQuality}`}><Icon name="signal" size={14} />{connectionQuality}</span>}{isInVoice ? <button type="button" className="connected-voice-action" onClick={onLeaveVoice} data-tooltip="Desconectar" aria-label="Desconectar"><Icon name="phoneDisconnect" size={16} /></button> : <button type="button" className="connected-voice-action" onClick={onJoinVoice} data-tooltip="Entrar na voz" aria-label="Entrar na voz"><Icon name="voice" size={15} /></button>}</div>
-        </section>
+        </section>}
 
         {isInVoice && <div className="sidebar-call-toolbar" aria-label="Controles da chamada">
           <button type="button" className={`sidebar-call-button ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} data-tooltip={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-pressed={cameraEnabled}>
@@ -183,8 +185,9 @@ export default function Sidebar({
           </div>
         </button>
         <div className="sidebar-user-controls" aria-label="Controles do usuario">
-          {isInVoice ? <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} data-tooltip={micEnabled ? "Silenciar microfone" : "Ativar microfone"} aria-label={micEnabled ? "Silenciar microfone" : "Ativar microfone"}><Icon name={micEnabled ? "mic" : "micOff"} size={16} /></button> : <span />}
-          {isInVoice && onToggleDeafen ? <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} data-tooltip={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}><Icon name="headphones" size={16} /></button> : <span />}
+          {isInVoice && <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} data-tooltip={micEnabled ? "Silenciar microfone" : "Ativar microfone"} aria-label={micEnabled ? "Silenciar microfone" : "Ativar microfone"}><Icon name={micEnabled ? "mic" : "micOff"} size={16} /></button>}
+          {isInVoice && onToggleDeafen && <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} data-tooltip={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}><Icon name="headphones" size={16} /></button>}
+          {onOpenUserSettings && <button type="button" className="control-glyph" onClick={onOpenUserSettings} data-tooltip="Configuracoes" aria-label="Abrir configuracoes"><Icon name="settings" size={16} /></button>}
         </div>
         </footer>
       </div>

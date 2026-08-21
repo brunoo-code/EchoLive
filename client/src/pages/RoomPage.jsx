@@ -141,7 +141,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     try {
       const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
       const nextProfile = { displayName: "", nickname: localStorage.getItem(NICKNAME_KEY) || "", status: "online", customStatus: "", avatarUrl: localStorage.getItem(AVATAR_KEY) || "", ...saved };
-      return { ...nextProfile, status: nextProfile.status === "dnd" ? "dnd" : "online" };
+      return { ...nextProfile, status: ["online", "dnd", "invisible"].includes(nextProfile.status) ? nextProfile.status : "online" };
     } catch {
       return { displayName: "", nickname: "", status: "online", customStatus: "", avatarUrl: "" };
     }
@@ -179,6 +179,26 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const isInVoiceRef = useRef(false);
   const statsHistoryRef = useRef(new Map());
   const roomExpiryWarningsRef = useRef(new Set());
+
+  useEffect(() => {
+    if (!accountUser) return;
+    const accountProfile = {
+      displayName: accountUser.displayName || accountUser.username || "",
+      nickname: accountUser.displayName || accountUser.username || "",
+      status: accountUser.status || "online",
+      customStatus: accountUser.customStatus || "",
+      avatarUrl: accountUser.avatarUrl || "",
+      pronouns: accountUser.pronouns || "",
+      aboutMe: accountUser.aboutMe || "",
+      accentColor: accountUser.accentColor || "#22D3EE",
+      badges: accountUser.badges || []
+    };
+    setProfile(accountProfile);
+    setAvatarUrl(accountProfile.avatarUrl);
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(accountProfile));
+    if (accountProfile.avatarUrl) localStorage.setItem(AVATAR_KEY, accountProfile.avatarUrl);
+    else localStorage.removeItem(AVATAR_KEY);
+  }, [accountUser]);
 
   const inviteLink = useMemo(() => `${window.location.origin}/room/${roomCode}`, [roomCode]);
 
@@ -301,7 +321,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         cleanupRoom();
       }
     };
-  }, [accountUser, authStatus, guestIdentity]);
+  }, [accountUser?.id, authStatus, guestIdentity]);
 
   useEffect(() => {
     if (!debugRtc) {
@@ -1228,15 +1248,26 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
 
   }
 
-  function saveProfile(nextProfile) {
+  async function saveProfile(nextProfile) {
     const next = { ...profile, ...nextProfile };
-    setProfile(next);
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
-    if (next.avatarUrl) { localStorage.setItem(AVATAR_KEY, next.avatarUrl); setAvatarUrl(next.avatarUrl); } else { localStorage.removeItem(AVATAR_KEY); setAvatarUrl(""); }
-    if (accountUser && next.displayName && next.displayName !== accountUser.displayName) {
-      updateAccountProfile({ displayName: next.displayName }).catch((error) => notify(error.message));
+    let canonical = next;
+    if (accountUser) {
+      canonical = await updateAccountProfile({
+        displayName: next.displayName,
+        avatarUrl: next.avatarUrl,
+        pronouns: next.pronouns,
+        aboutMe: next.aboutMe,
+        accentColor: next.accentColor,
+        customStatus: next.customStatus,
+        status: next.status
+      });
     }
+    const localProfile = { ...next, ...canonical, nickname: canonical.displayName || next.nickname };
+    setProfile(localProfile);
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(localProfile));
+    if (localProfile.avatarUrl) { localStorage.setItem(AVATAR_KEY, localProfile.avatarUrl); setAvatarUrl(localProfile.avatarUrl); } else { localStorage.removeItem(AVATAR_KEY); setAvatarUrl(""); }
     notify("Perfil salvo.");
+    return localProfile;
   }
 
   async function logoutAccount() {
@@ -1523,6 +1554,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
         isSpeaking={isSpeaking}
         avatarUrl={localAvatarUrl}
         onProfileClick={openProfilePopover}
+        onOpenUserSettings={openSettings}
         onToggleMicrophone={toggleMicrophone}
         onToggleCamera={toggleCamera}
         onToggleScreenShare={handleToggleScreenShare}
@@ -1579,8 +1611,9 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
           onOpenDevices={() => { setIsSettingsOpen(false); openDevices(); }}
           streamPreset={streamPreset}
           onStreamPresetChange={changeStreamPreset}
-          profile={{ ...profile, displayName: accountUser?.displayName || profile.displayName, username: accountUser?.username || "", avatarUrl }}
+          profile={{ ...profile, ...(accountUser || {}), displayName: accountUser?.displayName || profile.displayName, username: accountUser?.username || "", avatarUrl: accountUser?.avatarUrl || avatarUrl }}
           onProfileChange={saveProfile}
+          isPersistentProfile={Boolean(accountUser)}
           onClose={() => setIsSettingsOpen(false)}
         />
       )}

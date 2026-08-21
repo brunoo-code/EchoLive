@@ -19,7 +19,8 @@ import {
   revokeServerInvite,
   toggleServerMessageReaction,
   updateChannel,
-  updateServer
+  updateServer,
+  updateServerNickname
 } from "./db/servers.js";
 
 const serverVoiceSessions = new Map();
@@ -29,14 +30,15 @@ function serverVoiceKey(serverId, channelId) {
   return `server:${serverId}:voice:${channelId}`;
 }
 
-function serverVoiceParticipant(socket) {
+function serverVoiceParticipant(socket, member = null) {
   const user = socket.data.accountUser;
+  const displayName = member?.serverNickname || user.displayName || user.username;
   return {
     id: user.id,
     userId: user.id,
     socketId: socket.id,
-    nickname: user.displayName || user.username,
-    displayName: user.displayName || user.username,
+    nickname: displayName,
+    displayName,
     username: user.username,
     avatarUrl: user.avatarUrl || "",
     avatarVariant: 0,
@@ -115,6 +117,14 @@ export function registerServerRoutes(app) {
     try {
       const members = await listServerMembers(request.params.serverId, request.user.id);
       return members ? response.json({ members }) : response.status(404).json({ error: "Servidor nao encontrado.", code: "NOT_FOUND" });
+    } catch (error) { return handleServerError(response, error); }
+  });
+
+  app.patch("/api/servers/:serverId/members/me", optionalAuth, requireAuth, async (request, response) => {
+    if (!requireUuid(request.params.serverId, response)) return;
+    try {
+      const result = await updateServerNickname(request.params.serverId, request.user.id, request.body?.nickname);
+      return result.error ? response.status(result.code === "NOT_FOUND" ? 404 : 400).json(result) : response.json(result);
     } catch (error) { return handleServerError(response, error); }
   });
 
@@ -246,10 +256,11 @@ export function attachServerSocket(io, socket) {
     const server = await getServerForUser(serverId, user.id).catch(() => null);
     const channel = server?.channels?.find((item) => item.id === channelId && item.type === "voice");
     if (!channel) return acknowledge({ ok: false, error: "Canal de voz indisponivel." });
+    const member = (await listServerMembers(serverId, user.id).catch(() => []))?.find((item) => item.id === user.id) || null;
     const previous = leaveServerVoice(socket, false);
     const key = serverVoiceKey(serverId, channelId);
     const session = serverVoiceSessions.get(key) || new Map();
-    const participant = serverVoiceParticipant(socket);
+    const participant = serverVoiceParticipant(socket, member);
     session.set(socket.id, participant);
     serverVoiceSessions.set(key, session);
     socketServerVoice.set(socket.id, key);

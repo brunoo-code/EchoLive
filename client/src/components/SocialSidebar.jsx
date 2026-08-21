@@ -16,7 +16,7 @@ function conversationPreview(conversation) {
   return `@${conversation.user.username}`;
 }
 
-export default function SocialSidebar({ activeTab, onTabChange, conversations, onlineUserIds, user, onHome, onOpenConversation, onOpenProfile, onHideConversation, activeConversationId, socialStatus }) {
+export default function SocialSidebar({ activeTab, onTabChange, conversations, onlineUserIds, user, onHome, onOpenConversation, onOpenProfile, onOpenSettings, onHideConversation, activeConversationId, socialStatus }) {
   const [conversationQuery, setConversationQuery] = useState("");
   const normalizedQuery = conversationQuery.trim().toLowerCase().replace(/^@/, "");
   const visibleConversations = useMemo(() => conversations.filter((conversation) => {
@@ -52,8 +52,11 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
       </div>
     </div>
     <div className="social-sidebar-footer">
-      <Avatar user={user} size={36} />
-      <span><strong>{user?.displayName || user?.username}</strong><small><i className="online-dot" />Online</small></span>
+      <button type="button" className="social-sidebar-user" onClick={(event) => onOpenProfile?.(user, event.currentTarget.getBoundingClientRect())} aria-label="Abrir perfil">
+        <Avatar user={user} size={36} />
+        <span><strong>{user?.displayName || user?.username}</strong><small><i className={user?.status === "dnd" ? "dnd-dot" : user?.status === "invisible" ? "invisible-dot" : "online-dot"} />{user?.customStatus || (user?.status === "dnd" ? "Nao perturbe" : user?.status === "invisible" ? "Invisivel" : "Online")}</small></span>
+      </button>
+      <button type="button" className="social-sidebar-settings" onClick={onOpenSettings} title="Configuracoes" aria-label="Abrir configuracoes"><Icon name="settings" size={17} /></button>
     </div>
   </aside>;
 }

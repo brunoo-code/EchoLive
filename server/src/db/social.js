@@ -10,6 +10,11 @@ function mapSocialUser(row) {
     username: row.username,
     displayName: row.display_name,
     avatarUrl: row.avatar_url || "",
+    pronouns: row.pronouns || "",
+    aboutMe: row.about_me || "",
+    accentColor: row.accent_color || "#22D3EE",
+    customStatus: row.custom_status || "",
+    status: row.presence_status || "online",
     accountType,
     isOfficial: accountType === "system",
     badges
@@ -22,7 +27,7 @@ function orderPair(left, right) {
 
 export async function findSocialUserByUsername(usernameNormalized) {
   const result = await query(
-    `SELECT id AS user_id, username, display_name, avatar_url, account_type,
+    `SELECT id AS user_id, username, display_name, avatar_url, pronouns, about_me, accent_color, custom_status, presence_status, account_type,
             COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
                       ORDER BY ub.granted_at DESC)
                       FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
@@ -38,7 +43,7 @@ export async function findSocialUserByUsername(usernameNormalized) {
 export async function listRelationships(userId) {
   const result = await query(
     `SELECT f.id, f.status, f.requester_user_id, f.addressee_user_id, f.created_at, f.updated_at,
-            u.id AS user_id, u.username, u.display_name, u.avatar_url, u.account_type,
+            u.id AS user_id, u.username, u.display_name, u.avatar_url, u.pronouns, u.about_me, u.accent_color, u.custom_status, u.presence_status, u.account_type,
             COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
                       ORDER BY ub.granted_at DESC)
                       FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
@@ -77,7 +82,7 @@ export async function findRelationshipBetween(userId, otherUserId) {
 
 export async function getSocialProfile(userId, viewerId) {
   const userResult = await query(
-    `SELECT u.id AS user_id, u.username, u.display_name, u.avatar_url, u.account_type,
+    `SELECT u.id AS user_id, u.username, u.display_name, u.avatar_url, u.pronouns, u.about_me, u.accent_color, u.custom_status, u.presence_status, u.account_type,
             COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
                       ORDER BY ub.granted_at DESC)
                       FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
@@ -89,7 +94,7 @@ export async function getSocialProfile(userId, viewerId) {
   if (!user) return null;
   const relationship = viewerId === userId ? null : await findRelationshipBetween(viewerId, userId);
   const mutualResult = viewerId === userId ? { rows: [] } : await query(
-    `SELECT u.id AS user_id, u.username, u.display_name, u.avatar_url, u.account_type,
+    `SELECT u.id AS user_id, u.username, u.display_name, u.avatar_url, u.pronouns, u.about_me, u.accent_color, u.custom_status, u.presence_status, u.account_type,
             COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
                       ORDER BY ub.granted_at DESC)
                       FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
@@ -371,6 +376,9 @@ export async function getConversationForUser(conversationId, userId) {
     `SELECT c.id, c.user_one_id, c.user_two_id, c.created_at, c.updated_at,
             other.id AS other_user_id, other.username AS other_username,
             other.display_name AS other_display_name, other.avatar_url AS other_avatar_url,
+            other.pronouns AS other_pronouns, other.about_me AS other_about_me,
+            other.accent_color AS other_accent_color, other.custom_status AS other_custom_status,
+            other.presence_status AS other_presence_status,
             other.account_type AS other_account_type,
             COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
                       ORDER BY ub.granted_at DESC)
@@ -394,6 +402,11 @@ export async function getConversationForUser(conversationId, userId) {
       username: row.other_username,
       displayName: row.other_display_name,
       avatarUrl: row.other_avatar_url || "",
+      pronouns: row.other_pronouns || "",
+      aboutMe: row.other_about_me || "",
+      accentColor: row.other_accent_color || "#22D3EE",
+      customStatus: row.other_custom_status || "",
+      status: row.other_presence_status || "online",
       accountType: row.other_account_type || "user",
       isOfficial: row.other_account_type === "system",
       badges: row.other_badges || []
@@ -407,6 +420,9 @@ export async function listConversations(userId) {
     `SELECT c.id, c.created_at, c.updated_at, p.last_read_at,
             other.id AS other_user_id, other.username AS other_username,
             other.display_name AS other_display_name, other.avatar_url AS other_avatar_url,
+            other.pronouns AS other_pronouns, other.about_me AS other_about_me,
+            other.accent_color AS other_accent_color, other.custom_status AS other_custom_status,
+            other.presence_status AS other_presence_status,
             other.account_type AS other_account_type,
             COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key)
                       ORDER BY ub.granted_at DESC)
@@ -449,6 +465,11 @@ export async function listConversations(userId) {
       username: row.other_username,
       displayName: row.other_display_name,
       avatarUrl: row.other_avatar_url || "",
+      pronouns: row.other_pronouns || "",
+      aboutMe: row.other_about_me || "",
+      accentColor: row.other_accent_color || "#22D3EE",
+      customStatus: row.other_custom_status || "",
+      status: row.other_presence_status || "online",
       accountType: row.other_account_type || "user",
       isOfficial: row.other_account_type === "system",
       badges: row.other_badges || []

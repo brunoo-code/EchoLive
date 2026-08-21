@@ -396,7 +396,7 @@ function handleLeave(socket) {
   emitRoomRoster(result.roomCode);
 
   if (getRoomSize(result.roomCode) === 0) {
-    console.log("[room-deleted]", result.roomCode);
+    console.log("[room-empty]", result.roomCode, "retained until TTL expiry");
   }
 }
 

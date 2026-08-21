@@ -195,7 +195,7 @@ export function SocialProvider({ children }) {
     socialSocket.on("social:presence", ({ userId, status: nextStatus } = {}) => {
       setOnlineUserIds((current) => {
         const next = new Set(current);
-        if (nextStatus === "online") next.add(userId);
+        if (nextStatus === "online" || nextStatus === "dnd") next.add(userId);
         else next.delete(userId);
         return next;
       });

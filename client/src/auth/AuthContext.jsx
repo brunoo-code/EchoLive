@@ -88,10 +88,10 @@ export function AuthProvider({ children }) {
     setStatus("guest");
   }, []);
 
-  const updateProfile = useCallback(async ({ displayName }) => {
+  const updateProfile = useCallback(async (profile) => {
     const data = await request("/api/users/me", {
       method: "PATCH",
-      body: JSON.stringify({ displayName })
+      body: JSON.stringify(profile)
     });
     setUser(data.user);
     setStatus("authenticated");

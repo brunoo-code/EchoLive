@@ -10,6 +10,13 @@ function cleanName(value, pattern) {
   return pattern.test(name) ? name : null;
 }
 
+function cleanImageDataUrl(value) {
+  const source = String(value || "").trim();
+  if (!source) return "";
+  if (source.length > 2_800_000 || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(source)) return null;
+  return source;
+}
+
 function mapChannel(row) {
   return { id: row.id, serverId: row.server_id, type: row.type, name: row.name, position: row.position };
 }
@@ -47,8 +54,15 @@ function mapMessage(row) {
     sender: {
       id: row.sender_user_id,
       username: row.username,
-      displayName: row.display_name,
+      displayName: row.server_nickname || row.display_name,
+      globalDisplayName: row.display_name,
+      serverNickname: row.server_nickname || "",
       avatarUrl: row.avatar_url || "",
+      pronouns: row.pronouns || "",
+      aboutMe: row.about_me || "",
+      accentColor: row.accent_color || "#22D3EE",
+      customStatus: row.custom_status || "",
+      status: row.presence_status || "online",
       badges: Array.isArray(row.badges) ? row.badges : []
     }
   };
@@ -125,7 +139,9 @@ export async function listServerMembers(serverId, userId) {
   const server = await getServerForUser(serverId, userId);
   if (!server) return null;
   const result = await query(
-    `SELECT sm.role, sm.joined_at, u.id, u.username, u.display_name, u.avatar_url,
+    `SELECT sm.role, sm.joined_at, sm.nickname AS server_nickname,
+            u.id, u.username, u.display_name, u.avatar_url, u.pronouns, u.about_me,
+            u.accent_color, u.custom_status, u.presence_status,
             COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key) ORDER BY ub.granted_at DESC)
                       FROM user_badges ub JOIN badges b ON b.id = ub.badge_id WHERE ub.user_id = u.id), '[]'::json) AS badges
      FROM server_members sm JOIN users u ON u.id = sm.user_id
@@ -133,7 +149,22 @@ export async function listServerMembers(serverId, userId) {
      ORDER BY CASE sm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, u.display_name, u.username`,
     [serverId]
   );
-  return result.rows.map((row) => ({ id: row.id, username: row.username, displayName: row.display_name, avatarUrl: row.avatar_url || "", badges: Array.isArray(row.badges) ? row.badges : [], role: row.role, joinedAt: row.joined_at }));
+  return result.rows.map((row) => ({
+    id: row.id,
+    username: row.username,
+    displayName: row.server_nickname || row.display_name,
+    globalDisplayName: row.display_name,
+    serverNickname: row.server_nickname || "",
+    avatarUrl: row.avatar_url || "",
+    pronouns: row.pronouns || "",
+    aboutMe: row.about_me || "",
+    accentColor: row.accent_color || "#22D3EE",
+    customStatus: row.custom_status || "",
+    status: row.presence_status || "online",
+    badges: Array.isArray(row.badges) ? row.badges : [],
+    role: row.role,
+    joinedAt: row.joined_at
+  }));
 }
 
 export async function joinServerForUser(serverId, userId) {
@@ -161,11 +192,13 @@ export async function joinServerForUser(serverId, userId) {
 export async function createServer(userId, input) {
   const validation = validateServerInput(input || {});
   if (validation.error) return { error: validation.error };
+  const iconUrl = cleanImageDataUrl(input?.iconUrl);
+  if (iconUrl === null) return { error: "Use uma imagem PNG, JPEG ou WebP de ate 2 MB.", code: "INVALID_SERVER_ICON" };
   const server = await withTransaction(async (client) => {
     const inserted = await client.query(
-      `INSERT INTO servers (name, owner_user_id, privacy, allow_friend_join)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [validation.value.name, userId, validation.value.privacy, validation.value.allowFriendJoin]
+      `INSERT INTO servers (name, owner_user_id, privacy, allow_friend_join, icon_url)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [validation.value.name, userId, validation.value.privacy, validation.value.allowFriendJoin, iconUrl]
     );
     const serverId = inserted.rows[0].id;
     await client.query("INSERT INTO server_members (server_id, user_id, role) VALUES ($1, $2, 'owner')", [serverId, userId]);
@@ -187,8 +220,19 @@ export async function updateServer(serverId, userId, input) {
   const privacy = input?.privacy === undefined ? current.privacy : input.privacy;
   if (!["private", "public"].includes(privacy)) return { error: "Privacidade de servidor invalida." };
   const allowFriendJoin = input?.allowFriendJoin === undefined ? current.allowFriendJoin : Boolean(input.allowFriendJoin);
-  await query("UPDATE servers SET name = $1, privacy = $2, allow_friend_join = $3, updated_at = NOW() WHERE id = $4", [name, privacy, allowFriendJoin, serverId]);
+  const iconUrl = input?.iconUrl === undefined ? current.iconUrl : cleanImageDataUrl(input.iconUrl);
+  if (iconUrl === null) return { error: "Use uma imagem PNG, JPEG ou WebP de ate 2 MB.", code: "INVALID_SERVER_ICON" };
+  await query("UPDATE servers SET name = $1, privacy = $2, allow_friend_join = $3, icon_url = $4, updated_at = NOW() WHERE id = $5", [name, privacy, allowFriendJoin, iconUrl, serverId]);
   return { server: await getServerForUser(serverId, userId) };
+}
+
+export async function updateServerNickname(serverId, userId, value) {
+  const current = await getServerForUser(serverId, userId);
+  if (!current) return { error: "Servidor nao encontrado.", code: "NOT_FOUND" };
+  const nickname = String(value || "").trim();
+  if (nickname.length > 40) return { error: "O apelido deve ter no maximo 40 caracteres." };
+  await query("UPDATE server_members SET nickname = $3 WHERE server_id = $1 AND user_id = $2", [serverId, userId, nickname || null]);
+  return { member: (await listServerMembers(serverId, userId)).find((member) => member.id === userId) || null };
 }
 
 export async function deleteServer(serverId, userId) {
@@ -247,13 +291,17 @@ export async function listServerMessages(serverId, channelId, userId, { limit = 
   const safeLimit = Math.min(100, Math.max(1, Number(limit) || 50));
   const cursor = isUuid(before) ? before : "";
   const result = await query(
-    `SELECT m.*, u.username, u.display_name, u.avatar_url,
+    `SELECT m.*, u.username, u.display_name, u.avatar_url, u.pronouns, u.about_me,
+            u.accent_color, u.custom_status, u.presence_status,
+            membership.nickname AS server_nickname,
             COALESCE((SELECT json_agg(json_build_object('code', b.code, 'label', b.label, 'iconKey', b.icon_key) ORDER BY ub.granted_at DESC)
                       FROM user_badges ub JOIN badges b ON b.id = ub.badge_id WHERE ub.user_id = u.id), '[]'::json) AS badges,
             COALESCE((SELECT json_agg(json_build_object('emoji', reaction_rows.emoji, 'count', reaction_rows.reaction_count, 'reacted', reaction_rows.reacted) ORDER BY reaction_rows.emoji)
                       FROM (SELECT smr.emoji, COUNT(*)::int AS reaction_count, BOOL_OR(smr.user_id = $3::uuid) AS reacted
                             FROM server_message_reactions smr WHERE smr.message_id = m.id GROUP BY smr.emoji) reaction_rows), '[]'::json) AS reactions
-     FROM server_messages m JOIN users u ON u.id = m.sender_user_id
+     FROM server_messages m
+     JOIN users u ON u.id = m.sender_user_id
+     LEFT JOIN server_members membership ON membership.server_id = m.server_id AND membership.user_id = u.id
      WHERE m.server_id = $1 AND m.channel_id = $2
        AND ($4 = '' OR (m.created_at, m.id) < (SELECT created_at, id FROM server_messages WHERE id = $4::uuid))
      ORDER BY m.created_at DESC, m.id DESC LIMIT $5`,

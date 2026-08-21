@@ -10,14 +10,14 @@ import SocialUserProfilePopover from "../components/SocialUserProfilePopover.jsx
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useSocial } from "../social/SocialContext.jsx";
 
-export default function SocialPage({ onNavigateHome, onNavigateDm }) {
+export default function SocialPage({ onNavigateHome, onNavigateDm, onOpenAccountSettings }) {
   const { status, user } = useAuth();
   const [authModalMode, setAuthModalMode] = useState(null);
   if (status !== "authenticated") return <main className="page social-page social-page-gate"><SocialRail onHome={onNavigateHome} /><div className="social-guest-gate"><SocialEmptyState title="Quer continuar essa conversa depois?" copy="Crie uma conta para adicionar amigos e trocar mensagens no EchoLive." action="Criar conta" onAction={() => setAuthModalMode("register")} /><button type="button" className="text-button" onClick={onNavigateHome}>Agora nao</button></div><AuthModal open={Boolean(authModalMode)} initialMode="register" onClose={() => setAuthModalMode(null)} /></main>;
-  return <AuthenticatedSocialPage user={user} onNavigateHome={onNavigateHome} onNavigateDm={onNavigateDm} />;
+  return <AuthenticatedSocialPage user={user} onNavigateHome={onNavigateHome} onNavigateDm={onNavigateDm} onOpenAccountSettings={onOpenAccountSettings} />;
 }
 
-function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm }) {
+function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm, onOpenAccountSettings }) {
   const { friends, receivedRequests, sentRequests, onlineUserIds, conversations, socialStatus, acceptFriendRequest, deleteFriendRequest, removeFriend, sendFriendRequest, startConversation, hideConversation, notificationCount } = useSocial();
   const [activeTab, setActiveTab] = useState("friends");
   const [friendQuery, setFriendQuery] = useState("");
@@ -77,7 +77,10 @@ function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm }) {
 
   function openProfilePopover(profileUser, anchorRect) {
     if (!profileUser) return;
-    setProfilePopover({ user: { ...profileUser, status: onlineUserIds.has(profileUser.id) ? "online" : "offline" }, anchorRect });
+    const status = onlineUserIds.has(profileUser.id)
+      ? (profileUser.status === "dnd" ? "dnd" : "online")
+      : "offline";
+    setProfilePopover({ user: { ...profileUser, status }, anchorRect });
   }
 
   async function confirmRemove(userId) {
@@ -114,13 +117,13 @@ function AuthenticatedSocialPage({ user, onNavigateHome, onNavigateDm }) {
   const pendingCount = receivedRequests.length + sentRequests.length;
   return <main className={`page social-page ${onlineFriends.length ? "has-social-online" : "is-quiet"}`}>
     <SocialRail onHome={onNavigateHome} notificationCount={notificationCount} />
-    <SocialSidebar activeTab={activeTab} onTabChange={changeTab} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} onOpenProfile={openProfilePopover} onHideConversation={hideConversation} socialStatus={socialStatus} />
+    <SocialSidebar activeTab={activeTab} onTabChange={changeTab} conversations={conversations} onlineUserIds={onlineUserIds} user={user} onHome={onNavigateHome} onOpenConversation={onNavigateDm} onOpenProfile={openProfilePopover} onOpenSettings={onOpenAccountSettings} onHideConversation={hideConversation} socialStatus={socialStatus} />
     <section className="social-content">
       <header className="social-topbar"><div className="social-topbar-title"><Icon name="account" size={18} /><strong>Amigos</strong></div><nav className="social-tabs" aria-label="Visoes de Amigos">{[["friends", "Amigos"], ["online", "Online"], ["all", "Todos"], ["pending", "Pendentes"]].map(([id, label]) => <button type="button" key={id} className={activeTab === id ? "is-active" : ""} onClick={() => changeTab(id)}>{label}{id === "pending" && pendingCount > 0 && <b className="social-tab-badge">{pendingCount > 9 ? "9+" : pendingCount}</b>}</button>)}<button type="button" className={`social-tab-add ${activeTab === "add" ? "is-active" : ""}`} onClick={() => changeTab("add")}><Icon name="plus" size={14} />Adicionar amigo</button></nav><span className="social-topbar-note">Sua rede no EchoLive</span></header>
       {activeTab === "add" ? <AddFriendView addUsername={addUsername} setAddUsername={setAddUsername} onSubmit={handleAddFriend} isSubmitting={isAdding} /> : activeTab === "pending" ? <PendingView received={receivedRequests} sent={sentRequests} onAccept={handleAcceptRequest} onDelete={handleDeleteRequest} /> : <FriendsView friends={visibleFriends} allFriends={friends} onlineFriends={onlineFriends} onlineUserIds={onlineUserIds} activeTab={activeTab} search={friendQuery} onSearch={setFriendQuery} onMessage={openDm} onOpenProfile={openProfilePopover} removeTarget={removeTarget} setRemoveTarget={setRemoveTarget} onRemove={confirmRemove} onAdd={() => changeTab("add")} />}
     </section>
     {feedback && <div className="social-toast-stack" aria-live="polite"><div className={`social-toast is-${feedback.kind}`}><Icon name={feedback.kind === "error" ? "info" : feedback.kind === "neutral" ? "check" : "check"} size={15} /><span>{feedback.message}</span></div></div>}
-    {onlineFriends.length > 0 && <aside className="social-online-panel"><h2>Online agora</h2>{onlineFriends.slice(0, 8).map((item) => <div className="social-online-row" key={item.user.id}><button type="button" className="social-online-identity" onClick={(event) => openProfilePopover(item.user, event.currentTarget.getBoundingClientRect())}><Avatar user={item.user} size={32} /><span><strong>{item.user.displayName || item.user.username}</strong><small>Online</small></span></button><button type="button" className="icon-button" title="Enviar mensagem" aria-label={`Enviar mensagem para ${item.user.displayName || item.user.username}`} onClick={() => openDm(item.user.id)}><Icon name="chat" size={15} /></button><i className="online-dot" /></div>)}</aside>}
+    {onlineFriends.length > 0 && <aside className="social-online-panel"><h2>Online agora</h2>{onlineFriends.slice(0, 8).map((item) => <div className="social-online-row" key={item.user.id}><button type="button" className="social-online-identity" onClick={(event) => openProfilePopover(item.user, event.currentTarget.getBoundingClientRect())}><Avatar user={item.user} size={32} /><span><strong>{item.user.displayName || item.user.username}</strong><small>{item.user.status === "dnd" ? "Nao perturbe" : "Online"}</small></span></button><button type="button" className="icon-button" title="Enviar mensagem" aria-label={`Enviar mensagem para ${item.user.displayName || item.user.username}`} onClick={() => openDm(item.user.id)}><Icon name="chat" size={15} /></button><i className={item.user.status === "dnd" ? "dnd-dot" : "online-dot"} /></div>)}</aside>}
     {profilePopover && <SocialUserProfilePopover participant={profilePopover.user} anchorRect={profilePopover.anchorRect} onClose={() => setProfilePopover(null)} onMessage={openDmAndClose} onViewProfile={(profileUser) => { setProfilePopover(null); setProfileTarget(profileUser); }} />}
     {profileTarget && <SocialUserProfileModal userId={profileTarget.id} initialUser={profileTarget} onClose={() => setProfileTarget(null)} onMessage={(conversation) => { setProfileTarget(null); onNavigateDm(conversation.id, conversation); }} />}
   </main>;
@@ -151,5 +154,6 @@ function FriendsView({ friends, allFriends, onlineFriends, onlineUserIds, active
 }
 
 function FriendRow({ item, isOnline, onMessage, onOpenProfile, removeTarget, setRemoveTarget, onRemove }) {
-  return <div className="social-person-row"><button type="button" className="social-person-identity" onClick={(event) => onOpenProfile(item.user, event.currentTarget.getBoundingClientRect())}><span className="social-person-avatar"><Avatar user={item.user} size={32} /><i className={isOnline ? "is-online" : ""} /></span><span className="social-person-copy"><strong>{item.user.displayName || item.user.username}</strong><small><i className={isOnline ? "online-dot" : "offline-dot"} />{isOnline ? "Online" : "Offline"}</small></span></button><span className="social-row-actions"><button type="button" className="secondary-button compact" onClick={() => onMessage(item.user.id)}><Icon name="chat" size={14} />Mensagem</button><button type="button" className="icon-button" title="Mais acoes" aria-label={`Mais acoes para ${item.user.username}`} onClick={() => setRemoveTarget(removeTarget === item.user.id ? null : item.user.id)}><Icon name="more" size={16} /></button></span>{removeTarget === item.user.id && <span className="social-remove-confirm"><span>Remover amizade?</span><button type="button" className="text-button danger" onClick={() => onRemove(item.user.id)}>Remover</button><button type="button" className="text-button" onClick={() => setRemoveTarget(null)}>Cancelar</button></span>}</div>;
+  const presenceLabel = isOnline ? (item.user.status === "dnd" ? "Nao perturbe" : "Online") : "Offline";
+  return <div className="social-person-row"><button type="button" className="social-person-identity" onClick={(event) => onOpenProfile(item.user, event.currentTarget.getBoundingClientRect())}><span className="social-person-avatar"><Avatar user={item.user} size={32} /><i className={isOnline ? "is-online" : ""} /></span><span className="social-person-copy"><strong>{item.user.displayName || item.user.username}</strong><small><i className={isOnline ? item.user.status === "dnd" ? "dnd-dot" : "online-dot" : "offline-dot"} />{presenceLabel}</small></span></button><span className="social-row-actions"><button type="button" className="icon-button social-message-action" title="Enviar mensagem" aria-label={`Enviar mensagem para ${item.user.displayName || item.user.username}`} onClick={() => onMessage(item.user.id)}><Icon name="chat" size={15} /></button><button type="button" className="icon-button" title="Mais acoes" aria-label={`Mais acoes para ${item.user.username}`} onClick={() => setRemoveTarget(removeTarget === item.user.id ? null : item.user.id)}><Icon name="more" size={16} /></button></span>{removeTarget === item.user.id && <span className="social-remove-confirm"><span>Remover amizade?</span><button type="button" className="text-button danger" onClick={() => onRemove(item.user.id)}>Remover</button><button type="button" className="text-button" onClick={() => setRemoveTarget(null)}>Cancelar</button></span>}</div>;
 }

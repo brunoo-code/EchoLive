@@ -1,8 +1,9 @@
 import { deleteExpiredSessions, deleteSession, findSessionUser, createSession, getSessionDurationSeconds } from "./db/sessions.js";
-import { createUser, findUserById, findUserByUsername, updateUserDisplayName } from "./db/users.js";
+import { createUser, findUserById, findUserByUsername, updateUserProfile } from "./db/users.js";
 import { ensureAccountSocialBootstrap } from "./db/social.js";
 import { isDatabaseAvailable, isDatabaseConfigured } from "./db/pool.js";
 import { getBcrypt } from "./password.js";
+import { updatePresenceFromProfile } from "./presenceBridge.js";
 
 const SESSION_COOKIE = "echolive_session";
 const attemptLog = new Map();
@@ -14,6 +15,11 @@ function publicUser(user) {
     username: user.username,
     displayName: user.displayName,
     avatarUrl: user.avatarUrl || "",
+    pronouns: user.pronouns || "",
+    aboutMe: user.aboutMe || "",
+    accentColor: user.accentColor || "#22D3EE",
+    customStatus: user.customStatus || "",
+    status: user.status || "online",
     badges: user.badges || [],
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
@@ -77,9 +83,24 @@ function validateRegisterInput({ username, displayName, password }) {
   };
 }
 
-function validateDisplayName(value) {
-  const displayName = String(value || "").trim();
-  return displayName.length >= 1 && displayName.length <= 40 ? displayName : null;
+function validateProfileInput(input = {}, current = {}) {
+  const displayName = String(input.displayName ?? current.displayName ?? "").trim();
+  const pronouns = String(input.pronouns ?? current.pronouns ?? "").trim();
+  const aboutMe = String(input.aboutMe ?? current.aboutMe ?? "").trim();
+  const customStatus = String(input.customStatus ?? current.customStatus ?? "").trim();
+  const accentColor = String(input.accentColor ?? current.accentColor ?? "#22D3EE").trim().toUpperCase();
+  const avatarUrl = String(input.avatarUrl ?? current.avatarUrl ?? "").trim();
+  const status = ["online", "dnd", "invisible"].includes(input.status) ? input.status : current.status || "online";
+
+  if (displayName.length < 1 || displayName.length > 40) return { error: "O nome de exibicao deve ter entre 1 e 40 caracteres." };
+  if (pronouns.length > 40) return { error: "Os pronomes devem ter no maximo 40 caracteres." };
+  if (aboutMe.length > 300) return { error: "Sobre mim deve ter no maximo 300 caracteres." };
+  if (customStatus.length > 80) return { error: "O status personalizado deve ter no maximo 80 caracteres." };
+  if (!/^#[0-9A-F]{6}$/.test(accentColor)) return { error: "Cor de destaque invalida." };
+  if (avatarUrl && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(avatarUrl)) return { error: "Use uma imagem PNG, JPEG ou WebP valida." };
+  if (avatarUrl.length > 2_800_000) return { error: "A imagem do perfil deve ter no maximo 2 MB." };
+
+  return { value: { displayName, pronouns, aboutMe, customStatus, accentColor, avatarUrl, status } };
 }
 
 function isRateLimited(request, action) {
@@ -201,10 +222,11 @@ export function registerAuthRoutes(app) {
   });
 
   app.patch("/api/users/me", optionalAuth, requireAuth, async (request, response) => {
-    const displayName = validateDisplayName(request.body?.displayName);
-    if (!displayName) return response.status(400).json({ error: "O nome de exibicao deve ter entre 1 e 40 caracteres." });
+    const validation = validateProfileInput(request.body, request.user);
+    if (validation.error) return response.status(400).json({ error: validation.error, code: "INVALID_PROFILE" });
     try {
-      const user = await updateUserDisplayName(request.user.id, displayName);
+      const user = await updateUserProfile(request.user.id, validation.value);
+      updatePresenceFromProfile(user.id, user.status);
       return response.json({ user: publicUser(user) });
     } catch (error) {
       console.error("[AUTH] profile update failed:", error.message);

@@ -24,7 +24,7 @@ function uiSoundsEnabled() {
   }
 }
 
-export default function DirectMessagePage({ conversationId, initialConversation, onNavigateHome, onNavigateFriends, onNavigateDm }) {
+export default function DirectMessagePage({ conversationId, initialConversation, onNavigateHome, onNavigateFriends, onNavigateDm, onOpenAccountSettings }) {
   const { user } = useAuth();
   const { conversations, onlineUserIds, socket, socialReady, loadMessages, markRead, socialStatus, hideConversation, notificationCount } = useSocial();
   const [messages, setMessages] = useState([]);
@@ -333,8 +333,14 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     });
   }
 
-  const openSidebarProfile = (profileUser, anchorRect) => setProfilePopover({ user: { ...profileUser, status: onlineUserIds.has(profileUser.id) ? "online" : "offline" }, anchorRect });
-  const sidebarProps = { activeTab: "friends", onTabChange: onNavigateFriends, conversations, onlineUserIds, user, onHome: onNavigateHome, onOpenConversation: onNavigateDm, onHideConversation: async (id) => { await hideConversation(id); onNavigateFriends(); }, activeConversationId: conversationId, socialStatus };
+  const openSidebarProfile = (profileUser, anchorRect) => setProfilePopover({
+    user: {
+      ...profileUser,
+      status: onlineUserIds.has(profileUser.id) ? (profileUser.status === "dnd" ? "dnd" : "online") : "offline"
+    },
+    anchorRect
+  });
+  const sidebarProps = { activeTab: "friends", onTabChange: onNavigateFriends, conversations, onlineUserIds, user, onHome: onNavigateHome, onOpenConversation: onNavigateDm, onOpenSettings: onOpenAccountSettings, onHideConversation: async (id) => { await hideConversation(id); onNavigateFriends(); }, activeConversationId: conversationId, socialStatus };
   if (conversationStatus === "loading") return <main className="page social-page"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
   if (conversationStatus === "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
 
@@ -345,9 +351,9 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     <SocialSidebar {...sidebarProps} onOpenProfile={openSidebarProfile} />
     <section className="dm-content">
       <header className={`dm-header ${isOfficial ? "is-official" : ""}`}>
-        <button type="button" className="dm-header-profile" onClick={(event) => setProfilePopover({ user: { ...otherUser, status: isOnline ? "online" : "offline" }, anchorRect: event.currentTarget.getBoundingClientRect() })}>
+        <button type="button" className="dm-header-profile" onClick={(event) => setProfilePopover({ user: { ...otherUser, status: isOnline ? (otherUser.status === "dnd" ? "dnd" : "online") : "offline" }, anchorRect: event.currentTarget.getBoundingClientRect() })}>
           <Avatar user={otherUser} size={38} />
-          <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? "Online" : "Offline"}`}</small></span>
+          <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline ? otherUser.status === "dnd" ? "Nao perturbe" : "Online" : "Offline"}`}</small></span>
         </button>
       </header>
       <div ref={messagesRef} className="dm-messages" onScroll={handleMessagesScroll}>

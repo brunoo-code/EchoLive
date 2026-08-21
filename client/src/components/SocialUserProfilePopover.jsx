@@ -10,7 +10,7 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
   const [position, setPosition] = useState({ top: anchorRect?.top || 8, left: anchorRect?.left || 8, ready: false });
   const displayName = participant?.displayName || participant?.nickname || participant?.username || "Usuario";
   const username = participant?.username || participant?.nickname || "usuario";
-  const status = participant?.status === "dnd" ? "dnd" : participant?.status === "offline" ? "offline" : "online";
+  const status = participant?.status === "dnd" ? "dnd" : ["offline", "invisible"].includes(participant?.status) ? "offline" : "online";
   const isGuest = Boolean(participant?.isGuest);
   const isOfficial = Boolean(participant?.isOfficial || participant?.accountType === "system");
   const presenceLabel = participant?.isSpeaking
@@ -76,7 +76,7 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
 
   if (!participant) return null;
   return createPortal(
-    <section ref={popoverRef} className="social-user-popover" style={{ top: position.top, left: position.left, visibility: position.ready ? "visible" : "hidden" }} role="dialog" aria-label={`Perfil de ${displayName}`}>
+    <section ref={popoverRef} className="social-user-popover" style={{ top: position.top, left: position.left, visibility: position.ready ? "visible" : "hidden", "--profile-accent": participant?.accentColor || "#22D3EE" }} role="dialog" aria-label={`Perfil de ${displayName}`}>
       <div className="social-user-popover-cover" />
       <div className="social-user-popover-body">
         <div className="social-user-popover-avatar">
@@ -86,6 +86,7 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
         <div className="social-user-popover-identity">
           <strong>{displayName}</strong>
           <div className="social-user-popover-username"><span>@{username}</span><UserBadges user={participant} isGuest={participant?.isGuest} badges={participant.badges} /></div>
+          {participant?.pronouns && <small>{participant.pronouns}</small>}
         </div>
         <div className="social-user-popover-meta"><span className={isGuest ? "visitor-badge" : "social-presence-label"}>{isGuest ? "Visitante" : isOfficial ? "Conta oficial" : status === "offline" ? "Offline" : "Online"}</span></div>
         <p className={`social-user-popover-presence ${status === "offline" ? "is-offline" : ""}`}><i className="online-indicator" aria-hidden="true" />{presenceLabel}</p>
@@ -93,6 +94,8 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
           {voiceLabel && <span><Icon name="voice" size={14} />{voiceLabel}</span>}
           {roleLabel && <span><Icon name="user" size={14} />{roleLabel}</span>}
         </div>}
+        {participant?.customStatus && <p className="social-user-popover-status">{participant.customStatus}</p>}
+        {participant?.aboutMe && <div className="social-user-popover-about"><strong>Sobre mim</strong><p>{participant.aboutMe}</p></div>}
         <div className="social-user-popover-actions">
           {!isGuest && !isOfficial && <button type="button" className="primary-button" onClick={() => onMessage?.(participant)}><Icon name="chat" size={15} />Mensagem</button>}
           {!isGuest && <button type="button" className="secondary-button" onClick={() => onViewProfile?.(participant)}><Icon name="account" size={15} />Ver perfil</button>}

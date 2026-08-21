@@ -21,12 +21,14 @@ import { getSessionTokenFromCookieHeader, optionalAuth, requireAuth } from "./au
 import { findSessionUser } from "./db/sessions.js";
 import { isDatabaseAvailable } from "./db/pool.js";
 import { getActiveRoomActivity } from "./db/roomActivity.js";
+import { registerPresenceUpdater } from "./presenceBridge.js";
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,24}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SOCIAL_USER_ROOM = "social:user:";
 const socialIo = { current: null };
 const onlineSockets = new Map();
+const onlinePresence = new Map();
 const socialSubscribers = new Set();
 const socialRateLog = new Map();
 const typingRateLog = new Map();
@@ -43,6 +45,11 @@ function publicSocialUser(user) {
     username: user.username,
     displayName: user.displayName,
     avatarUrl: user.avatarUrl || "",
+    pronouns: user.pronouns || "",
+    aboutMe: user.aboutMe || "",
+    accentColor: user.accentColor || "#22D3EE",
+    customStatus: user.customStatus || "",
+    status: user.status || "online",
     accountType: user.accountType || "user",
     isOfficial: Boolean(user.isOfficial || user.accountType === "system"),
     badges: user.badges || []
@@ -66,7 +73,7 @@ function isRateLimited(key, limit, windowMs) {
 }
 
 function onlineUserIds() {
-  return new Set(Array.from(onlineSockets.entries()).filter(([, socketIds]) => socketIds.size > 0).map(([userId]) => userId));
+  return new Set(Array.from(onlineSockets.entries()).filter(([userId, socketIds]) => socketIds.size > 0 && onlinePresence.get(userId) !== "invisible").map(([userId]) => userId));
 }
 
 function emitPresence(userId, status) {
@@ -84,6 +91,8 @@ function emitToSocialUser(userId, event, payload) {
 }
 
 function relationPayload(relation, onlineIds) {
+  const connected = onlineIds.has(relation.user.id);
+  const storedStatus = relation.user.status || "online";
   return {
     id: relation.id,
     status: relation.status,
@@ -92,7 +101,7 @@ function relationPayload(relation, onlineIds) {
     updatedAt: relation.updatedAt,
     user: {
       ...relation.user,
-      status: onlineIds.has(relation.user.id) ? "online" : "offline"
+      status: connected ? (storedStatus === "dnd" ? "dnd" : "online") : "offline"
     }
   };
 }
@@ -125,7 +134,7 @@ export function registerSocialRoutes(app) {
       const ids = onlineUserIds();
       const roomActivity = await getActiveRoomActivity(profile.user.id).catch(() => null);
       const isOnline = ids.has(profile.user.id) || Boolean(roomActivity);
-      profile.user.status = isOnline ? "online" : "offline";
+      profile.user.status = isOnline ? (profile.user.status === "dnd" ? "dnd" : "online") : "offline";
       profile.activity.status = profile.user.status;
       profile.activity.kind = roomActivity ? "voice" : profile.user.status;
       profile.activity.room = roomActivity ? { name: roomActivity.name, joinable: false } : null;
@@ -298,8 +307,9 @@ export function registerAccountPresence(io, socket, user) {
   const wasOffline = sockets.size === 0;
   sockets.add(socket.id);
   onlineSockets.set(user.id, sockets);
+  onlinePresence.set(user.id, user.status || "online");
   socket.data.presenceRegistered = true;
-  if (wasOffline) emitPresence(user.id, "online");
+  if (wasOffline) emitPresence(user.id, user.status === "invisible" ? "offline" : user.status || "online");
 }
 
 export function unregisterAccountPresence(io, socket) {
@@ -309,9 +319,19 @@ export function unregisterAccountPresence(io, socket) {
   sockets?.delete(socket.id);
   if (!sockets?.size) {
     onlineSockets.delete(user.id);
+    onlinePresence.delete(user.id);
     emitPresence(user.id, "offline");
   }
 }
+
+function updateAccountPresence(userId, status) {
+  if (!onlineSockets.get(userId)?.size) return;
+  const nextStatus = ["online", "dnd", "invisible"].includes(status) ? status : "online";
+  onlinePresence.set(userId, nextStatus);
+  emitPresence(userId, nextStatus === "invisible" ? "offline" : nextStatus);
+}
+
+registerPresenceUpdater(updateAccountPresence);
 
 function rejectSocial(ack, message = "Autenticacao necessaria.") {
   ack?.({ ok: false, error: message, code: "UNAUTHENTICATED" });
