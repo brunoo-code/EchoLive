@@ -53,8 +53,7 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
     </div>
     <div className="social-sidebar-footer">
       <Avatar user={user} size={36} />
-      <span><strong>{user?.displayName || user?.username}</strong><small>@{user?.username}</small></span>
-      <button type="button" title="Voltar para salas" aria-label="Voltar para salas" onClick={onHome}><Icon name="home" size={17} /></button>
+      <span><strong>{user?.displayName || user?.username}</strong><small><i className="online-dot" />Online</small></span>
     </div>
   </aside>;
 }

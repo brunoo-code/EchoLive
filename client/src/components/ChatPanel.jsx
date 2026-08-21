@@ -312,7 +312,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
             ref={messageInputRef}
             className="message-input"
             maxLength={4000}
-            placeholder="Conversar em #geral"
+            placeholder="Mensagem em #geral"
             value={draft}
             onChange={(event) => {
               const nextDraft = event.target.value;

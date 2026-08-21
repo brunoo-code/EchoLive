@@ -1,9 +1,12 @@
+import { useState } from "react";
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import Icon from "./Icon.jsx";
 import BrandMark from "./BrandMark.jsx";
 import UserBadges from "./UserBadges.jsx";
 
 export default function ProfilePopover({ accountUser, profile, nickname, avatarUrl, isGuest = false, guestAvatarVariant = 0, isInVoice = false, voiceChannelName = "Geral", connectionQuality = "", onStatusChange, onEditProfile, onOpenSettings, onLogout, onCreateAccount, onClose }) {
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+
   if (isGuest) {
     return <section className="profile-popover guest-profile-popover" role="dialog" aria-label="Perfil temporario">
       <div className="profile-popover-banner" aria-hidden="true" />
@@ -27,9 +30,12 @@ export default function ProfilePopover({ accountUser, profile, nickname, avatarU
       <div className="profile-popover-identity"><strong title={displayName}>{displayName}</strong><div className="profile-popover-username"><span>@{accountNickname}</span><UserBadges user={accountUser} badges={accountUser?.badges} /></div><small title={profile.customStatus || ""}>{profile.customStatus || (currentStatus === "dnd" ? "Nao perturbe" : "Online")}</small></div>
     </div>
     {isInVoice && <div className="profile-popover-voice"><span className="profile-popover-voice-icon"><Icon name="voice" size={15} /></span><span><strong>Em voz</strong><small>{voiceChannelName}{connectionQuality ? ` · ${connectionQuality}` : ""}</small></span><i className="online-dot" /></div>}
-    <div className="profile-status-options" aria-label="Status do perfil">
-      <button type="button" className={currentStatus === "online" ? "is-selected" : ""} onClick={() => onStatusChange("online")}><UserStatusBadge status="online" size="sm" /><span>Online</span>{currentStatus === "online" && <Icon name="check" size={14} />}</button>
-      <button type="button" className={currentStatus === "dnd" ? "is-selected" : ""} onClick={() => onStatusChange("dnd")}><UserStatusBadge status="dnd" size="sm" /><span>Nao perturbe</span>{currentStatus === "dnd" && <Icon name="check" size={14} />}</button>
+    <div className="profile-status-menu">
+      <button type="button" className="profile-status-trigger" onClick={() => setStatusMenuOpen((value) => !value)} aria-expanded={statusMenuOpen} aria-haspopup="menu"><UserStatusBadge status={currentStatus} size="sm" /><span>{currentStatus === "dnd" ? "Nao perturbe" : "Online"}</span><Icon name="chevron" size={14} /></button>
+      {statusMenuOpen && <div className="profile-status-options" role="menu" aria-label="Status do perfil">
+        <button type="button" role="menuitemradio" aria-checked={currentStatus === "online"} className={currentStatus === "online" ? "is-selected" : ""} onClick={() => { onStatusChange("online"); setStatusMenuOpen(false); }}><UserStatusBadge status="online" size="sm" /><span>Online</span>{currentStatus === "online" && <Icon name="check" size={14} />}</button>
+        <button type="button" role="menuitemradio" aria-checked={currentStatus === "dnd"} className={currentStatus === "dnd" ? "is-selected" : ""} onClick={() => { onStatusChange("dnd"); setStatusMenuOpen(false); }}><UserStatusBadge status="dnd" size="sm" /><span>Nao perturbe</span>{currentStatus === "dnd" && <Icon name="check" size={14} />}</button>
+      </div>}
     </div>
     <div className="profile-popover-actions"><button type="button" onClick={onEditProfile}><Icon name="edit" size={15} /><span>Editar perfil</span></button><button type="button" onClick={onOpenSettings}><Icon name="settings" size={15} /><span>Configuracoes</span></button>{accountUser && <button type="button" className="profile-logout-button" onClick={onLogout}><Icon name="leave" size={15} /><span>Sair da conta</span></button>}</div>
   </section>;

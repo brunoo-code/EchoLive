@@ -364,7 +364,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
         <div className="dm-composer-row">
           <button type="button" className="composer-icon-button" onClick={() => fileInputRef.current?.click()} title="Adicionar anexo" aria-label="Adicionar anexo"><Icon name="plus" size={17} /></button>
           <input ref={fileInputRef} className="visually-hidden" type="file" accept={`${MEDIA_ACCEPT},${FILE_ACCEPT}`} onChange={handleFileChange} />
-          <textarea ref={composerRef} id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Conversar com ${otherUser.displayName || otherUser.username}`} disabled={!conversationReady || sending} />
+          <textarea ref={composerRef} id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Mensagem para @${otherUser.username}`} disabled={!conversationReady || sending} />
           <button type="button" className="composer-icon-button" onClick={() => setIsEmojiOpen((value) => !value)} title="Inserir emoji" aria-label="Inserir emoji"><span aria-hidden="true">😊</span></button>
           <button type="submit" className="primary-button" disabled={(!text.trim() && !selectedFile) || sending || !conversationReady} aria-label="Enviar mensagem"><Icon name="send" size={16} /></button>
           {isEmojiOpen && <div className="composer-popover dm-emoji-popover"><EmojiPicker onSelect={insertEmoji} /></div>}
