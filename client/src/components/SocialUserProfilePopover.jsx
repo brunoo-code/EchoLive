@@ -21,7 +21,9 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
         ? "Em voz na sala"
           : status === "offline"
             ? "Offline"
-            : "Online";
+            : status === "dnd"
+              ? "Nao perturbe"
+              : "Online";
   const roleLabel = participant?.role === "owner"
     ? "Proprietario"
     : participant?.role === "moderator"
@@ -88,7 +90,7 @@ export default function SocialUserProfilePopover({ participant, anchorRect, onCl
           <div className="social-user-popover-username"><span>@{username}</span><UserBadges user={participant} isGuest={participant?.isGuest} badges={participant.badges} /></div>
           {participant?.pronouns && <small>{participant.pronouns}</small>}
         </div>
-        <div className="social-user-popover-meta"><span className={isGuest ? "visitor-badge" : "social-presence-label"}>{isGuest ? "Visitante" : isOfficial ? "Conta oficial" : status === "offline" ? "Offline" : "Online"}</span></div>
+        <div className="social-user-popover-meta"><span className={isGuest ? "visitor-badge" : "social-presence-label"}>{isGuest ? "Visitante" : isOfficial ? "Conta oficial" : status === "offline" ? "Offline" : status === "dnd" ? "Nao perturbe" : "Online"}</span></div>
         <p className={`social-user-popover-presence ${status === "offline" ? "is-offline" : ""}`}><i className="online-indicator" aria-hidden="true" />{presenceLabel}</p>
         {(voiceLabel || roleLabel) && <div className="social-user-popover-details">
           {voiceLabel && <span><Icon name="voice" size={14} />{voiceLabel}</span>}

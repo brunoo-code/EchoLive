@@ -85,7 +85,7 @@ export default function Sidebar({
         <div className={`brand-mark ${isServer && serverIconUrl ? "has-server-icon" : ""}`} aria-hidden="true">{isServer && serverIconUrl ? <img src={serverIconUrl} alt="" /> : <BrandMark size={30} />}</div>
         <div>
           <strong>{isServer ? serverName || "Seus servidores" : "EchoLive"}</strong>
-          <span>{isServer ? "Servidor permanente" : "Sua call privada"}</span>
+          {!isServer && <span>Sua call privada</span>}
         </div>
         {isServer && <button type="button" className="server-menu-trigger" onClick={() => setIsServerMenuOpen((value) => !value)} title="Menu do servidor" aria-label="Menu do servidor" aria-expanded={isServerMenuOpen}><Icon name="chevron" size={15} /></button>}
       </div>

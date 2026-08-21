@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import UserStatusBadge from "./UserStatusBadge.jsx";
 import UserBadges from "./UserBadges.jsx";
 import Icon from "./Icon.jsx";
@@ -42,6 +42,7 @@ export default function SettingsModal({ initialSection = "profile", availableSec
   const [draft, setDraft] = useState(() => normalizedProfile(profile));
   const [saveState, setSaveState] = useState("idle");
   const [profileError, setProfileError] = useState("");
+  const modalRef = useRef(null);
 
   useEffect(() => {
     setActive(resolvedInitialSection);
@@ -56,6 +57,44 @@ export default function SettingsModal({ initialSection = "profile", availableSec
   const isDirty = useMemo(() => profileSignature(draft) !== profileSignature(savedProfile), [draft, savedProfile]);
   const displayName = draft.displayName.trim() || "Nome de exibicao";
   const statusLabel = draft.status === "dnd" ? "Nao perturbe" : draft.status === "invisible" ? "Invisivel" : "Online";
+
+  function requestClose() {
+    if (isDirty && !window.confirm("Descartar alteracoes nao salvas?")) return;
+    onClose?.();
+  }
+
+  useEffect(() => {
+    const modal = modalRef.current;
+    const focusableSelector = "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex='-1'])";
+    modal?.querySelector(focusableSelector)?.focus();
+  }, []);
+
+  useEffect(() => {
+    const modal = modalRef.current;
+    const focusableSelector = "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex='-1'])";
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (!isDirty || window.confirm("Descartar alteracoes nao salvas?")) onClose?.();
+        return;
+      }
+      if (event.key !== "Tab" || !modal) return;
+      const focusable = [...modal.querySelectorAll(focusableSelector)].filter((element) => !element.hidden && element.getClientRects().length > 0);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isDirty, onClose]);
 
   function update(key, value) {
     setProfileError("");
@@ -114,9 +153,9 @@ export default function SettingsModal({ initialSection = "profile", availableSec
     setSaveState("idle");
   }
 
-  return <div className="modal-backdrop settings-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target && !isDirty) onClose?.(); }}>
-    <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <header className="settings-header"><div><p className="section-label">EchoLive</p><h2 id="settings-title">Configuracoes</h2></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar configuracoes" title="Fechar"><Icon name="close" size={18} /></button></header>
+  return <div className="modal-backdrop settings-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) requestClose(); }}>
+    <section ref={modalRef} className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <header className="settings-header"><div><p className="section-label">EchoLive</p><h2 id="settings-title">Configuracoes</h2></div><button type="button" className="icon-button" onClick={requestClose} aria-label="Fechar configuracoes" title="Fechar"><Icon name="close" size={18} /></button></header>
       <div className="settings-layout">
         <nav className="settings-nav" aria-label="Secoes de configuracoes">{visibleSections.map((section) => <button type="button" key={section} className={active === section ? "settings-nav-active" : ""} onClick={() => setActive(section)}><span className="settings-nav-icon" aria-hidden="true"><Icon name={section === "profile" ? "user" : section === "account" ? "account" : section === "voice" ? "voice" : section === "appearance" ? "palette" : "sliders"} size={17} /></span><span className="settings-nav-copy"><strong>{labels[section]}</strong><small>{descriptions[section]}</small></span></button>)}</nav>
         <main className="settings-content">
@@ -145,7 +184,7 @@ export default function SettingsModal({ initialSection = "profile", availableSec
           <div className="settings-preview-card"><div className="settings-preview-cover" /><div className="settings-preview-body"><div className="settings-preview-avatar">{draft.avatarUrl ? <img src={draft.avatarUrl} alt="" /> : displayName.slice(0, 1).toUpperCase()}<UserStatusBadge status={draft.status} size="lg" /></div><h3>{displayName}</h3><div className="settings-preview-user"><span>@{draft.username || "username"}</span><UserBadges badges={draft.badges} /></div>{draft.pronouns && <small>{draft.pronouns}</small>}<div className="settings-preview-status"><UserStatusBadge status={draft.status} size="sm" /><span>{draft.customStatus || statusLabel}</span></div>{draft.aboutMe && <div className="settings-preview-about"><strong>Sobre mim</strong><p>{draft.aboutMe}</p></div>}</div></div>
         </aside>
       </div>
-      {active === "profile" && isPersistentProfile && (isDirty || saveState === "saved") && <footer className={`settings-unsaved-bar ${saveState === "saved" && !isDirty ? "is-saved" : ""}`}><span>{saveState === "saved" && !isDirty ? "Alteracoes salvas." : "Voce tem alteracoes nao salvas."}</span><div>{isDirty && <button type="button" className="text-button" onClick={discardProfileChanges} disabled={saveState === "saving"}>Descartar</button>}<button type="button" className="primary-button" onClick={saveProfile} disabled={!isDirty || saveState === "saving"}>{saveState === "saving" ? "Salvando..." : "Salvar alteracoes"}</button></div></footer>}
+      {active === "profile" && isPersistentProfile && (isDirty || saveState === "saved") && <footer className={`settings-unsaved-bar ${saveState === "saved" && !isDirty ? "is-saved" : ""}`}><span>{saveState === "saved" && !isDirty ? "Alteracoes salvas." : "Voce tem alteracoes nao salvas."}</span><div>{isDirty && <button type="button" className="text-button" onClick={discardProfileChanges} disabled={saveState === "saving"}>Redefinir</button>}<button type="button" className="primary-button" onClick={saveProfile} disabled={!isDirty || saveState === "saving"}>{saveState === "saving" ? "Salvando..." : "Salvar alteracoes"}</button></div></footer>}
     </section>
   </div>;
 }

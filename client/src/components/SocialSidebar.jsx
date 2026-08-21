@@ -1,5 +1,4 @@
 import Icon from "./Icon.jsx";
-import BrandMark from "./BrandMark.jsx";
 import UserAvatar from "./UserAvatar.jsx";
 import { useEffect, useMemo, useState } from "react";
 
@@ -16,7 +15,7 @@ function conversationPreview(conversation) {
   return `@${conversation.user.username}`;
 }
 
-export default function SocialSidebar({ activeTab, onTabChange, conversations, onlineUserIds, user, onHome, onOpenConversation, onOpenProfile, onOpenSettings, onHideConversation, activeConversationId, socialStatus }) {
+export default function SocialSidebar({ activeTab, onTabChange, conversations, onlineUserIds, user, onOpenConversation, onOpenProfile, onOpenSettings, onHideConversation, activeConversationId, socialStatus }) {
   const [conversationQuery, setConversationQuery] = useState("");
   const normalizedQuery = conversationQuery.trim().toLowerCase().replace(/^@/, "");
   const visibleConversations = useMemo(() => conversations.filter((conversation) => {
@@ -36,13 +35,9 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
   }, [conversations]);
 
   return <aside className="social-sidebar">
-    <div className="social-sidebar-brand">
-      <button type="button" className="social-brand-button" onClick={onHome} title="Voltar para a Home"><BrandMark size={28} /><strong>EchoLive</strong></button>
-      <span className="social-brand-caption">Pessoas e conversas</span>
-    </div>
     <label className="social-sidebar-search"><Icon name="search" size={15} /><span className="sr-only">Buscar conversas</span><input value={conversationQuery} onChange={(event) => setConversationQuery(event.target.value)} placeholder="Encontre ou comece uma conversa" /></label>
     <nav className="social-nav" aria-label="Navegacao social">
-      <button type="button" className={activeTab !== "add" ? "is-active" : ""} onClick={() => onTabChange("friends")}><Icon name="account" size={16} /><span>Amigos</span></button>
+      <button type="button" className={activeTab !== "add" ? "is-active" : ""} onClick={() => onTabChange("all")}><Icon name="account" size={16} /><span>Amigos</span></button>
     </nav>
     <div className="social-sidebar-section">
       <div className="social-sidebar-section-title"><span>Mensagens diretas</span><button type="button" title="Nova conversa" aria-label="Nova conversa" onClick={() => onTabChange("friends")}><Icon name="plus" size={14} /></button></div>
