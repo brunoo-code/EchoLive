@@ -48,6 +48,8 @@ export default function Sidebar({
   serverVoiceChannels = [],
   serverActiveChannelId = "",
   serverVoiceChannelId = "",
+  serverVoiceViewedChannelId = "",
+  serverConnectedVoiceChannelId = "",
   voiceChannelName = "Geral",
   onSelectServerChannel,
   onToggleServerVoice,
@@ -124,7 +126,7 @@ export default function Sidebar({
         <p className="section-label voice-label">Canais de voz</p>
         <button
           type="button"
-          className={`channel-button ${selectedChannel === "voice-general" ? "is-selected" : ""}`}
+          className={`channel-button ${selectedChannel === "voice-general" ? "is-selected" : ""} ${isInVoice ? "is-connected" : ""}`}
           onClick={() => onSelectChannel("voice-general")}
         >
           <span className="channel-icon" aria-hidden="true"><Icon name="voice" size={16} /></span>
@@ -146,7 +148,7 @@ export default function Sidebar({
           ))}
         </div>
       </section> : <section className="sidebar-section channel-section server-channel-section">
-         {serverNavigationState || <ServerChannelNavigation channels={serverTextChannels} voiceChannels={serverVoiceChannels} activeChannelId={serverActiveChannelId} voiceChannelId={serverVoiceChannelId} onSelectChannel={onSelectServerChannel} onToggleVoice={onToggleServerVoice} participants={serverVoiceParticipants} canManageServer={canManageServer} onCreateChannel={onCreateServerChannel} />}
+         {serverNavigationState || <ServerChannelNavigation channels={serverTextChannels} voiceChannels={serverVoiceChannels} activeChannelId={serverActiveChannelId} voiceChannelId={serverVoiceChannelId} viewedVoiceChannelId={serverVoiceViewedChannelId} connectedVoiceChannelId={serverConnectedVoiceChannelId} onSelectChannel={onSelectServerChannel} onToggleVoice={onToggleServerVoice} participants={serverVoiceParticipants} canManageServer={canManageServer} onCreateChannel={onCreateServerChannel} />}
       </section>}
 
       <div className="sidebar-lower-region">
@@ -190,7 +192,7 @@ export default function Sidebar({
   );
 }
 
-function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voiceChannelId, onSelectChannel, onToggleVoice, participants, canManageServer, onCreateChannel }) {
+function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voiceChannelId, viewedVoiceChannelId, connectedVoiceChannelId, onSelectChannel, onToggleVoice, participants, canManageServer, onCreateChannel }) {
   return <>
     <div className="server-channel-heading"><p className="section-label">Canais de texto</p>{canManageServer && <button type="button" className="server-channel-add" onClick={() => onCreateChannel?.("text")} title="Criar canal de texto" aria-label="Criar canal de texto"><Icon name="plus" size={14} /></button>}</div>
     {channels.map((channel) => (
@@ -202,12 +204,12 @@ function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voi
     <div className="server-channel-heading voice-label"><p className="section-label">Canais de voz</p>{canManageServer && <button type="button" className="server-channel-add" onClick={() => onCreateChannel?.("voice")} title="Criar canal de voz" aria-label="Criar canal de voz"><Icon name="plus" size={14} /></button>}</div>
     {voiceChannels.map((channel) => (
       <div key={channel.id}>
-        <button type="button" className={`channel-button ${channel.id === voiceChannelId ? "is-selected" : ""}`} onClick={() => onToggleVoice?.(channel.id)}>
+        <button type="button" className={`channel-button ${channel.id === viewedVoiceChannelId ? "is-selected" : ""} ${channel.id === connectedVoiceChannelId ? "is-connected" : ""}`} onClick={() => onToggleVoice?.(channel.id)}>
           <span className="channel-icon" aria-hidden="true"><Icon name="voice" size={16} /></span>
           <strong>{channel.name}</strong>
           <span className="channel-count">{channel.id === voiceChannelId ? participants.length : ""}</span>
         </button>
-        {channel.id === voiceChannelId && <div className="call-member-list">
+        {channel.id === (connectedVoiceChannelId || voiceChannelId) && <div className="call-member-list">
           {participants.map((participant) => (
             <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId}>
               <span className="member-avatar" aria-hidden="true"><UserAvatar user={participant} size={25} /><UserStatusBadge status={participant.status} size="sm" /></span>

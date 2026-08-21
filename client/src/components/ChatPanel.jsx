@@ -326,9 +326,9 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           <div className="composer-actions">
             <button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}><Icon name="smile" size={16} /></button>
             {false && <button type="button" className="composer-icon-button" onClick={() => { setIsStickerPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsEmojiPickerOpen(false); }} disabled={isSending} title="Abrir figurinhas do Eko" aria-label="Abrir figurinhas do Eko" aria-expanded={isStickerPickerOpen}><Icon name="sticker" size={16} /></button>}
-            <button className="send-button" type="submit" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}>
+            {(draft.trim() || selectedFile) && <button className="send-button" type="submit" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}>
               <Icon name="send" size={15} />
-            </button>
+            </button>}
           </div>
           {isEmojiPickerOpen && <div className="composer-popover"><EmojiPicker onSelect={insertEmoji} /></div>}
           {isStickerPickerOpen && <div className="composer-popover sticker-picker" role="dialog" aria-label="Figurinhas do Eko">

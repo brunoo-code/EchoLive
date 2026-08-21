@@ -1,6 +1,37 @@
+import { useState } from "react";
 import ParticipantCard from "./ParticipantCard.jsx";
 import ControlsBar from "./ControlsBar.jsx";
 import Icon from "./Icon.jsx";
+
+export function MediaPip({
+  participant,
+  onOpen,
+  onClose,
+  isDeafened = false,
+  outputDeviceId = "",
+  screenShareLabel = "",
+  volume = 100,
+  onVolumeChange,
+  notify
+}) {
+  const [isMinimized, setIsMinimized] = useState(false);
+
+  if (!participant) return null;
+
+  return (
+    <aside className={`call-pip-preview ${isMinimized ? "is-minimized" : ""}`} aria-label="Mídia da chamada em andamento">
+      <header className="call-pip-header">
+        <span>{participant.isScreenSharing ? "Compartilhamento ativo" : "Câmera ativa"}</span>
+        <div className="call-pip-actions">
+          <button type="button" onClick={onOpen} title="Abrir chamada" aria-label="Abrir chamada"><Icon name="screen" size={14} /></button>
+          <button type="button" className={isMinimized ? "is-restored" : "is-minimized"} onClick={() => setIsMinimized((value) => !value)} title={isMinimized ? "Mostrar preview" : "Minimizar preview"} aria-label={isMinimized ? "Mostrar preview" : "Minimizar preview"}><Icon name="chevron" size={14} /></button>
+          <button type="button" onClick={onClose} title="Fechar preview" aria-label="Fechar preview"><Icon name="close" size={14} /></button>
+        </div>
+      </header>
+      {!isMinimized && <ParticipantCard {...participant} compact screenShareLabel={participant.isLocal ? screenShareLabel : ""} isDeafened={isDeafened} outputDeviceId={outputDeviceId} volume={volume} onVolumeChange={onVolumeChange} notify={notify} />}
+    </aside>
+  );
+}
 
 export default function CallMediaView({
   participants = [],

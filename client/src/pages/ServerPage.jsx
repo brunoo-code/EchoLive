@@ -4,7 +4,7 @@ import Icon from "../components/Icon.jsx";
 import RoomRail from "../components/RoomRail.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import ParticipantsPanel from "../components/ParticipantsPanel.jsx";
-import CallMediaView from "../components/CallMediaView.jsx";
+import CallMediaView, { MediaPip } from "../components/CallMediaView.jsx";
 import UserAvatar from "../components/UserAvatar.jsx";
 import { ChatComposerFrame, ChatComposerRow, ChatHeader, ChatViewport } from "../components/ChatFrame.jsx";
 import EmojiPicker from "../components/EmojiPicker.jsx";
@@ -73,6 +73,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [server, setServer] = useState(null);
   const [activeChannelId, setActiveChannelId] = useState("");
   const [voiceChannelId, setVoiceChannelId] = useState("");
+  const [voiceViewChannelId, setVoiceViewChannelId] = useState("");
   const [messages, setMessages] = useState([]);
   const [messageQuery, setMessageQuery] = useState("");
   const [members, setMembers] = useState([]);
@@ -114,6 +115,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
   const [isDeafened, setIsDeafened] = useState(false);
   const [streamPreset, setStreamPreset] = useState("720p30");
   const [activeContentView, setActiveContentView] = useState("text");
+  const [isPipDismissed, setIsPipDismissed] = useState(false);
   const [isMemberPanelOpen, setIsMemberPanelOpen] = useState(false);
   const [viewMode, setViewMode] = useState("grid");
   const [focusedMediaId, setFocusedMediaId] = useState("");
@@ -171,6 +173,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
     setMessages([]);
     setActiveChannelId("");
     setVoiceChannelId("");
+    setVoiceViewChannelId("");
     setDraft("");
     setTypingUsers([]);
     setSelectedFile(null);
@@ -610,18 +613,24 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
 
   function toggleVoice(channelId) {
     setError("");
-    const joining = voiceChannelId !== channelId;
-    setActiveChannelId(channelId);
-    setVoiceChannelId(joining ? channelId : "");
-    setActiveContentView(joining ? "media" : "text");
+    setVoiceViewChannelId(channelId);
+    setActiveContentView("media");
+    if (voiceChannelId !== channelId) setVoiceChannelId(channelId);
   }
 
   function selectServerChannel(channelId) {
     const channel = server?.channels?.find((item) => item.id === channelId);
     setMessageQuery("");
     setActiveChannelId(channelId);
-    if (channel?.type === "text") setActiveContentView("text");
+    if (channel?.type === "text") {
+      setVoiceViewChannelId("");
+      setActiveContentView("text");
+    }
   }
+
+  useEffect(() => {
+    if (serverVoice.isScreenSharing || serverVoice.cameraEnabled) setIsPipDismissed(false);
+  }, [serverVoice.cameraEnabled, serverVoice.isScreenSharing]);
 
   const showServerLoading = Boolean(serverId && serverLoading);
   const showServerListLoading = !serverId && (serversStatus === "idle" || serversStatus === "loading");
@@ -670,7 +679,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
 
     return (
       <article id={`server-message-${message.id}`} className={`chat-message server-chat-message${isGrouped ? " is-grouped" : ""}`} key={message.id}>
-        {isGrouped ? <div className="message-avatar-placeholder server-message-time" aria-hidden="true"><time dateTime={message.createdAt}>{formatServerTime(message.createdAt)}</time></div> : <button type="button" className="message-avatar server-message-avatar" onClick={(event) => setProfileUser({ user: message.sender, anchorRect: event.currentTarget.getBoundingClientRect() })} aria-label={`Ver perfil de ${senderName}`}><UserAvatar user={message.sender} size={30} /></button>}
+        {isGrouped ? <div className="message-avatar-placeholder server-message-time" aria-hidden="true"><time dateTime={message.createdAt}>{formatServerTime(message.createdAt)}</time></div> : <button type="button" className="message-avatar server-message-avatar" onClick={(event) => setProfileUser({ user: message.sender, anchorRect: event.currentTarget.getBoundingClientRect() })} aria-label={`Ver perfil de ${senderName}`}><UserAvatar user={message.sender} size={36} /></button>}
         <div className="message-body">
           {!isGrouped && <div className="message-meta"><strong>{senderName}</strong><time dateTime={message.createdAt} title={formatServerDateTime(message.createdAt)}>{formatServerTime(message.createdAt)}</time></div>}
           {replyTarget && <button type="button" className="server-reply-ref" onClick={() => document.getElementById(`server-message-${replyTarget.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}>Respondendo a <strong>{replyTarget.sender?.displayName || replyTarget.sender?.username || "uma mensagem"}</strong>{replyTarget.content ? `: ${replyTarget.content.slice(0, 100)}` : ""}</button>}
@@ -692,12 +701,13 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
 
   return <main className={`page app-shell room-page server-page ${activeContentView === "media" && !isMemberPanelOpen ? "call-members-collapsed" : ""}`}>
     <RoomRail roomCode="" roomName="" recentRooms={[]} onHome={onNavigateHome} onSocial={onNavigateSocial} onOpenSwitcher={handleCreateServer} servers={servers} activeServerId={serverId} onOpenServer={onNavigateServer} onCreateServer={handleCreateServer} />
-    <Sidebar variant="server" serverName={server?.name || "Seus servidores"} serverTextChannels={textChannels} serverVoiceChannels={voiceChannels} serverActiveChannelId={activeChannel?.id} serverVoiceChannelId={voiceChannelId} voiceChannelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || voiceChannels[0]?.name || "Geral"} onSelectServerChannel={selectServerChannel} onToggleServerVoice={toggleVoice} serverVoiceParticipants={serverVoice.participants} serverNavigationState={serverSidebarState} nickname={user?.displayName || user?.username || "Conta"} status="online" avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} isInVoice={serverVoice.connected} connectionQuality="" micEnabled={serverVoice.micEnabled} cameraEnabled={serverVoice.cameraEnabled} isScreenSharing={serverVoice.isScreenSharing} streamPreset={streamPreset} screenShareLabel={streamPreset.replace("p", "p · ").replace("30", "30 FPS").replace("60", "60 FPS")} onStreamPresetChange={setStreamPreset} isDeafened={isDeafened} onProfileClick={(event) => setProfileUser({ user, anchorRect: event?.currentTarget?.getBoundingClientRect?.() })} onToggleMicrophone={serverVoice.toggleMicrophone} onToggleCamera={serverVoice.toggleCamera} onToggleScreenShare={serverVoice.toggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={() => { serverVoice.leave(); setActiveContentView("text"); }} onJoinVoice={() => voiceChannels[0] && toggleVoice(voiceChannels[0].id)} onLeaveRoom={onNavigateHome} onServerInvite={canManageServer ? openServerInvite : undefined} onServerSettings={canManageServer ? openServerSettings : undefined} onServerLeave={server ? openLeaveServer : undefined} onServerDelete={canDeleteServer ? openDeleteServer : undefined} canManageServer={canManageServer} canDeleteServer={canDeleteServer} onCreateServerChannel={canManageServer ? openCreateChannel : undefined} />
+    <Sidebar variant="server" serverName={server?.name || "Seus servidores"} serverTextChannels={textChannels} serverVoiceChannels={voiceChannels} serverActiveChannelId={activeChannel?.id} serverVoiceChannelId={voiceChannelId} serverVoiceViewedChannelId={activeContentView === "media" ? voiceViewChannelId : ""} serverConnectedVoiceChannelId={serverVoice.connected ? voiceChannelId : ""} voiceChannelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || voiceChannels[0]?.name || "Geral"} onSelectServerChannel={selectServerChannel} onToggleServerVoice={toggleVoice} serverVoiceParticipants={serverVoice.participants} serverNavigationState={serverSidebarState} nickname={user?.displayName || user?.username || "Conta"} status="online" avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} isInVoice={serverVoice.connected} connectionQuality="" micEnabled={serverVoice.micEnabled} cameraEnabled={serverVoice.cameraEnabled} isScreenSharing={serverVoice.isScreenSharing} streamPreset={streamPreset} screenShareLabel={streamPreset.replace("p", "p · ").replace("30", "30 FPS").replace("60", "60 FPS")} onStreamPresetChange={setStreamPreset} isDeafened={isDeafened} onProfileClick={(event) => setProfileUser({ user, anchorRect: event?.currentTarget?.getBoundingClientRect?.() })} onToggleMicrophone={serverVoice.toggleMicrophone} onToggleCamera={serverVoice.toggleCamera} onToggleScreenShare={serverVoice.toggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={() => { serverVoice.leave(); setVoiceChannelId(""); setVoiceViewChannelId(""); setActiveContentView("text"); }} onJoinVoice={() => voiceChannels[0] && toggleVoice(voiceChannels[0].id)} onLeaveRoom={onNavigateHome} onServerInvite={canManageServer ? openServerInvite : undefined} onServerSettings={canManageServer ? openServerSettings : undefined} onServerLeave={server ? openLeaveServer : undefined} onServerDelete={canDeleteServer ? openDeleteServer : undefined} canManageServer={canManageServer} canDeleteServer={canDeleteServer} onCreateServerChannel={canManageServer ? openCreateChannel : undefined} />
     <section className="central-stage">
-      {activeContentView === "media" ? <CallMediaView participants={serverVoice.participants} channelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || "Geral"} participantCount={serverVoice.participants.length} isInVoice={serverVoice.connected} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} volumeById={remoteVolumes} onVolumeChange={changeRemoteVolume} screenShareLabel={streamPreset.replace("p", "p · ").replace("30", "30 FPS").replace("60", "60 FPS")} notify={notify} micEnabled={serverVoice.micEnabled} onToggleMicrophone={serverVoice.toggleMicrophone} cameraEnabled={serverVoice.cameraEnabled} onToggleCamera={serverVoice.toggleCamera} isScreenSharing={serverVoice.isScreenSharing} onToggleScreenShare={serverVoice.toggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={() => { serverVoice.leave(); setActiveContentView("text"); }} membersVisible={isMemberPanelOpen} onToggleMembers={() => setIsMemberPanelOpen((value) => !value)} streamPreset={streamPreset} onStreamPresetChange={setStreamPreset} /> : <section className="chat-stage channel-view">
+      {activeContentView === "media" ? <CallMediaView participants={serverVoice.participants} channelName={voiceChannels.find((channel) => channel.id === voiceChannelId)?.name || "Geral"} participantCount={serverVoice.participants.length} isInVoice={serverVoice.connected} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} volumeById={remoteVolumes} onVolumeChange={changeRemoteVolume} screenShareLabel={streamPreset.replace("p", "p · ").replace("30", "30 FPS").replace("60", "60 FPS")} notify={notify} micEnabled={serverVoice.micEnabled} onToggleMicrophone={serverVoice.toggleMicrophone} cameraEnabled={serverVoice.cameraEnabled} onToggleCamera={serverVoice.toggleCamera} isScreenSharing={serverVoice.isScreenSharing} onToggleScreenShare={serverVoice.toggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={() => { serverVoice.leave(); setVoiceChannelId(""); setVoiceViewChannelId(""); setActiveContentView("text"); }} membersVisible={isMemberPanelOpen} onToggleMembers={() => setIsMemberPanelOpen((value) => !value)} streamPreset={streamPreset} onStreamPresetChange={setStreamPreset} /> : <section className="chat-stage channel-view">
       <div className="chat-stage-inner">
       <ChatHeader title={activeChannel?.name || (showServerEmpty ? "Seus servidores" : "Selecione um canal")} subtitle={server ? `${server.memberCount} membro${server.memberCount === 1 ? "" : "s"}` : ""} type={activeChannel?.type === "voice" ? "voice" : "text"} searchValue={messageQuery} onSearchChange={setMessageQuery} />
-      {serverVoice.connected && serverVoice.participants.length > 0 && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name={hasServerScreenShare ? "screenShare" : "voice"} size={15} /><span>{hasServerScreenShare ? "Transmissao ativa" : "Chamada ativa"}</span><strong>Ver chamada</strong></button>}
+          {serverVoice.connected && (hasServerScreenShare || serverVoice.cameraEnabled) && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name={hasServerScreenShare ? "screenShare" : "camera"} size={15} /><span>{hasServerScreenShare ? "Transmissao ativa" : "Camera ativa"}</span><strong>Ver chamada</strong></button>}
+          {serverVoice.connected && serverCallParticipants[0] && !isPipDismissed && <MediaPip participant={serverCallParticipants[0]} onOpen={() => setActiveContentView("media")} onClose={() => setIsPipDismissed(true)} isDeafened={isDeafened} volume={remoteVolumes[serverCallParticipants[0].socketId] ?? 100} onVolumeChange={(volume) => changeRemoteVolume(serverCallParticipants[0].socketId, volume)} notify={notify} />}
       {error && <div className="server-error" role="alert">{error}<button type="button" className="icon-button" onClick={() => setError("")} aria-label="Fechar aviso"><Icon name="close" size={14} /></button></div>}
       <ChatViewport>{showServerLoading || showServerListLoading ? <ServerLoadingState /> : serverNotFound ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Servidor indisponível</h2><p>Verifique o endereço ou volte para a lista de servidores.</p><button type="button" className="secondary-button" onClick={() => onNavigateServer?.("")}>Voltar aos servidores</button></div> : showServerListError ? <div className="server-welcome server-state-message"><Icon name="alert" size={30} /><h2>Não foi possível carregar</h2><p>O shell está pronto, mas a lista de servidores não respondeu.</p><button type="button" className="secondary-button" onClick={() => refreshServers().catch(() => {})}>Tentar novamente</button></div> : showServerEmpty ? <div className="server-welcome server-state-message"><Icon name="server" size={30} /><h2>Crie seu primeiro servidor</h2><p>Um espaço persistente para conversar com as pessoas que importam.</p><button type="button" className="primary-button" onClick={handleCreateServer}>Criar servidor</button></div> : visibleMessages.length ? visibleMessages.map(renderServerMessage) : messageQuery.trim() ? <div className="server-welcome server-state-message"><Icon name="search" size={30} /><h2>Nenhuma mensagem encontrada</h2><p>Tente outra palavra ou limpe a busca para voltar ao histórico.</p><button type="button" className="secondary-button" onClick={() => setMessageQuery("")}>Limpar busca</button></div> : <div className="server-welcome"><Icon name="hash" size={30} /><h2>Comece em #{activeChannel?.name || "geral"}</h2><p>Este é o início do histórico persistente deste canal.</p></div>}</ChatViewport>
       <div className="server-voice-audio-sinks" aria-hidden="true">{serverVoice.participants.filter((participant) => !participant.isLocal && !serverCallParticipants.some((visual) => visual.socketId === participant.socketId)).map((participant) => <AudioParticipant key={participant.socketId} peerSocketId={participant.socketId} stream={participant.stream || serverVoice.remoteStreams[participant.socketId]} volume={remoteVolumes[participant.socketId] ?? 100} isDeafened={isDeafened} />)}</div>
@@ -710,7 +720,7 @@ export default function ServerPage({ serverId, onNavigateHome, onNavigateSocial,
           {isAttachMenuOpen && <div className="composer-popover attach-menu" role="menu" aria-label="Adicionar anexo"><button type="button" role="menuitem" onClick={() => openServerFilePicker(MEDIA_ACCEPT)}><Icon name="image" size={15} /><span>Enviar imagem ou vídeo</span></button><button type="button" role="menuitem" onClick={() => openServerFilePicker(FILE_ACCEPT)}><Icon name="file" size={15} /><span>Enviar arquivo</span></button></div>}
           <input ref={fileInputRef} className="visually-hidden" type="file" accept={fileAccept} onChange={handleServerFileChange} />
           <textarea ref={messageInputRef} className="message-input" value={draft} onChange={(event) => handleDraftChange(event.target.value)} onKeyDown={handleMessageKeyDown} placeholder={`Mensagem em #${activeChannel.name}`} maxLength={4000} rows={1} disabled={isSending} aria-label={`Mensagem para #${activeChannel.name}`} />
-          <div className="composer-actions"><button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}><Icon name="smile" size={16} /></button><button type="submit" className="send-button" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}><Icon name="send" size={15} /></button></div>
+          <div className="composer-actions"><button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}><Icon name="smile" size={16} /></button>{(draft.trim() || selectedFile) && <button type="submit" className="send-button" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}><Icon name="send" size={15} /></button>}</div>
           {isEmojiPickerOpen && <div className="composer-popover"><EmojiPicker onSelect={insertServerEmoji} /></div>}
         </ChatComposerRow>
       </ChatComposerFrame>}

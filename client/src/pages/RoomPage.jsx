@@ -5,7 +5,7 @@ import AudioParticipant from "../components/AudioParticipant.jsx";
 import AuthModal from "../components/AuthModal.jsx";
 import DevicesModal from "../components/DevicesModal.jsx";
 import SettingsModal from "../components/SettingsModal.jsx";
-import CallMediaView from "../components/CallMediaView.jsx";
+import CallMediaView, { MediaPip } from "../components/CallMediaView.jsx";
 import ParticipantsPanel from "../components/ParticipantsPanel.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import RoomSwitcherModal from "../components/RoomSwitcherModal.jsx";
@@ -91,7 +91,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const [displayStream, setDisplayStream] = useState(null);
   const [remoteParticipants, setRemoteParticipants] = useState([]);
   const [roomParticipants, setRoomParticipants] = useState([]);
-  const [isInVoice, setIsInVoice] = useState(true);
+  const [isInVoice, setIsInVoice] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   const [maxParticipants, setMaxParticipants] = useState(10);
   const [micEnabled, setMicEnabled] = useState(false);
@@ -115,8 +115,9 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const [roomExpiryNow, setRoomExpiryNow] = useState(Date.now());
   const [roomExpiryWarning, setRoomExpiryWarning] = useState("");
   const [isRoomExpired, setIsRoomExpired] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState("voice-general");
-  const [activeContentView, setActiveContentView] = useState("media");
+  const [selectedChannel, setSelectedChannel] = useState("text-general");
+  const [activeContentView, setActiveContentView] = useState("text");
+  const [isPipDismissed, setIsPipDismissed] = useState(false);
   const [isMemberPanelOpen, setIsMemberPanelOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
@@ -175,7 +176,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   const analyserRef = useRef(null);
   const speechSourceRef = useRef(null);
   const speechFrameRef = useRef(null);
-  const isInVoiceRef = useRef(true);
+  const isInVoiceRef = useRef(false);
   const statsHistoryRef = useRef(new Map());
   const roomExpiryWarningsRef = useRef(new Set());
 
@@ -421,11 +422,9 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       setRoomName(joinedRoomName || `Sala ${roomCode}`);
       setRoomExpiresAt(expiresAt || null);
       setRoomParticipants(participants);
-      setIsInVoice(true);
-      isInVoiceRef.current = true;
-      upsertRemoteParticipants(voiceParticipants || participants);
-      await setupLocalMedia();
-      emitMediaStatus();
+      setIsInVoice(false);
+      isInVoiceRef.current = false;
+      setRemoteParticipants([]);
     });
 
     socket.on("room-roster", ({ participants: nextParticipants, voiceParticipants: nextVoiceParticipants, count, maxParticipants, roomName: joinedRoomName, expiresAt } = {}) => {
@@ -489,6 +488,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
 
     socket.on("voice-users", async ({ participants }) => {
       setIsInVoice(true);
+      isInVoiceRef.current = true;
       upsertRemoteParticipants(participants);
       await setupLocalMedia();
       emitMediaStatus();
@@ -1132,6 +1132,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
     socketRef.current?.emit("leave-voice");
     isInVoiceRef.current = false;
     setIsInVoice(false);
+    setSelectedChannel("text-general");
+    setActiveContentView("text");
     closePeers();
     cleanupLocalMedia();
     playUiSound("voice-leave", uiSounds);
@@ -1259,12 +1261,21 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
   }
   function handleSelectChannel(channel) {
     setSelectedChannel(channel);
-    setActiveContentView(channel === "voice-general" ? "media" : "text");
+    if (channel === "voice-general") {
+      setActiveContentView("media");
+      joinVoiceChannel();
+      return;
+    }
+    setActiveContentView("text");
   }
   function handleToggleScreenShare() {
     setActiveContentView("media");
     return toggleScreenShare();
   }
+
+  useEffect(() => {
+    if (isScreenSharing || cameraEnabled) setIsPipDismissed(false);
+  }, [cameraEnabled, isScreenSharing]);
   function openProfileSettings() { setIsProfilePopoverOpen(false); setSettingsInitialSection("profile"); setIsSettingsOpen(true); }
   function openSettings() { setIsProfilePopoverOpen(false); setSettingsInitialSection("profile"); setIsSettingsOpen(true); }
 
@@ -1524,7 +1535,8 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
 
       <section className="central-stage">
         {activeContentView === "media" ? <CallMediaView participants={voiceParticipants} channelName="Geral" participantCount={currentParticipantCount} maxParticipants={maxParticipants} isInVoice={isInVoice} isJoining={joinState === "joining"} isDisconnected={joinState === "disconnected"} viewMode={viewMode} onViewModeChange={setViewMode} focusedMediaId={focusedMediaId} onFocusParticipant={setFocusedMediaId} isDeafened={isDeafened} outputDeviceId={selectedOutputId} screenShareLabel={screenShareLabel} onVolumeChange={changeRemoteVolume} notify={notify} micEnabled={micEnabled} onToggleMicrophone={toggleMicrophone} cameraEnabled={cameraEnabled} onToggleCamera={toggleCamera} isScreenSharing={isScreenSharing} onToggleScreenShare={handleToggleScreenShare} onToggleDeafen={toggleDeafen} onLeaveVoice={leaveVoiceChannel} membersVisible={isMemberPanelOpen} onToggleMembers={() => setIsMemberPanelOpen((value) => !value)} streamPreset={streamPreset} onStreamPresetChange={setStreamPreset} /> : <section className="chat-stage channel-view">
-          {isScreenSharing && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name="screenShare" size={15} /><span>Transmissao ativa</span><strong>Ver transmissao</strong></button>}
+          {isInVoice && (isScreenSharing || cameraEnabled) && <button type="button" className="active-media-view-banner" onClick={() => setActiveContentView("media")}><Icon name={isScreenSharing ? "screenShare" : "camera"} size={15} /><span>{isScreenSharing ? "Transmissao ativa" : "Camera ativa"}</span><strong>Ver chamada</strong></button>}
+          {isInVoice && callParticipants[0] && !isPipDismissed && <MediaPip participant={callParticipants[0]} onOpen={() => setActiveContentView("media")} onClose={() => setIsPipDismissed(true)} isDeafened={isDeafened} outputDeviceId={selectedOutputId} screenShareLabel={screenShareLabel} volume={callParticipants[0].volume} onVolumeChange={(volume) => changeRemoteVolume(callParticipants[0].socketId, volume)} notify={notify} />}
           <ChatPanel
               socket={socketInstance}
               socketId={selfId}

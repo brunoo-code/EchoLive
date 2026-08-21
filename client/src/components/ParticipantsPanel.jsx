@@ -13,7 +13,7 @@ export default function ParticipantsPanel({ participants, onProfileClick, onPart
         {participants.map((participant) => (
           <div className={`online-person ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-person" : ""}`} key={participant.socketId} onClick={(event) => { const anchor = event.currentTarget.getBoundingClientRect(); if (participant.isLocal) onProfileClick?.(participant.rawUser || participant, anchor); else onParticipantClick?.(participant.rawUser || participant, anchor); }} onKeyDown={(event) => { if (event.key !== "Enter" && event.key !== " ") return; event.preventDefault(); const anchor = event.currentTarget.getBoundingClientRect(); if (participant.isLocal) onProfileClick?.(participant.rawUser || participant, anchor); else onParticipantClick?.(participant.rawUser || participant, anchor); }} role="button" tabIndex={0}>
             <div className="avatar-dot" aria-hidden="true">
-              <UserAvatar user={participant} size={28} />
+              <UserAvatar user={participant} size={30} />
               <UserStatusBadge status={participant.status} size="md" />
             </div>
             <div className="online-person-info">
