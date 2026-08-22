@@ -22,7 +22,7 @@ export default function ProfilePopover({ accountUser, profile, nickname, avatarU
   }
 
   if (isGuest) {
-    return <section className="profile-popover guest-profile-popover" role="dialog" aria-label="Perfil temporario">
+    return <section className="profile-popover guest-profile-popover fluxer-profile-popover" data-flx="app.user-profile-popout.guest" role="dialog" aria-label="Perfil temporario">
       <div className="profile-popover-banner" aria-hidden="true" />
       <div className="profile-popover-body profile-card-layout">
         <div className="profile-avatar-layer">
@@ -42,7 +42,7 @@ export default function ProfilePopover({ accountUser, profile, nickname, avatarU
   const customStatus = accountUser?.customStatus || profile?.customStatus || "";
   const pronouns = accountUser?.pronouns || profile?.pronouns || "";
   const aboutMe = accountUser?.aboutMe || profile?.aboutMe || "";
-  return <section className="profile-popover" data-flx="app.user-profile-popout" style={{ "--profile-accent": accountUser?.accentColor || profile?.accentColor || "#22D3EE" }} role="dialog" aria-label="Menu do perfil">
+  return <section className="profile-popover fluxer-profile-popover" data-flx="app.user-profile-popout" style={{ "--profile-accent": accountUser?.accentColor || profile?.accentColor || "#22D3EE" }} role="dialog" aria-label="Menu do perfil">
     <div className="profile-popover-banner" aria-hidden="true" />
     <div className="profile-popover-body profile-card-layout">
       <div className="profile-avatar-layer">

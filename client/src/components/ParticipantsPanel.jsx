@@ -5,30 +5,30 @@ import UserAvatar from "./UserAvatar.jsx";
 
 export default function ParticipantsPanel({ participants, onProfileClick, onParticipantClick, showMedia = true, heading = "Online", showPresenceIndicator = true }) {
   return (
-    <aside className="participants-panel" aria-label={heading}>
-      <div className="panel-heading">
-          <span>{showPresenceIndicator && <i className="online-indicator" aria-hidden="true" />}{heading} <b className="panel-count">— {participants.length}</b></span>
+    <aside className="fluxer-member-list" aria-label={heading} data-flx="channel.member-list.member-list">
+      <div className="fluxer-member-list-header" data-flx="channel.member-list.header">
+          <span>{showPresenceIndicator && <i className="fluxer-member-presence-indicator" aria-hidden="true" />}{heading} <b className="fluxer-member-count">— {participants.length}</b></span>
       </div>
 
-      <div className="online-list">
+      <div className="fluxer-member-list-scroller" data-flx="channel.member-list.scroller">
         {participants.map((participant) => (
-          <button type="button" className={`online-person member-list-item ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-person" : ""}`} key={participant.socketId} onClick={(event) => { const anchor = event.currentTarget.getBoundingClientRect(); if (participant.isLocal) onProfileClick?.(participant.rawUser || participant, anchor); else onParticipantClick?.(participant.rawUser || participant, anchor); }}>
-            <div className="member-list-grid">
-              <div className="avatar-dot member-avatar-stack" aria-hidden="true">
+          <button type="button" className={`fluxer-member-row ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-person" : ""}`} key={participant.socketId} onClick={(event) => { const anchor = event.currentTarget.getBoundingClientRect(); if (participant.isLocal) onProfileClick?.(participant.rawUser || participant, anchor); else onParticipantClick?.(participant.rawUser || participant, anchor); }} data-flx="channel.member-list.member-row">
+            <div className="fluxer-member-row-grid">
+              <span className="fluxer-member-row-avatar" aria-hidden="true">
               <UserAvatar user={participant} size={32} />
               <UserStatusBadge status={participant.status} size="md" />
-              </div>
-              <div className="online-person-info member-main">
-                <span className="online-person-name-row">
+              </span>
+              <span className="fluxer-member-row-content">
+                <span className="fluxer-member-name-container">
                   <strong title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</strong>
                   {participant.isGuest && <span className="visitor-badge">Visitante</span>}
                 </span>
-                {participant.secondaryText && <span className="online-person-role">{participant.secondaryText}</span>}
-              </div>
-              {showMedia && <div className="mini-status member-action-cluster" aria-label="Status de midia">
-              <span className={`status-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}><Icon name={participant.micEnabled === false ? "micOff" : "mic"} size={14} /></span>
-              <span className={`status-icon status-camera ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"} aria-label={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}><Icon name={participant.cameraEnabled === false ? "cameraOff" : "camera"} size={14} /></span>
-              {participant.isScreenSharing && <span className="status-icon status-screen is-sharing" title="Compartilhando tela" aria-label="Compartilhando tela"><Icon name="screenShare" size={14} /></span>}
+                {participant.secondaryText && <span className="fluxer-member-status">{participant.secondaryText}</span>}
+              </span>
+              {showMedia && <div className="fluxer-member-action-cluster" aria-label="Status de midia">
+              <span className={`fluxer-member-media-icon status-mic ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}><Icon name={participant.micEnabled === false ? "micOff" : "mic"} size={14} /></span>
+              <span className={`fluxer-member-media-icon status-camera ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"} aria-label={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}><Icon name={participant.cameraEnabled === false ? "cameraOff" : "camera"} size={14} /></span>
+              {participant.isScreenSharing && <span className="fluxer-member-media-icon status-screen is-sharing" title="Compartilhando tela" aria-label="Compartilhando tela"><Icon name="screenShare" size={14} /></span>}
               </div>}
             </div>
           </button>

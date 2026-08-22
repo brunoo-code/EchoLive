@@ -38,7 +38,7 @@ export default function PresenceMenu({ value, onChange, placement = "below", cla
     onChange?.(nextValue);
   }
 
-  return <div ref={rootRef} data-flx="app.presence-menu" className={`presence-menu presence-menu--${placement} ${opensLeft ? "opens-left" : ""} ${className}`.trim()}>
+  return <div ref={rootRef} data-flx="app.presence-menu" className={`presence-menu fluxer-presence-menu presence-menu--${placement} ${opensLeft ? "opens-left" : ""} ${className}`.trim()}>
     <button type="button" className="profile-status-trigger status-menu-row" onClick={() => setOpen((currentOpen) => !currentOpen)} aria-expanded={open} aria-haspopup="menu">
       <UserStatusBadge status={current} size="sm" className="menu-status-dot status-menu-icon" />
       <span className="status-menu-text"><span className="status-menu-label">{presenceLabel(current)}</span></span>

@@ -13,19 +13,11 @@ import { useSocial } from "../social/SocialContext.jsx";
 import { SERVER_URL } from "../utils/webrtc.js";
 import { UPLOAD_MIME_TYPES, validateUploadFile } from "../utils/uploadLimits.js";
 import { linkifyMessage } from "../utils/linkifyMessage.js";
-import { playUiSound } from "../utils/uiSounds.js";
+import { playUiSound, uiNotificationSoundsEnabled } from "../utils/uiSounds.js";
 import { publicPresence } from "../utils/presence.js";
 
 const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
 const FILE_ACCEPT = "application/pdf,application/zip,text/plain,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint,.docx,.xlsx,.pptx";
-
-function uiSoundsEnabled() {
-  try {
-    return window.localStorage.getItem("echolive.uiSounds") !== "false";
-  } catch {
-    return true;
-  }
-}
 
 export default function DirectMessagePage({ conversationId, initialConversation, onNavigateHome, onNavigateFriends, onNavigateDm, onOpenAccountSettings }) {
   const { user, logout, updateProfile } = useAuth();
@@ -272,7 +264,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       if (!result?.ok) { setError(result?.error || "Nao foi possivel enviar a mensagem."); return; }
       const savedMessage = normalizeMessage(result.message, conversationId, user);
       if (savedMessage) setMessages((current) => appendUniqueMessage(current, savedMessage, conversationId));
-      playUiSound("dmSent", uiSoundsEnabled());
+      playUiSound("dmSent", uiNotificationSoundsEnabled(user?.status));
       setText("");
       try { if (draftKey) localStorage.removeItem(draftKey); } catch {}
       setSelectedFile(null);

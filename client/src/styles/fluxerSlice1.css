@@ -62,7 +62,7 @@
 .fluxer-dm-info small { font-size:11px; color:#878292; }
 .fluxer-dm-close { opacity:0; flex:0 0 auto; margin-right:5px; }
 .fluxer-dm-item:hover .fluxer-dm-close, .fluxer-dm-item.is-active .fluxer-dm-close { opacity:1; }
-.fluxer-user-area-inner { flex:0 0 auto; margin:0 8px 8px; border-radius:8px; background:#211f27; box-shadow:inset 0 1px 0 rgba(255,255,255,.025); overflow:hidden; }
+.fluxer-user-area-inner-wrapper { flex:0 0 auto; margin:0 8px 8px; border-radius:8px; background:#211f27; box-shadow:inset 0 1px 0 rgba(255,255,255,.025); overflow:hidden; }
 .fluxer-user-area-container { display:flex; align-items:center; gap:8px; min-height:56px; padding:8px 10px; }
 .fluxer-user-info { display:flex; align-items:center; gap:9px; flex:1; min-width:0; padding:0; border:0; color:inherit; background:transparent; text-align:left; cursor:pointer; }
 .fluxer-user-avatar { position:relative; display:inline-flex; flex:0 0 auto; }

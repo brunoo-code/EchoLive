@@ -26,9 +26,9 @@ export default function EmojiPicker({ onSelect }) {
     try { localStorage.setItem(RECENTS_KEY, JSON.stringify(next)); } catch {}
     onSelect?.(emoji);
   }
-  return <div className="emoji-picker emoji-picker-rich" role="dialog" aria-label="Escolher emoji">
-    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar emoji" aria-label="Buscar emoji" />
-    <div className="emoji-category-tabs">{GROUPS.map(([name]) => <button type="button" key={name} className={group === name && !query ? "is-active" : ""} onClick={() => { setGroup(name); setQuery(""); }}>{name}</button>)}</div>
-    <div className="emoji-grid">{filtered.length ? filtered.map((emoji, index) => <button type="button" key={`${emoji}-${index}`} onClick={() => choose(emoji)} aria-label={`Inserir ${emoji}`}>{emoji}</button>) : <span className="emoji-empty">Nenhum emoji encontrado.</span>}</div>
+  return <div className="emoji-picker emoji-picker-rich fluxer-emoji-picker" data-flx="composer.emoji-picker" role="dialog" aria-label="Escolher emoji">
+    <input className="fluxer-emoji-picker-search" data-flx="composer.emoji-picker.search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar emoji" aria-label="Buscar emoji" />
+    <div className="emoji-category-tabs fluxer-emoji-picker-tabs" data-flx="composer.emoji-picker.tabs">{GROUPS.map(([name]) => <button type="button" key={name} className={group === name && !query ? "is-active" : ""} onClick={() => { setGroup(name); setQuery(""); }}>{name}</button>)}</div>
+    <div className="emoji-grid fluxer-emoji-picker-grid" data-flx="composer.emoji-picker.grid">{filtered.length ? filtered.map((emoji, index) => <button type="button" key={`${emoji}-${index}`} onClick={() => choose(emoji)} aria-label={`Inserir ${emoji}`}>{emoji}</button>) : <span className="emoji-empty">Nenhum emoji encontrado.</span>}</div>
   </div>;
 }

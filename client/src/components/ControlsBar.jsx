@@ -14,9 +14,9 @@ const presetOptions = [
 
 function IconControl({ label, icon, active = false, danger = false, onClick, pressed, disabled = false }) {
   return (
-    <div className="voice-control-button-container">
+    <div className="fluxer-voice-control-button-container">
       <button
-        className={`control-button control-icon-button call-toolbar-button ${active ? "is-on" : ""} ${danger ? "is-danger" : ""}`}
+        className={`fluxer-voice-control-button ${active ? "is-on" : ""} ${danger ? "is-danger" : ""}`}
         type="button"
         onClick={onClick}
         title={label}
@@ -32,10 +32,10 @@ function IconControl({ label, icon, active = false, danger = false, onClick, pre
 
 function PresetMenu({ streamPreset, onStreamPresetChange, isOpen, onToggle }) {
   return (
-    <div className="screen-options-control">
+      <div className="fluxer-screen-options-control fluxer-voice-control-button-container">
       <button
         type="button"
-        className="screen-preset-trigger control-button control-icon-button call-toolbar-button"
+        className="fluxer-screen-preset-trigger fluxer-voice-control-button"
         onClick={onToggle}
         title="Opções da transmissão"
         aria-label="Opções da transmissão"
@@ -45,8 +45,8 @@ function PresetMenu({ streamPreset, onStreamPresetChange, isOpen, onToggle }) {
         <Icon name="more" size={18} />
       </button>
       {isOpen && (
-        <div className="screen-preset-menu" role="menu" aria-label="Qualidade da transmissão">
-          <p className="menu-kicker">Qualidade da transmissão</p>
+        <div className="fluxer-screen-preset-menu" role="menu" aria-label="Qualidade da transmissão">
+          <p className="fluxer-menu-kicker">Qualidade da transmissão</p>
           {presetOptions.map(([value, label]) => (
             <button
               type="button"
@@ -86,7 +86,7 @@ export default function ControlsBar({
 
   if (compact) {
     return (
-      <div className="voice-control-bar voice-control-bar-compact" data-flx="voice.voice-control-bar" aria-label="Controles de voz">
+      <div className="fluxer-voice-control-bar fluxer-voice-control-bar-compact" data-flx="voice.voice-control-bar" aria-label="Controles de voz">
         <IconControl label={cameraEnabled ? "Desligar camera" : "Ligar camera"} icon={cameraEnabled ? "camera" : "cameraOff"} active={cameraEnabled} pressed={cameraEnabled} onClick={onToggleCamera} />
         <IconControl label={isScreenSharing ? "Parar compartilhamento de tela" : "Compartilhar tela"} icon="screenShare" active={isScreenSharing} pressed={isScreenSharing} onClick={onToggleScreenShare} />
         <PresetMenu streamPreset={streamPreset} onStreamPresetChange={onStreamPresetChange} isOpen={isPresetMenuOpen} onToggle={togglePresetMenu} />
@@ -95,13 +95,13 @@ export default function ControlsBar({
   }
 
   return (
-    <footer className="call-controls voice-control-bar" data-flx="voice.voice-control-bar" aria-label="Controles da chamada">
+    <footer className="fluxer-voice-control-bar" data-flx="voice.voice-control-bar" aria-label="Controles da chamada">
       <IconControl label={micEnabled ? "Silenciar microfone" : "Ativar microfone"} icon={micEnabled ? "mic" : "micOff"} active={micEnabled} pressed={micEnabled} onClick={onToggleMicrophone} />
       <IconControl label={isDeafened ? "Ativar áudio" : "Desativar áudio"} icon={isDeafened ? "speaker" : "headphones"} active={isDeafened} pressed={isDeafened} onClick={onToggleDeafen} />
       <IconControl label={cameraEnabled ? "Desligar câmera" : "Ligar câmera"} icon={cameraEnabled ? "camera" : "cameraOff"} active={cameraEnabled} pressed={cameraEnabled} onClick={onToggleCamera} />
-      <div className="screen-share-control">
+      <div className="fluxer-screen-share-control">
         <IconControl label={isScreenSharing ? "Parar compartilhamento de tela" : "Compartilhar tela"} icon="screenShare" active={isScreenSharing} pressed={isScreenSharing} onClick={onToggleScreenShare} />
-        {isScreenSharing && <span className="screen-share-state" title={screenShareLabel}>{screenShareLabel}</span>}
+        {isScreenSharing && <span className="fluxer-screen-share-state" title={screenShareLabel}>{screenShareLabel}</span>}
       </div>
       <PresetMenu streamPreset={streamPreset} onStreamPresetChange={onStreamPresetChange} isOpen={isPresetMenuOpen} onToggle={togglePresetMenu} />
       <IconControl label="Desconectar da voz" icon="phoneDisconnect" danger onClick={onLeaveVoice} />

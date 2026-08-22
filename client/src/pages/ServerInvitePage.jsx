@@ -39,5 +39,5 @@ export default function ServerInvitePage({ code, onNavigateHome, onNavigateServe
     return () => { active = false; };
   }, [code, isAuthenticated, onNavigateServer, refreshServers]);
 
-  return <main className="page server-page-gate server-invite-page"><section className="social-guest-gate" aria-live="polite"><Icon name={status === "error" ? "warning" : "link"} size={26} /><h1>{status === "error" ? "Convite indisponível" : status === "guest" ? "Convite para servidor" : "Convite de servidor"}</h1><p>{message}</p>{status === "guest" || status === "error" ? <button type="button" className="primary-button" onClick={onNavigateHome}>{status === "guest" ? "Ir para a Home" : "Voltar para a Home"}</button> : <span className="invite-loading">{code}</span>}</section></main>;
+  return <main className="page fluxer-server-page-gate server-invite-page"><section className="social-guest-gate" aria-live="polite"><Icon name={status === "error" ? "warning" : "link"} size={26} /><h1>{status === "error" ? "Convite indisponível" : status === "guest" ? "Convite para servidor" : "Convite de servidor"}</h1><p>{message}</p>{status === "guest" || status === "error" ? <button type="button" className="primary-button" onClick={onNavigateHome}>{status === "guest" ? "Ir para a Home" : "Voltar para a Home"}</button> : <span className="invite-loading">{code}</span>}</section></main>;
 }

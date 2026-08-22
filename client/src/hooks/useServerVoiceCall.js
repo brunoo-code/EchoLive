@@ -129,6 +129,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     const handleJoined = ({ participant } = {}) => {
       if (!participant || participant.socketId === socket.id) return;
       const joinKey = `${serverId}:${channelId}:join:${participant.socketId}`;
+      participantSoundKeysRef.current.delete(`${serverId}:${channelId}:leave:${participant.socketId}`);
       if (!participantSoundKeysRef.current.has(joinKey)) {
         participantSoundKeysRef.current.add(joinKey);
         playUiSound("participant-join", uiSoundsRef.current);

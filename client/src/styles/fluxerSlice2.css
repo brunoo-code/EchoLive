@@ -1,0 +1,1707 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ * Direct presentation derivation from Fluxer ChannelItem, ChannelHeader,
+ * MemberListItem, MessageGroup, VoiceControlBar and composer CSS.
+ * EchoLive data, state and event handlers remain the source of behavior.
+ */
+
+.fluxer-server-sidebar {
+  --fluxer-channel-item-radius: .375rem;
+  --fluxer-channel-item-inline: .5rem;
+  --fluxer-channel-item-block: .375rem;
+  --fluxer-channel-item-gap: .375rem;
+}
+
+.fluxer-server-channel-list {
+  min-width: 0;
+  padding-inline: .5rem;
+}
+
+.fluxer-server-identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .625rem;
+}
+
+.fluxer-server-identity-content {
+  min-width: 0;
+}
+
+.fluxer-server-identity-content strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-context-menu {
+  display: grid;
+  gap: .125rem;
+  padding: .375rem;
+  border-radius: .5rem;
+}
+
+.fluxer-channel-section {
+  min-width: 0;
+}
+
+.fluxer-channel-section + .fluxer-channel-section {
+  margin-top: .75rem;
+}
+
+.fluxer-channel-section-heading {
+  display: flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding-inline: .5rem;
+}
+
+.fluxer-channel-section-label {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-channel-section-list {
+  display: grid;
+  gap: .125rem;
+  min-width: 0;
+}
+
+.fluxer-channel-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding-inline: .5rem;
+  border-radius: .375rem;
+}
+
+.fluxer-channel-item:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, .06));
+}
+
+.fluxer-channel-item-core {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  gap: .375rem;
+  padding: .375rem .5rem;
+  border-radius: .375rem;
+}
+
+.fluxer-channel-item-core.is-selected,
+.fluxer-channel-item-core.is-connected {
+  background: var(--surface-selected, rgba(255, 255, 255, .1));
+}
+
+.fluxer-channel-item-content {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: .375rem;
+}
+
+.fluxer-channel-item-icon {
+  flex: 0 0 1.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fluxer-channel-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25rem;
+}
+
+.fluxer-channel-item-count {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.fluxer-voice-connected-panel {
+  min-width: 0;
+  margin: 0 .5rem .5rem;
+  padding: .5rem;
+  border-radius: .5rem;
+}
+
+.fluxer-voice-control-bar {
+  --fluxer-voice-button-gap: .25rem;
+  --fluxer-voice-button-size: 2.75rem;
+  --fluxer-voice-button-radius: .75rem;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fluxer-voice-button-gap);
+  max-width: calc(100vw - 2rem);
+  padding: .375rem;
+  border-radius: .75rem;
+}
+
+.fluxer-voice-control-button-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fluxer-voice-control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--fluxer-voice-button-size);
+  min-width: var(--fluxer-voice-button-size);
+  height: var(--fluxer-voice-button-size);
+  border-radius: var(--fluxer-voice-button-radius);
+}
+
+.fluxer-voice-control-button:hover,
+.fluxer-voice-control-button:focus-visible {
+  color: var(--text-strong, #fff);
+  background: var(--surface-hover, rgba(255, 255, 255, .08));
+  outline: none;
+}
+
+.fluxer-voice-control-button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.fluxer-channel-header {
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  align-items: center;
+  gap: 1rem;
+  min-height: 3rem;
+  padding-inline: 1rem;
+}
+
+.fluxer-channel-header-left,
+.fluxer-channel-header-right {
+  min-width: 0;
+}
+
+.fluxer-channel-header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.fluxer-message-scroller {
+  min-height: 0;
+  overflow: auto;
+}
+
+.fluxer-message-list {
+  min-height: 100%;
+  padding-block: .5rem 1rem;
+}
+
+.fluxer-message-list > .fluxer-message-groups {
+  min-width: 0;
+}
+
+.fluxer-message-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: .125rem 1rem;
+}
+
+.fluxer-message-row-grid {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  align-items: start;
+  min-width: 0;
+  column-gap: .75rem;
+}
+
+.fluxer-message-row.is-grouped .fluxer-message-row-grid {
+  align-items: baseline;
+}
+
+.fluxer-message-row-grid .fluxer-message-avatar,
+.fluxer-message-row-grid .fluxer-message-avatar-placeholder {
+  justify-self: center;
+}
+
+.fluxer-message-row-grid .fluxer-message-body {
+  min-width: 0;
+}
+
+.fluxer-message-row:hover {
+  background: rgba(255, 255, 255, .025);
+}
+
+.fluxer-composer {
+  flex: 0 0 auto;
+}
+
+.fluxer-composer-surface {
+  border-radius: .5rem;
+  padding: .375rem;
+}
+
+.fluxer-composer-inner {
+  min-width: 0;
+}
+
+.fluxer-composer-row {
+  min-height: 2.75rem;
+  gap: .5rem;
+}
+
+.fluxer-member-list {
+  min-width: 0;
+}
+
+.fluxer-member-list-header {
+  min-height: 3rem;
+  padding-inline: 1rem;
+}
+
+.fluxer-member-list-scroller {
+  min-height: 0;
+  overflow-y: auto;
+  padding: .5rem;
+}
+
+.fluxer-member-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding-block: .375rem;
+  border-radius: .375rem;
+  color: var(--text-chat, inherit);
+  text-align: left;
+}
+
+.fluxer-member-row:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, .06));
+}
+
+.fluxer-member-row-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  min-height: 2rem;
+  gap: .25rem;
+  padding-inline: .5rem;
+}
+
+.fluxer-member-row-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  gap: .125rem;
+}
+
+.fluxer-member-row-avatar {
+  flex: 0 0 auto;
+}
+
+.fluxer-member-name-container,
+.fluxer-member-status {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-member-status {
+  font-size: .6875rem;
+  line-height: 1rem;
+}
+
+.fluxer-member-action-cluster,
+.fluxer-member-media-icons {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  gap: .25rem;
+  color: var(--text-muted, #9d98a9);
+}
+
+.fluxer-member-media-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: inherit;
+  font-style: normal;
+}
+
+.fluxer-member-media-icon.is-muted {
+  color: var(--danger, #ed6475);
+}
+
+.fluxer-member-media-icon.is-sharing {
+  color: var(--accent, #62d9e8);
+}
+
+/* The remaining Slice 2 surfaces use the same direct Fluxer presentation
+ * vocabulary: compact stage chrome, dense popovers, and one visual picker. */
+.fluxer-call-stage {
+  min-width: 0;
+}
+
+.fluxer-call-stage-body {
+  min-width: 0;
+  min-height: 0;
+}
+
+.fluxer-call-stage-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.fluxer-call-participant-grid,
+.fluxer-call-focus-layout {
+  min-width: 0;
+  min-height: 0;
+}
+
+.fluxer-screen-share-pip {
+  overflow: hidden;
+  border-radius: .5rem;
+}
+
+.fluxer-screen-share-pip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  min-height: 2.25rem;
+  padding-inline: .625rem;
+}
+
+.fluxer-profile-popover {
+  overflow: hidden;
+  border-radius: .5rem;
+}
+
+.fluxer-profile-popover .profile-popover-body {
+  min-width: 0;
+}
+
+.fluxer-presence-menu {
+  min-width: 0;
+}
+
+.fluxer-presence-menu .status-menu-row,
+.fluxer-presence-menu .profile-status-options button {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 2.25rem;
+}
+
+.fluxer-presence-menu .status-menu-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.fluxer-presence-menu .status-menu-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-emoji-picker {
+  display: grid;
+  gap: .5rem;
+  width: min(22rem, calc(100vw - 1rem));
+  padding: .5rem;
+  border-radius: .5rem;
+}
+
+.fluxer-emoji-picker-search {
+  min-height: 2.25rem;
+  padding-inline: .75rem;
+  border-radius: .375rem;
+}
+
+.fluxer-emoji-picker-tabs {
+  gap: .125rem;
+  padding-bottom: .125rem;
+}
+
+.fluxer-emoji-picker-tabs button {
+  min-height: 2rem;
+  padding-inline: .625rem;
+  border-radius: .375rem;
+}
+
+.fluxer-emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: .125rem;
+  max-height: 16rem;
+  padding: .125rem;
+  overflow: auto;
+}
+
+.fluxer-emoji-picker-grid button {
+  display: grid;
+  aspect-ratio: 1;
+  min-width: 0;
+  place-items: center;
+  padding: 0;
+  border-radius: .375rem;
+}
+
+.fluxer-settings-modal {
+  border-radius: .625rem;
+}
+
+.fluxer-settings-layout {
+  min-width: 0;
+}
+
+.fluxer-settings-nav {
+  min-width: 0;
+}
+
+.fluxer-settings-nav button {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  align-items: center;
+  text-align: left;
+}
+
+.fluxer-settings-nav-copy {
+  display: grid;
+  min-width: 0;
+  gap: .125rem;
+}
+
+.fluxer-settings-nav-copy strong,
+.fluxer-settings-nav-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-settings-content {
+  min-width: 0;
+}
+
+.fluxer-settings-preview {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .fluxer-channel-header {
+    gap: .5rem;
+    padding-inline: .75rem;
+  }
+
+  .fluxer-channel-header-right .fluxer-channel-meta {
+    display: none;
+  }
+}
+
+/* Canonical server presentation. These selectors intentionally own the
+ * server shell surfaces so the former EchoLive presentation classes cannot
+ * layer underneath the directly-derived Fluxer hierarchy. */
+.fluxer-user-area-inner-wrapper {
+  flex: 0 0 auto;
+  margin: 0 .5rem .5rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .055);
+  border-radius: .5rem;
+  background: #211f27;
+}
+
+.fluxer-user-area-container {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 3.5rem;
+  padding: .5rem .625rem;
+}
+
+.fluxer-user-info {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: .5625rem;
+  padding: .25rem .125rem;
+  border: 0;
+  border-radius: .375rem;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fluxer-user-info:hover,
+.fluxer-user-info:focus-visible {
+  color: var(--text-strong, #fff);
+  background: rgba(255, 255, 255, .06);
+  outline: none;
+}
+
+.fluxer-user-info.is-speaking {
+  box-shadow: 0 0 0 1px rgba(98, 217, 232, .7);
+}
+
+.fluxer-user-avatar {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.fluxer-user-avatar > .user-avatar,
+.fluxer-user-avatar > .avatar {
+  width: 100%;
+  height: 100%;
+}
+
+.fluxer-user-avatar .status-badge {
+  position: absolute;
+  right: -.125rem;
+  bottom: -.125rem;
+}
+
+.fluxer-user-info-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  gap: .0625rem;
+  overflow: hidden;
+}
+
+.fluxer-user-name,
+.fluxer-user-status,
+.fluxer-user-status-roll,
+.fluxer-user-status-default,
+.fluxer-user-status-hovered {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-user-name {
+  color: #eeeaf2;
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1.125rem;
+}
+
+.fluxer-user-status {
+  display: block;
+  color: #8d8799;
+  font-size: .6875rem;
+  line-height: .875rem;
+}
+
+.fluxer-user-status-roll {
+  position: relative;
+  display: block;
+  height: .875rem;
+}
+
+.fluxer-user-status-default,
+.fluxer-user-status-hovered {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transition: opacity .14s ease, transform .14s ease;
+}
+
+.fluxer-user-status-hovered {
+  opacity: 0;
+  transform: translateY(.2rem);
+}
+
+.fluxer-user-info:hover .fluxer-user-status-default,
+.fluxer-user-info:focus-visible .fluxer-user-status-default {
+  opacity: 0;
+  transform: translateY(-.2rem);
+}
+
+.fluxer-user-info:hover .fluxer-user-status-hovered,
+.fluxer-user-info:focus-visible .fluxer-user-status-hovered {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fluxer-user-controls {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: .125rem;
+}
+
+.fluxer-user-control {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: .375rem;
+  color: #aaa5b8;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fluxer-user-control:hover,
+.fluxer-user-control:focus-visible {
+  color: #fff;
+  background: #35313d;
+  outline: none;
+}
+
+.fluxer-user-control.is-muted,
+.fluxer-user-control.is-deafened {
+  color: #ed6475;
+}
+
+.fluxer-user-control:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.fluxer-channel-section-heading {
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.fluxer-channel-section-label {
+  color: var(--text-muted, #aaa5b8);
+  font-size: .6875rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.fluxer-channel-add,
+.fluxer-channel-item-actions {
+  display: grid;
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: .375rem;
+  color: var(--text-muted, #aaa5b8);
+  background: transparent;
+  cursor: pointer;
+}
+
+.fluxer-channel-add:hover,
+.fluxer-channel-add:focus-visible,
+.fluxer-channel-item-actions:hover,
+.fluxer-channel-item-actions:focus-visible {
+  color: var(--text-strong, #fff);
+  background: var(--surface-hover, rgba(255, 255, 255, .08));
+  outline: none;
+}
+
+.fluxer-channel-item {
+  min-height: 2rem;
+  padding-inline: 0;
+}
+
+.fluxer-channel-item-core {
+  flex: 1 1 auto;
+  min-height: 2rem;
+  color: var(--text-muted, #aaa5b8);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fluxer-channel-item-core:hover,
+.fluxer-channel-item-core:focus-visible,
+.fluxer-channel-item-core.is-selected,
+.fluxer-channel-item-core.is-connected {
+  color: var(--text-strong, #fff);
+  background: var(--surface-selected, rgba(255, 255, 255, .1));
+  outline: none;
+}
+
+.fluxer-channel-item-icon.is-text {
+  color: inherit;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.fluxer-context-menu {
+  z-index: 10;
+  position: absolute;
+  top: calc(100% + .25rem);
+  right: 0;
+  min-width: 12rem;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: #24212a;
+  box-shadow: 0 .75rem 2rem rgba(0, 0, 0, .28);
+}
+
+.fluxer-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 2rem;
+  padding: 0 .625rem;
+  border: 0;
+  border-radius: .25rem;
+  color: #d9d5df;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fluxer-context-menu button:hover,
+.fluxer-context-menu button:focus-visible {
+  color: #fff;
+  background: #35313d;
+  outline: none;
+}
+
+.fluxer-server-chat-stage,
+.fluxer-server-chat-stage-inner {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.fluxer-server-chat-stage {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.fluxer-server-chat-stage-inner {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.fluxer-message-avatar,
+.fluxer-message-avatar-placeholder {
+  display: inline-flex;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.fluxer-message-avatar {
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fluxer-message-avatar:focus-visible {
+  outline: 2px solid var(--accent, #62d9e8);
+  outline-offset: 2px;
+}
+
+.fluxer-message-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.fluxer-message-meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .375rem;
+  min-width: 0;
+}
+
+.fluxer-message-time {
+  color: var(--text-muted, #8d8799);
+  font-size: .6875rem;
+}
+
+.fluxer-message-attachment {
+  width: fit-content;
+  max-width: min(32.5rem, 100%);
+  margin-top: .4375rem;
+  padding: .5rem;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: .5rem;
+  background: rgba(16, 15, 20, .3);
+}
+
+.fluxer-message-attachment img,
+.fluxer-message-attachment video {
+  display: block;
+  max-width: 100%;
+  max-height: 27.5rem;
+  border-radius: .375rem;
+  object-fit: contain;
+}
+
+.fluxer-message-image-button {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  text-align: left;
+}
+
+.fluxer-message-image-button:focus-visible {
+  outline: 2px solid #67d4e5;
+  outline-offset: 3px;
+  border-radius: .5rem;
+}
+
+.fluxer-file-attachment {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: .5rem .625rem;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: .375rem;
+  color: #67d4e5;
+  background: rgba(255, 255, 255, .035);
+  text-decoration: none;
+}
+
+.fluxer-file-attachment:hover,
+.fluxer-file-attachment:focus-visible {
+  background: rgba(255, 255, 255, .08);
+  outline: none;
+}
+
+.fluxer-composer {
+  min-width: 0;
+  padding: .5rem 1rem 1rem;
+}
+
+.fluxer-composer-surface {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: #24212a;
+}
+
+.fluxer-composer-inner,
+.fluxer-composer-row {
+  min-width: 0;
+}
+
+.fluxer-composer-row {
+  display: flex;
+  align-items: center;
+}
+
+.fluxer-voice-connected-panel {
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: #211f27;
+}
+
+.fluxer-voice-connected-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  min-width: 0;
+  gap: .5rem;
+}
+
+.fluxer-voice-state-icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid rgba(98, 217, 232, .18);
+  border-radius: .375rem;
+  color: var(--accent, #62d9e8);
+  background: rgba(98, 217, 232, .08);
+}
+
+.fluxer-voice-connected-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: .0625rem;
+}
+
+.fluxer-voice-connected-copy strong,
+.fluxer-voice-connected-channel,
+.fluxer-voice-quality {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-voice-connected-copy strong {
+  color: #62d9a4;
+  font-size: .75rem;
+}
+
+.fluxer-voice-connected-channel {
+  color: var(--text-muted, #8d8799);
+  font-size: .6875rem;
+}
+
+.fluxer-voice-quality {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  color: var(--text-muted, #aaa5b8);
+  font-size: .6875rem;
+}
+
+.fluxer-voice-connected-action {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: .375rem;
+  color: var(--text-muted, #aaa5b8);
+  background: transparent;
+  cursor: pointer;
+}
+
+.fluxer-voice-connected-action:hover,
+.fluxer-voice-connected-action:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, .08);
+  outline: none;
+}
+
+.fluxer-voice-toolbar {
+  min-width: 0;
+  margin-top: .25rem;
+}
+
+.fluxer-voice-control-bar-compact {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  max-width: none;
+  gap: .25rem;
+  padding: .25rem 0 0;
+  background: transparent;
+}
+
+.fluxer-voice-control-bar-compact .fluxer-voice-control-button-container,
+.fluxer-voice-control-bar-compact .fluxer-screen-share-control {
+  min-width: 0;
+  width: auto;
+}
+
+.fluxer-voice-control-bar-compact .fluxer-voice-control-button {
+  width: 100%;
+  min-width: 0;
+  height: 2.25rem;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: .375rem;
+  background: rgba(255, 255, 255, .035);
+}
+
+.fluxer-voice-control-bar-compact .fluxer-voice-control-button:hover,
+.fluxer-voice-control-bar-compact .fluxer-voice-control-button:focus-visible {
+  background: rgba(255, 255, 255, .09);
+}
+
+.fluxer-voice-control-bar-compact .fluxer-screen-share-control {
+  display: flex;
+}
+
+.fluxer-screen-share-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-voice-member-list {
+  display: grid;
+  gap: .125rem;
+  min-width: 0;
+  padding: .125rem 0 0 .625rem;
+}
+
+.fluxer-voice-member-row {
+  display: grid;
+  grid-template-columns: 1.5625rem minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  min-height: 2rem;
+  gap: .375rem;
+  padding: .125rem .375rem;
+  border-radius: .375rem;
+}
+
+.fluxer-voice-member-row:hover,
+.fluxer-voice-member-row.is-local,
+.fluxer-voice-member-row.is-speaking {
+  background: rgba(255, 255, 255, .06);
+}
+
+.fluxer-voice-member-avatar {
+  position: relative;
+  display: inline-flex;
+  width: 1.5625rem;
+  height: 1.5625rem;
+}
+
+.fluxer-voice-member-avatar .status-badge {
+  position: absolute;
+  right: -.125rem;
+  bottom: -.125rem;
+}
+
+.fluxer-voice-member-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: .0625rem;
+  overflow: hidden;
+}
+
+.fluxer-voice-member-name {
+  overflow: hidden;
+  color: var(--text-chat, #ddd9e4);
+  font-size: .75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-member-media-icons {
+  gap: .125rem;
+}
+
+.fluxer-call-stage {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  flex-direction: column;
+  gap: .5rem;
+  padding: 0 1rem 1rem;
+  background: transparent;
+}
+
+.fluxer-call-stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  min-height: 2.75rem;
+  gap: .75rem;
+}
+
+.fluxer-call-stage-title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: .5rem;
+}
+
+.fluxer-call-stage-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: .5rem;
+  color: var(--accent, #62d9e8);
+  background: rgba(98, 217, 232, .1);
+}
+
+.fluxer-call-stage-eyebrow,
+.fluxer-call-context,
+.fluxer-call-count {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-call-stage-eyebrow {
+  color: var(--text-strong, #fff);
+  font-size: .8125rem;
+  font-weight: 700;
+}
+
+.fluxer-call-context,
+.fluxer-call-count {
+  color: var(--text-muted, #aaa5b8);
+  font-size: .6875rem;
+}
+
+.fluxer-call-stage-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: .5rem 0;
+}
+
+.fluxer-call-participant-grid,
+.fluxer-call-focus-layout {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  gap: .5rem;
+}
+
+.fluxer-call-participant-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  align-content: center;
+}
+
+.fluxer-call-focus-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 18rem);
+}
+
+.fluxer-call-focus-main,
+.fluxer-call-focus-thumbnails {
+  min-width: 0;
+  min-height: 0;
+}
+
+.fluxer-call-focus-thumbnails {
+  display: grid;
+  align-content: start;
+  gap: .5rem;
+  overflow: auto;
+}
+
+.fluxer-call-empty-surface {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 14rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: .5rem;
+  background: rgba(255, 255, 255, .025);
+}
+
+.fluxer-call-empty-state {
+  display: grid;
+  max-width: 28rem;
+  gap: .5rem;
+  place-items: center;
+  color: var(--text-muted, #aaa5b8);
+  text-align: center;
+}
+
+.fluxer-call-view-controls {
+  display: flex;
+  justify-content: center;
+  gap: .25rem;
+}
+
+.fluxer-call-view-button,
+.fluxer-call-members-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0 .625rem;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: .375rem;
+  color: var(--text-muted, #aaa5b8);
+  background: rgba(255, 255, 255, .035);
+  cursor: pointer;
+}
+
+.fluxer-call-view-button:hover,
+.fluxer-call-view-button:focus-visible,
+.fluxer-call-view-button.is-active,
+.fluxer-call-members-toggle:hover,
+.fluxer-call-members-toggle:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, .09);
+  outline: none;
+}
+
+@media (max-width: 820px) {
+  .fluxer-call-focus-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fluxer-call-focus-thumbnails {
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  }
+}
+
+/* Complete the server-only presentation nodes after the legacy EchoLive
+ * names have been removed from the JSX. */
+.fluxer-member-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid rgba(255, 255, 255, .06);
+  background: #1d1b22;
+}
+
+.fluxer-member-list-header {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  color: #c5c0cc;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.fluxer-member-list-header > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-member-presence-indicator {
+  display: inline-block;
+  width: .4375rem;
+  height: .4375rem;
+  margin-right: .375rem;
+  border-radius: 50%;
+  background: #62d9a4;
+  vertical-align: middle;
+}
+
+.fluxer-member-count {
+  color: #8d8799;
+  font-weight: 600;
+}
+
+.fluxer-member-list-scroller {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.fluxer-channel-title,
+.fluxer-channel-kind,
+.fluxer-channel-subtitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxer-channel-title {
+  color: #eeeaf2;
+  font-size: .875rem;
+  font-weight: 700;
+}
+
+.fluxer-channel-kind {
+  color: #8d8799;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.fluxer-channel-subtitle {
+  color: #8d8799;
+  font-size: .6875rem;
+}
+
+.fluxer-channel-header-search {
+  display: flex;
+  align-items: center;
+  min-width: 10rem;
+}
+
+.fluxer-channel-header-search input {
+  width: 100%;
+  min-height: 2rem;
+}
+
+.fluxer-composer-attach,
+.fluxer-composer-button,
+.fluxer-composer-send {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: .375rem;
+  color: #aaa5b8;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fluxer-composer-attach:hover,
+.fluxer-composer-attach:focus-visible,
+.fluxer-composer-button:hover,
+.fluxer-composer-button:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, .08);
+  outline: none;
+}
+
+.fluxer-composer-send {
+  color: #131218;
+  background: var(--accent, #62d9e8);
+}
+
+.fluxer-composer-send:hover,
+.fluxer-composer-send:focus-visible {
+  background: #88e4ed;
+  outline: none;
+}
+
+.fluxer-composer-attach:disabled,
+.fluxer-composer-button:disabled,
+.fluxer-composer-send:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.fluxer-composer-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 2rem;
+  max-height: 8rem;
+  padding: .375rem .125rem;
+  border: 0;
+  color: #eeeaf2;
+  background: transparent;
+  resize: none;
+}
+
+.fluxer-composer-input:focus {
+  outline: none;
+}
+
+.fluxer-composer-input::placeholder {
+  color: #8d8799;
+}
+
+.fluxer-composer-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: .125rem;
+}
+
+.fluxer-composer-popover {
+  z-index: 15;
+  position: absolute;
+  right: .5rem;
+  bottom: calc(100% + .5rem);
+  max-width: min(24rem, calc(100vw - 1rem));
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: .5rem;
+  background: #24212a;
+  box-shadow: 0 .75rem 2rem rgba(0, 0, 0, .3);
+}
+
+.fluxer-composer-attach-menu {
+  display: grid;
+  min-width: 12rem;
+  padding: .375rem;
+}
+
+.fluxer-composer-attach-menu button {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 2.25rem;
+  padding: 0 .625rem;
+  border: 0;
+  border-radius: .375rem;
+  color: #d9d5df;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fluxer-composer-attach-menu button:hover,
+.fluxer-composer-attach-menu button:focus-visible {
+  color: #fff;
+  background: #35313d;
+  outline: none;
+}
+
+.fluxer-voice-connected-preview {
+  min-width: 0;
+  max-height: 8rem;
+  overflow: hidden;
+  border-radius: .375rem;
+}
+
+.fluxer-voice-toolbar {
+  display: block;
+}
+
+.fluxer-voice-control-bar:not(.fluxer-voice-control-bar-compact) {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  width: 100%;
+  max-width: none;
+  justify-content: stretch;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.fluxer-voice-control-bar:not(.fluxer-voice-control-bar-compact) .fluxer-voice-control-button-container,
+.fluxer-voice-control-bar:not(.fluxer-voice-control-bar-compact) .fluxer-screen-share-control,
+.fluxer-voice-control-bar:not(.fluxer-voice-control-bar-compact) .fluxer-screen-options-control {
+  min-width: 0;
+  width: auto;
+}
+
+.fluxer-voice-control-bar:not(.fluxer-voice-control-bar-compact) .fluxer-voice-control-button {
+  width: 100%;
+  min-width: 0;
+  height: 2.25rem;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: .375rem;
+  color: #aaa5b8;
+  background: rgba(255, 255, 255, .035);
+}
+
+.fluxer-voice-control-bar:not(.fluxer-voice-control-bar-compact) .fluxer-voice-control-button.is-on {
+  color: var(--accent, #62d9e8);
+  background: rgba(98, 217, 232, .1);
+}
+
+.fluxer-voice-control-bar:not(.fluxer-voice-control-bar-compact) .fluxer-voice-control-button.is-danger {
+  color: #fff;
+  border-color: rgba(237, 100, 117, .45);
+  background: #c94d60;
+}
+
+.fluxer-screen-share-control,
+.fluxer-screen-options-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fluxer-screen-share-state {
+  position: absolute;
+  top: calc(100% + .25rem);
+  left: 50%;
+  max-width: 8rem;
+  color: #62d9e8;
+  font-size: .625rem;
+  transform: translateX(-50%);
+}
+
+.fluxer-screen-preset-menu {
+  z-index: 20;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + .5rem);
+  display: grid;
+  min-width: 13rem;
+  gap: .125rem;
+  padding: .375rem;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: .5rem;
+  background: #24212a;
+  box-shadow: 0 .75rem 2rem rgba(0, 0, 0, .3);
+}
+
+.fluxer-menu-kicker {
+  margin: .25rem .5rem .125rem;
+  color: #8d8799;
+  font-size: .625rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.fluxer-screen-preset-menu button {
+  display: grid;
+  gap: .125rem;
+  min-height: 2.25rem;
+  padding: .375rem .5rem;
+  border: 0;
+  border-radius: .375rem;
+  color: #d9d5df;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fluxer-screen-preset-menu button:hover,
+.fluxer-screen-preset-menu button:focus-visible,
+.fluxer-screen-preset-menu button.is-selected {
+  color: #fff;
+  background: #35313d;
+  outline: none;
+}
+
+.fluxer-screen-preset-menu small {
+  color: #8d8799;
+  font-size: .625rem;
+}
+
+.fluxer-screen-share-pip {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: #211f27;
+}
+
+.fluxer-screen-share-pip.is-floating {
+  width: min(22rem, 40vw);
+}
+
+.fluxer-screen-share-pip.is-sidebar {
+  width: 100%;
+}
+
+.fluxer-screen-share-pip-header {
+  flex: 0 0 auto;
+  color: #d9d5df;
+  font-size: .6875rem;
+  font-weight: 700;
+}
+
+.fluxer-screen-share-pip-header .fluxer-screen-share-pip-actions {
+  display: inline-flex;
+  gap: .125rem;
+}
+
+.fluxer-screen-share-pip-header button {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: .375rem;
+  color: #aaa5b8;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fluxer-screen-share-pip-header button:hover,
+.fluxer-screen-share-pip-header button:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, .08);
+  outline: none;
+}
+
+@media (max-width: 720px) {
+  .fluxer-voice-control-bar:not(.fluxer-voice-control-bar-compact) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .fluxer-voice-control-bar:not(.fluxer-voice-control-bar-compact) .fluxer-voice-control-button-container:nth-child(-n + 2) {
+    grid-column: span 1;
+  }
+}
+
+/* Server shell: keep the Fluxer-derived grid independent from Quick Room's legacy shell. */
+.fluxer-server-shell {
+  --fluxer-rail-width: 64px;
+  --fluxer-sidebar-width: 284px;
+  --fluxer-member-width: 300px;
+  display: grid;
+  grid-template-columns: var(--fluxer-rail-width) var(--fluxer-sidebar-width) minmax(0, 1fr) var(--fluxer-member-width);
+  min-width: 0;
+  min-height: 100dvh;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  background: #19171f;
+  color: #e5e1eb;
+}
+
+.fluxer-server-shell > .room-rail {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 0;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  box-shadow: none;
+  background: #111016;
+}
+
+.fluxer-server-shell > .app-sidebar {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #1c1a21;
+}
+
+.fluxer-server-shell > .central-stage {
+  min-width: 0;
+  min-height: 0;
+  background: #201e25;
+}
+
+.fluxer-server-shell > .fluxer-member-list {
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.fluxer-server-page-gate {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 24px;
+  background: #19171f;
+  color: #e5e1eb;
+}
+
+@media (max-width: 1180px) {
+  .fluxer-server-shell {
+    --fluxer-sidebar-width: 248px;
+    --fluxer-member-width: 248px;
+  }
+}
+
+@media (max-width: 900px) {
+  .fluxer-server-shell {
+    grid-template-columns: var(--fluxer-rail-width) minmax(0, 1fr);
+  }
+
+  .fluxer-server-shell > .fluxer-member-list {
+    display: none;
+  }
+}
