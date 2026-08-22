@@ -5,6 +5,8 @@ import SocialRail from "../components/SocialRail.jsx";
 import SocialSidebar, { Avatar } from "../components/SocialSidebar.jsx";
 import SocialEmptyState from "../components/SocialEmptyState.jsx";
 import EmojiPicker from "../components/EmojiPicker.jsx";
+import GifPicker from "../components/GifPicker.jsx";
+import InlineGifEmbeds from "../components/InlineGifEmbeds.jsx";
 import SocialUserProfileModal from "../components/SocialUserProfileModal.jsx";
 import SocialUserProfilePopover from "../components/SocialUserProfilePopover.jsx";
 import ProfilePopover from "../components/ProfilePopover.jsx";
@@ -35,6 +37,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   const [retryVersion, setRetryVersion] = useState(0);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [isGifOpen, setIsGifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(null);
   const [profilePopover, setProfilePopover] = useState(null);
   const [lightboxImage, setLightboxImage] = useState(null);
@@ -148,7 +151,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       officialFirstOpenRef.current = Boolean(otherUser?.isOfficial && nextMessages.length);
     }).catch((requestError) => {
       if (!active) return;
-      setError(requestError.message || "Nao foi possivel carregar esta conversa.");
+      setError(requestError.message || "Não foi possível carregar esta conversa.");
       setHistoryStatus("error");
       if (import.meta.env.DEV) console.debug("[DM:history:error]", { error: requestError.message || "unknown" });
     }).finally(() => {
@@ -173,7 +176,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     }
     if (!socialReady) {
       setConversationReady(false);
-      setRealtimeError(socialStatus === "error" ? "Sem conexao em tempo real." : "");
+      setRealtimeError(socialStatus === "error" ? "Sem conexão em tempo real." : "");
       setRealtimeStatus(socialStatus === "error" ? "error" : socket.connected ? "connecting" : "reconnecting");
       return undefined;
     }
@@ -202,7 +205,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       if (import.meta.env.DEV) console.debug("[DM:join:ack]", { ok: Boolean(result?.ok), conversationId });
       if (!result?.ok) {
         setRealtimeStatus("error");
-        setRealtimeError(result?.error || "Sem conexao em tempo real.");
+        setRealtimeError(result?.error || "Sem conexão em tempo real.");
         return;
       }
       joined = true;
@@ -261,7 +264,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     const submit = (attachment) => socket.timeout(10000).emit("dm:message", { conversationId, content: cleanText, attachment }, (transportError, result) => {
       setSending(false);
       if (transportError) { setError("Não foi possível enviar a mensagem."); return; }
-      if (!result?.ok) { setError(result?.error || "Nao foi possivel enviar a mensagem."); return; }
+      if (!result?.ok) { setError(result?.error || "Não foi possível enviar a mensagem."); return; }
       const savedMessage = normalizeMessage(result.message, conversationId, user);
       if (savedMessage) setMessages((current) => appendUniqueMessage(current, savedMessage, conversationId));
       playUiSound("dmSent", uiNotificationSoundsEnabled(user?.status));
@@ -281,6 +284,18 @@ export default function DirectMessagePage({ conversationId, initialConversation,
       return nextText;
     });
     setIsEmojiOpen(false);
+  }
+
+  function insertGif(gif) {
+    const url = gif?.url;
+    if (!url) return;
+    setText((current) => {
+      const nextText = `${current}${current ? "\n" : ""}${url}`.slice(0, 4000);
+      try { if (draftKey) localStorage.setItem(draftKey, nextText); } catch {}
+      return nextText;
+    });
+    setIsGifOpen(false);
+    window.requestAnimationFrame(() => composerRef.current?.focus());
   }
 
   function handleFileChange(event) {
@@ -337,7 +352,7 @@ export default function DirectMessagePage({ conversationId, initialConversation,
   }));
   const sidebarProps = { activeTab: "friends", onTabChange: onNavigateFriends, conversations, onlineUserIds, user, onHome: onNavigateHome, onOpenConversation: onNavigateDm, onOpenSettings: onOpenAccountSettings, onHideConversation: async (id) => { await hideConversation(id); onNavigateFriends(); }, activeConversationId: conversationId, socialStatus };
   if (conversationStatus === "loading") return <main className="page fluxer-social-shell"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="fluxer-dm-main"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
-  if (conversationStatus === "error") return <main className="page fluxer-social-shell"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="fluxer-dm-main"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
+  if (conversationStatus === "error") return <main className="page fluxer-social-shell"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="fluxer-dm-main"><SocialEmptyState title="Conversa indisponível" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
 
   const historyLoading = historyStatus === "loading";
   const historyError = historyStatus === "error";
@@ -345,37 +360,39 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     <SocialRail onHome={onNavigateHome} notificationCount={notificationCount} />
     <SocialSidebar {...sidebarProps} onOpenProfile={openSidebarProfile} />
     <section className="fluxer-dm-main">
-      <header className={`dm-header fluxer-dm-header ${isOfficial ? "is-official" : ""}`}>
-        <button type="button" className="dm-header-profile" onClick={(event) => openSidebarProfile({ ...otherUser, status: isOnline ? publicPresence(otherUser.status) : "offline" }, event.currentTarget.getBoundingClientRect())}>
+      <header className={`fluxer-dm-header ${isOfficial ? "is-official" : ""}`}>
+        <button type="button" className="fluxer-dm-header-profile" onClick={(event) => openSidebarProfile({ ...otherUser, status: isOnline ? publicPresence(otherUser.status) : "offline" }, event.currentTarget.getBoundingClientRect())}>
           <Avatar user={otherUser} size={38} />
-          <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline && publicPresence(otherUser.status) === "dnd" ? "Não perturbe" : isOnline && publicPresence(otherUser.status) === "online" ? "Online" : "Offline"}`}</small></span>
+          <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="fluxer-dm-official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline && publicPresence(otherUser.status) === "dnd" ? "Não perturbe" : isOnline && publicPresence(otherUser.status) === "online" ? "Online" : "Offline"}`}</small></span>
         </button>
       </header>
-      <div ref={messagesRef} className="dm-messages fluxer-message-scroller" onScroll={handleMessagesScroll}>
-        {showNewMessages && <button type="button" className="dm-new-messages" onClick={() => { shouldAutoScrollRef.current = true; setShowNewMessages(false); bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }}>↓ Novas mensagens</button>}
-        {hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}
-        {historyLoading && !messages.length ? <DmSkeleton /> : historyError ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId && timestampValue(message.createdAt) - timestampValue(messages[index - 1].createdAt) < 5 * 60 * 1000} showDate={index === 0 || !sameDate(message.createdAt, messages[index - 1].createdAt)} onOpenImage={(source, alt) => setLightboxImage({ source, alt })} />) : <div className="dm-intro"><Avatar user={otherUser} size={64} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p><span>Este e o inicio da conversa.</span></div>}
-        <div className={`dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} esta digitando</div>
+      <div ref={messagesRef} className="fluxer-dm-messages fluxer-message-scroller" onScroll={handleMessagesScroll}>
+        {showNewMessages && <button type="button" className="fluxer-dm-new-messages" onClick={() => { shouldAutoScrollRef.current = true; setShowNewMessages(false); bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }}>↓ Novas mensagens</button>}
+        {hasMore && <button type="button" className="text-button fluxer-dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}
+        {historyLoading && !messages.length ? <DmSkeleton /> : historyError ? <div className="fluxer-dm-load-error"><strong>Não foi possível carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId && timestampValue(message.createdAt) - timestampValue(messages[index - 1].createdAt) < 5 * 60 * 1000} showDate={index === 0 || !sameDate(message.createdAt, messages[index - 1].createdAt)} onOpenImage={(source, alt) => setLightboxImage({ source, alt })} />) : <div className="fluxer-dm-intro"><Avatar user={otherUser} size={64} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p><span>Este é o início da conversa.</span></div>}
+        <div className={`fluxer-dm-typing ${typing ? "is-visible" : ""}`} aria-live="polite"><i /><i /><i /> {otherUser.displayName || otherUser.username} está digitando</div>
         <div ref={bottomRef} />
       </div>
-      {error && !historyError && <p className="social-feedback is-error dm-error">{error}</p>}
-      {!isOfficial && realtimeStatus !== "connected" && <p className={`dm-realtime-status ${realtimeStatus === "error" ? "is-error" : ""}`} role="status">{realtimeError || (realtimeStatus === "reconnecting" ? "Reconectando..." : "Conectando ao tempo real...")}</p>}
-      {isOfficial ? <div className="dm-official-notice"><Icon name="lock" size={16} /><span>Esta é uma mensagem oficial do EchoLive. Este canal é somente leitura.</span></div> : <form className="dm-composer" onSubmit={sendMessage}>
+      {error && !historyError && <p className="social-feedback is-error fluxer-dm-error">{error}</p>}
+      {!isOfficial && realtimeStatus !== "connected" && <p className={`fluxer-dm-realtime-status ${realtimeStatus === "error" ? "is-error" : ""}`} role="status">{realtimeError || (realtimeStatus === "reconnecting" ? "Reconectando..." : "Conectando ao tempo real...")}</p>}
+      {isOfficial ? <div className="fluxer-dm-official-notice"><Icon name="lock" size={16} /><span>Esta é uma mensagem oficial do EchoLive. Este canal é somente leitura.</span></div> : <form className="fluxer-dm-composer" onSubmit={sendMessage}>
         {selectedFile && <SelectedAttachment file={selectedFile} onRemove={() => setSelectedFile(null)} />}
-        <div className="dm-composer-row">
+        <div className="fluxer-dm-composer-row">
           <button type="button" className="composer-icon-button" onClick={() => fileInputRef.current?.click()} title="Adicionar anexo" aria-label="Adicionar anexo"><Icon name="plus" size={17} /></button>
           <input ref={fileInputRef} className="visually-hidden" type="file" accept={`${MEDIA_ACCEPT},${FILE_ACCEPT}`} onChange={handleFileChange} />
           <textarea ref={composerRef} id="dm-message" value={text} onChange={(event) => handleTypingInput(event.target.value)} onKeyDown={handleComposerKeyDown} maxLength={4000} rows={1} placeholder={`Mensagem para @${otherUser.username}`} disabled={!conversationReady || sending} />
-          <button type="button" className="composer-icon-button" onClick={() => setIsEmojiOpen((value) => !value)} title="Inserir emoji" aria-label="Inserir emoji"><span aria-hidden="true">😊</span></button>
+          <button type="button" className="composer-icon-button fluxer-composer-gif-button" onClick={() => { setIsGifOpen((value) => !value); setIsEmojiOpen(false); }} title="Inserir GIF" aria-label="Inserir GIF" aria-expanded={isGifOpen}>GIF</button>
+          <button type="button" className="composer-icon-button" onClick={() => { setIsEmojiOpen((value) => !value); setIsGifOpen(false); }} title="Inserir emoji" aria-label="Inserir emoji"><span aria-hidden="true">😊</span></button>
           {(text.trim() || selectedFile) && <button type="submit" className="primary-button" disabled={sending || !conversationReady} aria-label="Enviar mensagem"><Icon name="send" size={16} /></button>}
-          {isEmojiOpen && <div className="composer-popover dm-emoji-popover"><EmojiPicker onSelect={insertEmoji} /></div>}
+          {isGifOpen && <div className="fluxer-composer-popover fluxer-gif-popover"><GifPicker onSelect={insertGif} onClose={() => setIsGifOpen(false)} /></div>}
+          {isEmojiOpen && <div className="fluxer-composer-popover fluxer-dm-emoji-popover"><EmojiPicker onSelect={insertEmoji} /></div>}
         </div>
       </form>}
     </section>
     {profilePopover?.user?.id === user?.id && <ProfilePopover accountUser={user} profile={user} nickname={user.displayName || user.username} avatarUrl={user.avatarUrl || ""} onStatusChange={(nextStatus) => updateProfile({ status: nextStatus })} onEditProfile={() => { setProfilePopover(null); onOpenAccountSettings?.("profile"); }} onOpenSettings={() => { setProfilePopover(null); onOpenAccountSettings?.("profile"); }} onLogout={async () => { await logout(); onNavigateHome?.(); }} onClose={() => setProfilePopover(null)} />}
     {profilePopover && profilePopover.user?.id !== user?.id && <SocialUserProfilePopover participant={profilePopover.user} anchorRect={profilePopover.anchorRect} onClose={() => setProfilePopover(null)} onMessage={(person) => { setProfilePopover(null); onNavigateDm?.(conversationId, conversation); }} onViewProfile={(person) => { setProfilePopover(null); setProfileOpen(person); }} />}
     {profileOpen && <SocialUserProfileModal userId={profileOpen.id} initialUser={profileOpen} onClose={() => setProfileOpen(null)} onMessage={(nextConversation) => { setProfileOpen(null); onNavigateDm(nextConversation.id, nextConversation); }} />}
-    {lightboxImage && <div className="dm-lightbox" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setLightboxImage(null); }}><button type="button" className="icon-button dm-lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Fechar imagem" title="Fechar"><Icon name="close" size={20} /></button><img src={lightboxImage.source} alt={lightboxImage.alt || "Imagem ampliada"} /></div>}
+    {lightboxImage && <div className="fluxer-dm-lightbox" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setLightboxImage(null); }}><button type="button" className="icon-button fluxer-dm-lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Fechar imagem" title="Fechar"><Icon name="close" size={20} /></button><img src={lightboxImage.source} alt={lightboxImage.alt || "Imagem ampliada"} /></div>}
   </main>;
 }
 
@@ -396,23 +413,23 @@ function extractHistory(data) {
 
 function Message({ message, mine, compact, showDate, onOpenImage }) {
   const sender = message.sender || {};
-  const senderName = sender.displayName || sender.username || "Usuario";
-  return <>{showDate && <DateDivider value={message.createdAt} />}<article className={`dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="dm-message-avatar">{!compact && <Avatar user={sender} size={40} />}</div><div>{!compact && <div className="dm-message-meta"><strong>{senderName}{message.messageType === "official" && <em className="official-badge">OFICIAL</em>}</strong><small>{formatMessageTime(message.createdAt)}</small></div>}{message.content && <p>{linkifyMessage(message.content)}</p>}{message.attachment && <Attachment attachment={message.attachment} onOpenImage={onOpenImage} />}</div></article></>;
+  const senderName = sender.displayName || sender.username || "Usuário";
+  return <>{showDate && <DateDivider value={message.createdAt} />}<article className={`fluxer-dm-message ${mine ? "is-mine" : ""} ${compact ? "is-compact" : ""} ${message.messageType === "official" ? "is-official" : ""}`}><div className="fluxer-dm-message-avatar">{!compact && <Avatar user={sender} size={40} />}</div><div>{!compact && <div className="fluxer-dm-message-meta"><strong>{senderName}{message.messageType === "official" && <em className="fluxer-dm-official-badge">OFICIAL</em>}</strong><small>{formatMessageTime(message.createdAt)}</small></div>}{message.content && <p>{linkifyMessage(message.content)}</p>}{message.content && <InlineGifEmbeds content={message.content} onOpenImage={onOpenImage} />}{message.attachment && <Attachment attachment={message.attachment} onOpenImage={onOpenImage} />}</div></article></>;
 }
 
-function DmSkeleton() { return <div className="dm-skeleton" aria-label="Carregando mensagens">{[1, 2, 3, 4].map((item) => <div key={item}><i /><span /><b /></div>)}</div>; }
+function DmSkeleton() { return <div className="fluxer-dm-skeleton" aria-label="Carregando mensagens">{[1, 2, 3, 4].map((item) => <div key={item}><i /><span /><b /></div>)}</div>; }
 
-function DateDivider({ value }) { const date = normalizeTimestamp(value); if (!date) return null; const current = new Date(date); const today = new Date(); const dayStart = (input) => new Date(input.getFullYear(), input.getMonth(), input.getDate()).getTime(); const delta = Math.round((dayStart(today) - dayStart(current)) / 86400000); const label = delta === 0 ? "Hoje" : delta === 1 ? "Ontem" : current.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }); return <div className="dm-date-divider"><span>{label}</span></div>; }
+function DateDivider({ value }) { const date = normalizeTimestamp(value); if (!date) return null; const current = new Date(date); const today = new Date(); const dayStart = (input) => new Date(input.getFullYear(), input.getMonth(), input.getDate()).getTime(); const delta = Math.round((dayStart(today) - dayStart(current)) / 86400000); const label = delta === 0 ? "Hoje" : delta === 1 ? "Ontem" : current.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }); return <div className="fluxer-dm-date-divider"><span>{label}</span></div>; }
 
 function sameDate(left, right) { const a = normalizeTimestamp(left); const b = normalizeTimestamp(right); return a && b && new Date(a).toDateString() === new Date(b).toDateString(); }
 
-function SelectedAttachment({ file, onRemove }) { const [url, setUrl] = useState(""); useEffect(() => { const next = URL.createObjectURL(file); setUrl(next); return () => URL.revokeObjectURL(next); }, [file]); return <div className="dm-selected-file"><div className="dm-selected-file-preview">{file.type.startsWith("image/") && url ? <img src={url} alt="Pré-visualização do anexo" /> : file.type.startsWith("video/") && url ? <video src={url} muted preload="metadata" /> : <Icon name="file" size={18} />}<span><strong>{file.name}</strong><small>{formatFileSize(file.size)}</small></span></div><button type="button" className="icon-button" onClick={onRemove} aria-label="Remover anexo"><Icon name="close" size={14} /></button></div>; }
+function SelectedAttachment({ file, onRemove }) { const [url, setUrl] = useState(""); useEffect(() => { const next = URL.createObjectURL(file); setUrl(next); return () => URL.revokeObjectURL(next); }, [file]); return <div className="fluxer-dm-selected-file"><div className="fluxer-dm-selected-file-preview">{file.type.startsWith("image/") && url ? <img src={url} alt="Pré-visualização do anexo" /> : file.type.startsWith("video/") && url ? <video src={url} muted preload="metadata" /> : <Icon name="file" size={18} />}<span><strong>{file.name}</strong><small>{formatFileSize(file.size)}</small></span></div><button type="button" className="icon-button" onClick={onRemove} aria-label="Remover anexo"><Icon name="close" size={14} /></button></div>; }
 
 function Attachment({ attachment, onOpenImage }) {
   const source = `${SERVER_URL}${attachment.url}`;
-  if (attachment.type === "image") return <button type="button" className="dm-attachment dm-attachment-image-button" onClick={() => onOpenImage?.(source, attachment.name || "Imagem anexada")}><img src={source} alt={attachment.name || "Imagem anexada"} /></button>;
-  if (attachment.type === "video") return <video className="dm-attachment-video" controls preload="metadata" src={source} />;
-  return <a className="dm-file-attachment" href={source} target="_blank" rel="noreferrer"><Icon name="file" size={16} /><span><strong>{attachment.name || "Arquivo"}</strong><small>{formatFileSize(attachment.size)}</small></span></a>;
+  if (attachment.type === "image") return <button type="button" className="fluxer-dm-attachment fluxer-dm-attachment-image-button" onClick={() => onOpenImage?.(source, attachment.name || "Imagem anexada")}><img src={source} alt={attachment.name || "Imagem anexada"} /></button>;
+  if (attachment.type === "video") return <video className="fluxer-dm-attachment-video" controls preload="metadata" src={source} />;
+  return <a className="fluxer-dm-file-attachment" href={source} target="_blank" rel="noreferrer"><Icon name="file" size={16} /><span><strong>{attachment.name || "Arquivo"}</strong><small>{formatFileSize(attachment.size)}</small></span></a>;
 }
 
 function formatFileSize(bytes = 0) {

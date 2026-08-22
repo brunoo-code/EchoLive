@@ -38,17 +38,17 @@ export default function PresenceMenu({ value, onChange, placement = "below", cla
     onChange?.(nextValue);
   }
 
-  return <div ref={rootRef} data-flx="app.presence-menu" className={`presence-menu fluxer-presence-menu presence-menu--${placement} ${opensLeft ? "opens-left" : ""} ${className}`.trim()}>
-    <button type="button" className="profile-status-trigger status-menu-row" onClick={() => setOpen((currentOpen) => !currentOpen)} aria-expanded={open} aria-haspopup="menu">
-      <UserStatusBadge status={current} size="sm" className="menu-status-dot status-menu-icon" />
-      <span className="status-menu-text"><span className="status-menu-label">{presenceLabel(current)}</span></span>
-      <Icon name="chevron" size={14} className="status-menu-chevron" />
+  return <div ref={rootRef} data-flx="app.presence-menu" className={`fluxer-presence-menu fluxer-presence-menu--${placement} ${opensLeft ? "fluxer-presence-menu--opens-left" : ""} ${className}`.trim()}>
+    <button type="button" className="fluxer-presence-trigger" onClick={() => setOpen((currentOpen) => !currentOpen)} aria-expanded={open} aria-haspopup="menu">
+      <UserStatusBadge status={current} size="sm" className="fluxer-presence-status-dot" />
+      <span className="fluxer-presence-text"><span className="fluxer-presence-label">{presenceLabel(current)}</span></span>
+      <Icon name="chevron" size={14} className="fluxer-presence-chevron" />
     </button>
-    {open && <div className="profile-status-options" data-flx="app.presence-menu.options" role="menu" aria-label={label}>
-      {PRESENCE_OPTIONS.map((option) => <button type="button" role="menuitemradio" aria-checked={current === option.value} className={current === option.value ? "is-selected" : ""} key={option.value} onClick={() => select(option.value)}>
-        <UserStatusBadge status={option.value} size="sm" className="menu-status-dot status-menu-icon" />
-        <span className="status-menu-text"><span className="status-menu-label">{option.label}</span></span>
-        {current === option.value && <Icon name="check" size={14} className="status-menu-chevron" />}
+    {open && <div className="fluxer-presence-options" data-flx="app.presence-menu.options" role="menu" aria-label={label}>
+      {PRESENCE_OPTIONS.map((option) => <button type="button" role="menuitemradio" aria-checked={current === option.value} className={`fluxer-presence-option ${current === option.value ? "is-selected" : ""}`} key={option.value} onClick={() => select(option.value)}>
+        <UserStatusBadge status={option.value} size="sm" className="fluxer-presence-status-dot" />
+        <span className="fluxer-presence-text"><span className="fluxer-presence-label">{option.label}</span></span>
+        {current === option.value && <Icon name="check" size={14} className="fluxer-presence-chevron" />}
       </button>)}
     </div>}
   </div>;

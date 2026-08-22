@@ -6,6 +6,8 @@ import { playUiSound } from "../utils/uiSounds.js";
 
 export default function useServerVoiceCall({ socket, serverId, channelId, identity, enabled, notify, uiSounds = true }) {
   const [connected, setConnected] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isDisconnected, setIsDisconnected] = useState(false);
   const [remoteParticipants, setRemoteParticipants] = useState([]);
   const [remoteStreams, setRemoteStreams] = useState({});
   const [localStream, setLocalStream] = useState(null);
@@ -120,6 +122,8 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     const detachSignaling = engineRef.current.attachSignaling({ prepareLocalMedia: setupLocalMedia });
 
     const handleUsers = async ({ participants = [] } = {}) => {
+      setIsJoining(false);
+      setIsDisconnected(false);
       setConnected(true);
       applyParticipants(participants);
       await setupLocalMedia();
@@ -167,6 +171,8 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
       }
       voiceSessionRef.current = false;
       setConnected(false);
+      setIsJoining(false);
+      setIsDisconnected(true);
       engineRef.current?.closePeers();
       teardownAudioMix();
       cleanupLocalMedia();
@@ -181,8 +187,12 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     getPeerConnectionConfig().then((config) => {
       if (!active) return;
       if (config) iceConfigRef.current = config;
+      setIsJoining(true);
       socket.emit("server:voice-join", { serverId, channelId }, (result) => {
-        if (!result?.ok && active) notify(result?.error || "Nao foi possivel entrar no canal de voz.");
+        if (!result?.ok && active) {
+          setIsJoining(false);
+          notify(result?.error || "Não foi possível entrar no canal de voz.");
+        }
         if (result?.ok && active) {
           voiceSessionRef.current = true;
           voiceLeaveSoundRef.current = false;
@@ -191,9 +201,11 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
       });
     }).catch(() => {
       if (active) {
+        setIsJoining(true);
         socket.emit("server:voice-join", { serverId, channelId }, (result) => {
           if (!result?.ok) {
-            notify(result?.error || "Nao foi possivel entrar no canal de voz.");
+            setIsJoining(false);
+            notify(result?.error || "Não foi possível entrar no canal de voz.");
             return;
           }
           voiceSessionRef.current = true;
@@ -217,6 +229,8 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
       teardownAudioMix();
       cleanupLocalMedia();
       setConnected(false);
+      setIsJoining(false);
+      setIsDisconnected(false);
       voiceSessionRef.current = false;
       setRemoteParticipants([]);
       setRemoteStreams({});
@@ -251,7 +265,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     }
     const result = await requestSingleKind("video");
     if (!result.track) {
-      notify("Permissao de camera negada.");
+      notify("Permissão de câmera negada.");
       return;
     }
     cameraTrackRef.current = result.track;
@@ -342,6 +356,8 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
 
   return {
     connected,
+    isJoining,
+    isDisconnected,
     participants,
     remoteStreams,
     localStream,

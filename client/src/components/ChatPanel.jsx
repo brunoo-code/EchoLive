@@ -3,6 +3,8 @@ import { SERVER_URL } from "../utils/webrtc.js";
 import { playUiSound } from "../utils/uiSounds.js";
 import Icon from "./Icon.jsx";
 import EmojiPicker from "./EmojiPicker.jsx";
+import GifPicker from "./GifPicker.jsx";
+import InlineGifEmbeds from "./InlineGifEmbeds.jsx";
 import { validateUploadFile } from "../utils/uploadLimits.js";
 import { linkifyMessage } from "../utils/linkifyMessage.js";
 import { ChatComposerFrame, ChatComposerRow, ChatHeader, ChatViewport } from "./ChatFrame.jsx";
@@ -33,6 +35,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
   const [typingUsers, setTypingUsers] = useState([]);
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
   const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [fileAccept, setFileAccept] = useState(ALL_ACCEPT);
@@ -152,6 +155,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
     setFileAccept(accept);
     setIsAttachMenuOpen(false);
     setIsEmojiPickerOpen(false);
+    setIsGifPickerOpen(false);
     setIsStickerPickerOpen(false);
     window.requestAnimationFrame(() => fileInputRef.current?.click());
   }
@@ -163,12 +167,21 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
     const nextDraft = `${draft.slice(0, start)}${emoji}${draft.slice(end)}`.slice(0, 4000);
     setDraft(nextDraft);
     setIsEmojiPickerOpen(false);
+    setIsGifPickerOpen(false);
     setIsStickerPickerOpen(false);
     window.requestAnimationFrame(() => {
       input?.focus();
       const nextCursor = Math.min(start + emoji.length, 4000);
       input?.setSelectionRange(nextCursor, nextCursor);
     });
+  }
+
+  function insertGif(gif) {
+    const url = gif?.url;
+    if (!url) return;
+    setDraft((current) => `${current}${current ? "\n" : ""}${url}`.slice(0, 4000));
+    setIsGifPickerOpen(false);
+    window.requestAnimationFrame(() => messageInputRef.current?.focus());
   }
 
   async function uploadFile(file) {
@@ -215,7 +228,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
       setDraft("");
       setSelectedFile(null);
     } catch (error) {
-      notify(error.message || "Nao foi possivel enviar a mensagem.");
+      notify(error.message || "Não foi possível enviar a mensagem.");
     } finally {
       setIsSending(false);
     }
@@ -223,9 +236,9 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
 
   function renderTypingLabel() {
     const names = typingUsers.map((user) => user.displayName).filter(Boolean);
-    if (names.length === 1) return <><strong>{names[0]}</strong> esta digitando</>;
-    if (names.length === 2) return <><strong>{names[0]}</strong> e <strong>{names[1]}</strong> estao digitando</>;
-    return <><strong>{names[0]}</strong> e mais {names.length - 1} pessoas estao digitando</>;
+    if (names.length === 1) return <><strong>{names[0]}</strong> está digitando</>;
+    if (names.length === 2) return <><strong>{names[0]}</strong> e <strong>{names[1]}</strong> estão digitando</>;
+    return <><strong>{names[0]}</strong> e mais {names.length - 1} pessoas estão digitando</>;
   }
 
   return (
@@ -236,7 +249,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
         {messages.length === 0 && (
           <div className="empty-chat">
             <div className="empty-chat-icon" aria-hidden="true">#</div>
-            <strong>Este e o comeco de # geral</strong>
+            <strong>Este é o começo de # geral</strong>
             <span>Envie uma mensagem para conversar com a sala.</span>
           </div>
         )}
@@ -260,6 +273,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
                 <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
               </div>}
               {message.content && <p>{linkifyMessage(message.content)}</p>}
+              {message.content && <InlineGifEmbeds content={message.content} onOpenImage={(source, alt) => setLightboxImage({ source, alt })} />}
               {message.attachment && (
                 <div className="message-attachment" data-flx="channel.message-attachments">
                   {message.attachment.type === "image" ? (
@@ -293,11 +307,11 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           </div>
         )}
         <ChatComposerRow>
-          <button type="button" className="attach-button" onClick={() => { setIsAttachMenuOpen((current) => !current); setIsEmojiPickerOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Adicionar anexo" aria-label="Adicionar anexo" aria-haspopup="menu" aria-expanded={isAttachMenuOpen}>
+          <button type="button" className="attach-button" onClick={() => { setIsAttachMenuOpen((current) => !current); setIsEmojiPickerOpen(false); setIsGifPickerOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Adicionar anexo" aria-label="Adicionar anexo" aria-haspopup="menu" aria-expanded={isAttachMenuOpen}>
             <Icon name="plus" size={17} />
           </button>
           {isAttachMenuOpen && <div className="composer-popover attach-menu" role="menu" aria-label="Adicionar anexo">
-            <button type="button" role="menuitem" onClick={() => openFilePicker(MEDIA_ACCEPT)}><Icon name="image" size={15} /><span>Enviar imagem ou video</span></button>
+            <button type="button" role="menuitem" onClick={() => openFilePicker(MEDIA_ACCEPT)}><Icon name="image" size={15} /><span>Enviar imagem ou vídeo</span></button>
             <button type="button" role="menuitem" onClick={() => openFilePicker(FILE_ACCEPT)}><Icon name="file" size={15} /><span>Enviar arquivo</span></button>
           </div>}
           <input
@@ -323,12 +337,14 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           />
           {draft.length >= 3400 && <span className="message-counter">{draft.length} / 4000</span>}
           <div className="composer-actions">
-            <button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}><Icon name="smile" size={16} /></button>
+            <button type="button" className="composer-icon-button fluxer-composer-gif-button" onClick={() => { setIsGifPickerOpen((current) => !current); setIsEmojiPickerOpen(false); setIsAttachMenuOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Inserir GIF" aria-label="Inserir GIF" aria-expanded={isGifPickerOpen}>GIF</button>
+            <button type="button" className="composer-icon-button" onClick={() => { setIsEmojiPickerOpen((current) => !current); setIsGifPickerOpen(false); setIsAttachMenuOpen(false); setIsStickerPickerOpen(false); }} disabled={isSending} title="Inserir emoji" aria-label="Inserir emoji" aria-expanded={isEmojiPickerOpen}><Icon name="smile" size={16} /></button>
             {false && <button type="button" className="composer-icon-button" onClick={() => { setIsStickerPickerOpen((current) => !current); setIsAttachMenuOpen(false); setIsEmojiPickerOpen(false); }} disabled={isSending} title="Abrir figurinhas do Eko" aria-label="Abrir figurinhas do Eko" aria-expanded={isStickerPickerOpen}><Icon name="sticker" size={16} /></button>}
             {(draft.trim() || selectedFile) && <button className="send-button" type="submit" disabled={isSending} aria-label={isSending ? "Enviando" : "Enviar mensagem"}>
               <Icon name="send" size={15} />
             </button>}
           </div>
+          {isGifPickerOpen && <div className="composer-popover fluxer-gif-popover"><GifPicker onSelect={insertGif} onClose={() => setIsGifPickerOpen(false)} /></div>}
           {isEmojiPickerOpen && <div className="composer-popover"><EmojiPicker onSelect={insertEmoji} /></div>}
           {isStickerPickerOpen && <div className="composer-popover sticker-picker" role="dialog" aria-label="Figurinhas do Eko">
             <strong>Figurinhas do Eko</strong>
@@ -336,7 +352,7 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           </div>}
         </ChatComposerRow>
       </ChatComposerFrame>
-      {lightboxImage && <div className="dm-lightbox chat-lightbox" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLightboxImage(null); }}><button type="button" className="icon-button dm-lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Fechar imagem" title="Fechar"><Icon name="close" size={20} /></button><img src={lightboxImage.source} alt={lightboxImage.alt} /></div>}
+      {lightboxImage && <div className="fluxer-lightbox fluxer-chat-lightbox" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLightboxImage(null); }}><button type="button" className="icon-button fluxer-lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Fechar imagem" title="Fechar"><Icon name="close" size={20} /></button><img src={lightboxImage.source} alt={lightboxImage.alt} /></div>}
     </section>
   );
 }

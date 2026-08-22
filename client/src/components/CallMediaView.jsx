@@ -22,7 +22,7 @@ export function MediaPip({
   }
 
   return (
-    <aside className={`fluxer-screen-share-pip ${variant === "sidebar" ? "is-sidebar" : "is-floating"}`} data-flx="voice.screen-share-pip" aria-label="Midia da chamada em andamento" onClick={openFromPreview}>
+    <aside className={`fluxer-screen-share-pip ${variant === "sidebar" ? "is-sidebar" : "is-floating"}`} data-flx="voice.screen-share-pip" aria-label="Mídia da chamada em andamento" onClick={openFromPreview}>
       <header className="fluxer-screen-share-pip-header" data-flx="voice.screen-share-pip.header">
         <span>{participant.isScreenSharing ? "Compartilhamento ativo" : "Câmera ativa"}</span>
         <div className="fluxer-screen-share-pip-actions">
@@ -127,11 +127,23 @@ export default function CallMediaView({
       </header>
 
       <div className="fluxer-call-stage-body" data-flx="voice.call-stage.body">
-        {isJoining && <p className="status-line">Entrando na sala...</p>}
-        {isDisconnected && <p className="status-line danger">Conexão com o servidor perdida.</p>}
-
-        {!isInVoice ? (
-          <section className="fluxer-call-empty-surface" data-flx="voice.call-stage.empty-surface" aria-label="Canal de voz vazio" />
+        {isJoining ? (
+          <section className="fluxer-call-connection-state" data-flx="voice.call-stage.joining-state" role="status" aria-live="polite">
+            <span className="fluxer-call-connection-icon"><Icon name="voice" size={22} /></span>
+            <strong>Entrando na voz...</strong>
+            <span>Conectando ao canal {channelName}.</span>
+          </section>
+        ) : isDisconnected ? (
+          <section className="fluxer-call-connection-state is-disconnected" data-flx="voice.call-stage.disconnected-state" role="status" aria-live="polite">
+            <span className="fluxer-call-connection-icon"><Icon name="warning" size={22} /></span>
+            <strong>Conexão perdida</strong>
+            <span>Você pode sair e entrar novamente no canal.</span>
+          </section>
+        ) : !isInVoice ? (
+          <section className="fluxer-call-empty-surface" data-flx="voice.call-stage.empty-surface" aria-label="Canal de voz vazio">
+            <strong>Canal de voz</strong>
+            <span>Entre para conversar por voz.</span>
+          </section>
         ) : callParticipants.length > 0 ? (
           viewMode === "focus" && hasVisualMedia && focusedParticipant ? (
             <section className="fluxer-call-focus-layout" data-flx="voice.call-stage.focus-layout">

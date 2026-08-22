@@ -1,6 +1,6 @@
 # EchoLive
 
-EchoLive e um aplicativo web para salas privadas de voz, video, compartilhamento de tela e conversa temporaria em `# geral`.
+EchoLive é um aplicativo web para salas privadas de voz, vídeo, compartilhamento de tela e conversa temporária em `# geral`.
 
 ## Requisitos
 
@@ -19,9 +19,9 @@ Opcionalmente, crie `server/.env` a partir de `server/.env.example` para ajustar
 
 ## Contas e PostgreSQL
 
-O EchoLive pode ser usado sem cadastro como visitante. Para habilitar contas persistentes, configure uma instancia PostgreSQL e a variavel `DATABASE_URL` no servidor. As contas usam UUID, nome de usuario exclusivo sem diferenciar maiusculas de minusculas, nome de exibicao e senha armazenada com hash bcrypt. A sessao usa um cookie HttpOnly de 14 dias; a senha nunca vai para o navegador.
+O EchoLive pode ser usado sem cadastro como visitante. Para habilitar contas persistentes, configure uma instância PostgreSQL e a variável `DATABASE_URL` no servidor. As contas usam UUID, nome de usuário exclusivo sem diferenciar maiúsculas de minúsculas, nome de exibição e senha armazenada com hash bcrypt. A sessão usa um cookie HttpOnly de 14 dias; a senha nunca vai para o navegador.
 
-O `username` e a identidade publica unica da conta. Ele aceita de 3 a 24 caracteres ASCII entre letras, numeros e `_`, sem espacos. O valor normalizado em lowercase e protegido por `UNIQUE` no PostgreSQL; `displayName` nao possui `UNIQUE` e pode se repetir entre contas.
+O `username` é a identidade pública única da conta. Ele aceita de 3 a 24 caracteres ASCII entre letras, números e `_`, sem espaços. O valor normalizado em lowercase é protegido por `UNIQUE` no PostgreSQL; `displayName` não possui `UNIQUE` e pode se repetir entre contas.
 
 Com o servidor parado, aplique as migrações a partir da raiz:
 
@@ -31,11 +31,11 @@ npm install
 npm run db:migrate
 ```
 
-Sem `DATABASE_URL`, o servidor inicia normalmente, as salas temporarias continuam funcionando e as rotas de conta respondem que a autenticacao esta indisponivel. O projeto nao usa SQLite como fallback.
+Sem `DATABASE_URL`, o servidor inicia normalmente, as salas temporárias continuam funcionando e as rotas de conta respondem que a autenticação está indisponível. O projeto não usa SQLite como fallback.
 
 No Render, crie um PostgreSQL, copie a `DATABASE_URL` para as variaveis do Web Service e execute `npm run db:migrate` uma vez usando o mesmo ambiente. Depois mantenha `npm run build` como Build Command e `npm start` como Start Command.
 
-As rotas de conta sao `GET /api/auth/me`, `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout` e `PATCH /api/users/me`. Esta etapa nao inclui recuperacao de senha, email, amigos, mensagens diretas, servidores persistentes ou canais persistentes.
+As rotas de conta são `GET /api/auth/me`, `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout` e `PATCH /api/users/me`. Esta etapa não inclui recuperação de senha, email, amigos, mensagens diretas, servidores persistentes ou canais persistentes.
 
 ## Desenvolvimento
 
@@ -45,7 +45,7 @@ Para iniciar frontend e backend juntos:
 npm run dev
 ```
 
-Tambem e possivel rodar separadamente:
+Também é possível rodar separadamente:
 
 ```bash
 cd server
@@ -67,15 +67,15 @@ npm run dev
 
 ## Salas personalizadas
 
-Na home, informe um codigo de 3 a 16 caracteres usando letras, numeros, `-` ou `_`. O codigo e normalizado para maiusculas e aparece na URL, por exemplo `http://localhost:5173/room/666`. O nome visual da sala e opcional e tem limite de 32 caracteres; quando omitido, a interface usa `Sala <codigo>`.
+Na home, informe um código de 3 a 16 caracteres usando letras, números, `-` ou `_`. O código é normalizado para maiúsculas e aparece na URL, por exemplo `http://localhost:5173/room/666`. O nome visual da sala é opcional e tem limite de 32 caracteres; quando omitido, a interface usa `Sala <código>`.
 
-O backend rejeita codigos duplicados e nao cria uma sala automaticamente quando alguem tenta entrar em um codigo inexistente.
+O backend rejeita códigos duplicados e não cria uma sala automaticamente quando alguém tenta entrar em um código inexistente.
 
 Exemplos neutros:
 
-- Nome da sala: `Minha sala` | Codigo: `SALA01`
-- Nome da sala: `Reuniao` | Codigo: `REUNIAO`
-- Nome da sala: `Estudos` | Codigo: `ESTUDOS`
+- Nome da sala: `Minha sala` | Código: `SALA01`
+- Nome da sala: `Reunião` | Código: `REUNIAO`
+- Nome da sala: `Estudos` | Código: `ESTUDOS`
 
 ## Teste com duas abas
 
@@ -85,10 +85,10 @@ Exemplos neutros:
 4. Abra uma aba anonima ou outro navegador.
 5. Cole o convite.
 6. Digite outro nickname.
-7. Teste microfone, camera, volume remoto, tela cheia e compartilhamento de tela.
+7. Teste microfone, câmera, volume remoto, tela cheia e compartilhamento de tela.
 8. Use `Alterar nick` para confirmar a atualizacao em tempo real.
 9. Saia da sala e confirme que o participante desaparece da outra aba.
-10. Alterne entre `# geral` e `Geral`; trocar de canal e apenas visual e nao encerra a call.
+10. Alterne entre `# geral` e `Geral`; trocar de canal é apenas visual e não encerra a call.
 11. Envie texto no chat e confirme que a outra aba recebe a mensagem.
 12. Anexe uma imagem ou video aceito e confirme o preview no chat.
 
@@ -104,28 +104,28 @@ O backend tambem precisa estar acessivel nessa rede. Ajuste `CLIENT_ORIGIN` no s
 
 ## Limite de participantes
 
-O limite padrao e 10 participantes por sala:
+O limite padrão é 10 participantes por sala:
 
 ```env
 MAX_PARTICIPANTS_PER_ROOM=10
 ```
 
-Esse valor fica em `server/.env`. Se a variavel nao existir, o backend usa 10.
+Esse valor fica em `server/.env`. Se a variável não existir, o backend usa 10.
 
-EchoLive usa WebRTC em arquitetura mesh. Isso e simples e bom para poucas pessoas, mas o custo cresce conforme mais participantes entram, porque cada navegador conversa diretamente com os outros. Para salas muito grandes no futuro, o ideal seria uma SFU. Esta versao nao implementa SFU.
+EchoLive usa WebRTC em arquitetura mesh. Isso é simples e bom para poucas pessoas, mas o custo cresce conforme mais participantes entram, porque cada navegador conversa diretamente com os outros. Para salas muito grandes no futuro, o ideal seria uma SFU. Esta versão não implementa SFU.
 
 ## WebRTC
 
-- Signaling: Socket.IO coordena entrada, saida, offers, answers e ICE candidates.
+- Signaling: Socket.IO coordena entrada, saída, offers, answers e ICE candidates.
 - STUN: ajuda os navegadores a descobrirem enderecos publicos.
-- TURN: retransmite midia quando conexao direta nao funciona.
-- ICE: escolhe o melhor caminho de conexao entre os participantes.
+- TURN: retransmite mídia quando conexão direta não funciona.
+- ICE: escolhe o melhor caminho de conexão entre os participantes.
 
-Socket.IO nao transporta audio, video ou tela. A midia passa por WebRTC.
+Socket.IO não transporta áudio, vídeo ou tela. A mídia passa por WebRTC.
 
 ## Internet, TURN e HTTPS
 
-STUN sozinho nao garante conexao confiavel pela internet. Algumas redes, NATs e firewalls exigem TURN.
+STUN sozinho não garante conexão confiável pela internet. Algumas redes, NATs e firewalls exigem TURN.
 
 Configure TURN em `server/.env`:
 
@@ -135,44 +135,53 @@ TURN_USERNAME=
 TURN_CREDENTIAL=
 ```
 
-Nao coloque credenciais reais no codigo.
+Não coloque credenciais reais no código.
 
 Fora de `localhost`, `getUserMedia` e `getDisplayMedia` normalmente exigem HTTPS. Uma implantacao publica deve usar HTTPS.
 
 ## Supressao de ruido
 
-O audio usa recursos nativos do navegador quando disponiveis:
+O áudio usa recursos nativos do navegador quando disponíveis:
 
 - `echoCancellation`
 - `noiseSuppression`
 - `autoGainControl`
 
-Se algum navegador nao suportar uma constraint, a captura deve continuar funcionando com o melhor suporte disponivel.
+Se algum navegador não suportar uma constraint, a captura deve continuar funcionando com o melhor suporte disponível.
 
-Essa reducao usa recursos nativos do navegador e pode reduzir ruido de teclado, ventilador e ambiente, mas nao e uma solucao avancada como Krisp ou Discord. Mutar/desmutar apenas alterna `enabled` na track local e nao recria a captura de audio.
+Essa redução usa recursos nativos do navegador e pode reduzir ruído de teclado, ventilador e ambiente, mas não é uma solução avançada como Krisp ou Discord. Mutar/desmutar apenas alterna `enabled` na track local e não recria a captura de áudio.
 
 ## Voz e dispositivos
 
 - A presenca online e a presenca na voz sao listas separadas por sala.
-- `Sair voz` encerra apenas a midia e as conexoes WebRTC; o usuario continua online e pode usar o chat.
+- `Sair voz` encerra apenas a mídia e as conexões WebRTC; o usuário continua online e pode usar o chat.
 - `Entrar voz` recria a captura e reconecta a voz sem duplicar o participante.
 - O indicador de fala usa um analisador local do navegador e transmite somente um estado booleano.
-- Microfone, saida de audio e camera podem ser escolhidos no menu de dispositivos; as preferencias ficam em `localStorage`. A saida usa `setSinkId` quando o navegador oferece suporte e cai no dispositivo padrao caso contrario.
+- Microfone, saída de áudio e câmera podem ser escolhidos no menu de dispositivos; as preferências ficam em `localStorage`. A saída usa `setSinkId` quando o navegador oferece suporte e cai no dispositivo padrão caso contrário.
 - O avatar local aceita PNG, JPG ou WEBP de ate 1 MB e tambem fica somente no navegador.
 
 ## Chat e uploads temporarios
 
 - Salas Rapidas permanecem reentraveis por 5 horas; depois desse prazo o backend expira a sala e novos acessos sao recusados.
-- `# geral` e o canal de texto padrao da sala.
+- `# geral` é o canal de texto padrão da sala.
 - Mensagens sao transmitidas por Socket.IO e ficam somente em memoria.
 - Cada sala mantem no maximo 200 mensagens; ao ficar vazia, o historico e apagado.
 - O chat aceita texto de ate 4.000 caracteres.
 - Imagens aceitas: PNG, JPEG, WebP e GIF.
 - Videos aceitos: MP4, WebM e MOV/QuickTime.
 - Limites por tipo: imagens ate 15 MB, videos ate 50 MB e outros arquivos ate 25 MB.
-- Uploads ficam em `UPLOAD_DIR` quando essa variavel esta configurada; sem ela, o servidor usa `server/uploads`. Os arquivos sao servidos por `/uploads/...`.
+- Uploads ficam em `UPLOAD_DIR` quando essa variável está configurada; sem ela, o servidor usa `server/uploads`. Os arquivos são servidos por `/uploads/...`.
 - O backend gera nomes aleatorios; o nome original e usado apenas para exibicao.
-- Uploads de Sala Rapida continuam temporarios. Anexos de servidores e DMs so sobrevivem a reinicios em producao quando `UPLOAD_DIR` aponta para um disco persistente.
+- Uploads de Sala Rápida continuam temporários. Anexos de servidores e DMs só sobrevivem a reinícios em produção quando `UPLOAD_DIR` aponta para um disco persistente.
+
+## Paridade visual e feedback local
+
+- As superfícies autenticadas usam uma camada de apresentação diretamente derivada das estruturas públicas do Fluxer, com avisos SPDX/AGPL nos arquivos derivados. Dados, handlers, autenticação, API, banco, Socket.IO e WebRTC continuam sendo do EchoLive.
+- A tipografia segue a pilha do Fluxer (`Fluxer Sans`, variantes de idioma e fallbacks `system-ui`/`Segoe UI`). Nenhum binário de fonte foi adicionado ao repositório; quando `Fluxer Sans` não estiver disponível, o navegador usa o fallback do sistema.
+- A geometria canonica autenticada usa rail de `72px`, sidebar de `320px`, cabecalho de `56px`, painel de membros de `264px` e UserArea de `58px`. A Quick Room permanece isolada da camada autenticada.
+- O picker de GIF usa um adapter configuravel por `VITE_GIF_PROVIDER_URL` e `VITE_GIF_PROVIDER_NAME`. O endpoint recebe `q` e `limit`, e pode responder com uma lista ou com `results`, `data` ou `gifs`. Sem URL configurada, a interface mostra o estado de provider ausente; loading, erro, vazio, recentes e selecao continuam funcionais localmente.
+- A selecao de GIF insere a URL no rascunho atual. Persistencia/renderizacao duravel exige ampliar o contrato de anexos do backend e permitir o provider escolhido; isso permanece explicitamente pendente, sem inventar uma integracao externa.
+- Os sons seguem o mapa de eventos do Fluxer (entrada/saída de voz, participante, mensagem, DM, solicitação de amizade, notificação, câmera, tela e mute/deafen), mas continuam gerados pelo helper local `client/src/utils/uiSounds.js`. Não foram copiados arquivos de áudio externos: o contexto Web Audio de UI é exclusivo, respeita `echolive.uiSounds`/Não perturbe e nunca entra no WebRTC.
 
 ## Scripts
 
@@ -182,22 +191,22 @@ npm run build
 npm start
 ```
 
-## Deploy em um unico servico
+## Deploy em um único serviço
 
 O backend Express serve `client/dist` quando essa pasta existe. Assim, o mesmo Web Service hospeda o frontend, a API, os uploads e o Socket.IO. Em desenvolvimento, o Vite continua em `5173` e o servidor em `3001`.
 
-Configuracao para Render Web Service com a raiz do repositorio:
+Configuração para Render Web Service com a raiz do repositório:
 
 ```text
 Root Directory: (vazio)
 Build Command: npm run build
 Start Command: npm start
-Environment Variables: `UPLOAD_DIR` e opcional; em producao, aponte para o ponto de montagem de um disco persistente
+Environment Variables: `UPLOAD_DIR` é opcional; em produção, aponte para o ponto de montagem de um disco persistente
 ```
 
-O servidor usa `process.env.PORT` e escuta em `0.0.0.0`. O cliente usa o backend local em `localhost:3001` durante o Vite e o proprio dominio quando publicado. Links de sala usam `window.location.origin`, portanto continuam validos no dominio HTTPS do Render e ao atualizar `/room/<codigo>`.
+O servidor usa `process.env.PORT` e escuta em `0.0.0.0`. O cliente usa o backend local em `localhost:3001` durante o Vite e o próprio domínio quando publicado. Links de sala usam `window.location.origin`, portanto continuam válidos no domínio HTTPS do Render e ao atualizar `/room/<codigo>`.
 
-No Render, monte um Persistent Disk e configure `UPLOAD_DIR` com o caminho desse disco, por exemplo `/var/data/echolive-uploads`. Sem disco persistente, o filesystem do servico e efemero e anexos antigos podem desaparecer em um novo deploy ou restart. Integracao com object storage ainda exige as credenciais e o provedor que serao escolhidos para producao.
+No Render, monte um Persistent Disk e configure `UPLOAD_DIR` com o caminho desse disco, por exemplo `/var/data/echolive-uploads`. Sem disco persistente, o filesystem do serviço é efêmero e anexos antigos podem desaparecer em um novo deploy ou restart. Integração com object storage ainda exige as credenciais e o provedor que serão escolhidos para produção.
 
 Para publicar no GitHub a partir da raiz:
 
@@ -210,16 +219,16 @@ git remote add origin https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
 git push -u origin main
 ```
 
-No Render, crie `New > Web Service`, conecte o repositorio, escolha o plano Free, deixe `Root Directory` vazio e use os comandos acima. O Render fornecera a URL HTTPS. O plano Free pode suspender o servico quando ocioso, e o primeiro acesso depois disso pode demorar.
+No Render, crie `New > Web Service`, conecte o repositório, escolha o plano Free, deixe `Root Directory` vazio e use os comandos acima. O Render fornecerá a URL HTTPS. O plano Free pode suspender o serviço quando ocioso, e o primeiro acesso depois disso pode demorar.
 
 ## Limitacoes atuais
 
 - Salas e mensagens ficam apenas em memoria; contas e sessoes podem ser persistentes no PostgreSQL.
-- Uploads usam disco local por padrao e devem ser limpos manualmente em uma rotina futura; em producao, configure `UPLOAD_DIR` em um disco persistente.
+- Uploads usam disco local por padrão e devem ser limpos manualmente em uma rotina futura; em produção, configure `UPLOAD_DIR` em um disco persistente.
 - Sem `DATABASE_URL`, o modo visitante funciona sem contas, senhas ou banco configurado.
 - Nicknames podem ser repetidos; o identificador real e `socket.id`.
-- Compartilhamento de tela substitui temporariamente a camera enviada aos outros participantes.
-- Audio do compartilhamento de tela nao e obrigatorio nesta versao.
+- Compartilhamento de tela substitui temporariamente a câmera enviada aos outros participantes.
+- Áudio do compartilhamento de tela não é obrigatório nesta versão.
 - WebRTC mesh e indicado para salas pequenas; para muitas pessoas, considere SFU em etapa futura.
 
 ## Proximos passos sugeridos

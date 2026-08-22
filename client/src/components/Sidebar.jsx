@@ -100,30 +100,30 @@ export default function Sidebar({
   async function copyRoomCode() {
     try {
       await navigator.clipboard.writeText(roomCode);
-      notify?.("Codigo copiado.");
+      notify?.("Código copiado.");
     } catch {
-      notify?.("Nao foi possivel copiar o codigo.");
+      notify?.("Não foi possível copiar o código.");
     }
     setIsRoomMenuOpen(false);
   }
 
   return (
-    <aside className="app-sidebar fluxer-guild-sidebar fluxer-server-sidebar" aria-label={isServer ? "Navegacao do servidor" : "Informacoes da sala"} data-flx="layout.server-sidebar">
-      <div className={`brand-block ${isServer ? "server-brand-block fluxer-server-identity" : ""}`} ref={isServer ? serverMenuRef : null} data-flx={isServer ? "layout.server-identity" : undefined}>
+    <aside className={`${isServer ? "fluxer-guild-sidebar fluxer-server-sidebar" : "app-sidebar"}`} aria-label={isServer ? "Navegação do servidor" : "Informações da sala"} data-flx="layout.server-sidebar">
+      <div className={isServer ? "fluxer-server-identity" : "brand-block"} ref={isServer ? serverMenuRef : null} data-flx={isServer ? "layout.server-identity" : undefined}>
         <div className={`brand-mark ${isServer && serverIconUrl ? "has-server-icon" : ""}`} aria-hidden="true">{isServer && serverIconUrl ? <img src={serverIconUrl} alt="" /> : <BrandMark size={30} />}</div>
         <div className="fluxer-server-identity-content">
           <strong>{isServer ? serverName || "Seus servidores" : "EchoLive"}</strong>
           {!isServer && <span>Sua call privada</span>}
         </div>
-        {isServer && <button type="button" className="server-menu-trigger" onClick={() => { setChannelMenuId(""); setIsServerMenuOpen((value) => !value); }} title="Menu do servidor" aria-label="Menu do servidor" aria-haspopup="menu" aria-expanded={isServerMenuOpen}><Icon name="chevron" size={15} /></button>}
-        {isServer && isServerMenuOpen && <div className="server-context-menu fluxer-context-menu" role="menu" data-flx="ui.context-menu.server">
+        {isServer && <button type="button" className="fluxer-server-menu-trigger" onClick={() => { setChannelMenuId(""); setIsServerMenuOpen((value) => !value); }} title="Menu do servidor" aria-label="Menu do servidor" aria-haspopup="menu" aria-expanded={isServerMenuOpen}><Icon name="chevron" size={15} /></button>}
+        {isServer && isServerMenuOpen && <div className="fluxer-context-menu fluxer-server-context-menu" role="menu" data-flx="ui.context-menu.server">
           {onServerInvite && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerInvite(); }}><Icon name="account" size={15} />Convidar pessoas</button>}
           {onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings(canManageServer ? "overview" : "identity"); }}><Icon name="settings" size={15} />{canManageServer ? "Configurações do servidor" : "Perfil neste servidor"}</button>}
           {canManageServer && onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings("overview"); }}><Icon name="edit" size={15} />Editar nome e ícone</button>}
           {canManageServer && onCreateServerChannel && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onCreateServerChannel("text"); }}><Icon name="plus" size={15} />Criar canal</button>}
           {canManageServer && onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings("channels"); }}><Icon name="hash" size={15} />Gerenciar canais</button>}
           {canManageServer && onServerSettings && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerSettings("members"); }}><Icon name="members" size={15} />Membros</button>}
-          {(onServerLeave || (canDeleteServer && onServerDelete)) && <div className="server-menu-divider" />}
+          {(onServerLeave || (canDeleteServer && onServerDelete)) && <div className="fluxer-server-menu-divider" />}
           {onServerLeave && <button type="button" role="menuitem" onClick={() => { setIsServerMenuOpen(false); onServerLeave(); }}><Icon name="leave" size={15} />Sair do servidor</button>}
           {canDeleteServer && onServerDelete && <button type="button" role="menuitem" className="danger-menu-item" onClick={() => { setIsServerMenuOpen(false); onServerDelete(); }}><Icon name="trash" size={15} />Excluir servidor</button>}
         </div>}
@@ -135,7 +135,7 @@ export default function Sidebar({
         <p className="sidebar-count">
           Participantes: {participantCount}/{maxParticipants || "-"}
         </p>
-        {roomExpiryLabel && <p className="sidebar-expiry">Sala temporaria · {roomExpiryLabel}</p>}
+        {roomExpiryLabel && <p className="sidebar-expiry">Sala temporária · {roomExpiryLabel}</p>}
         {roomExpiryWarning && <div className="sidebar-expiry-warning" role="status">{roomExpiryWarning}</div>}
         {copyFallbackLink && (
           <label className="field compact-field">
@@ -143,7 +143,7 @@ export default function Sidebar({
             <input readOnly value={copyFallbackLink} onFocus={(event) => event.target.select()} />
           </label>
         )}
-        {isRoomMenuOpen && <div className="room-context-menu fluxer-context-menu" role="menu" data-flx="ui.context-menu.room"><button type="button" onClick={() => { onCopyInvite(); setIsRoomMenuOpen(false); }}><Icon name="link" size={15} />Copiar convite</button><button type="button" onClick={copyRoomCode}><Icon name="code" size={15} />Copiar codigo</button><button type="button" onClick={onLeaveRoom} className="danger-menu-item"><Icon name="phoneDisconnect" size={15} />Sair da sala</button></div>}
+        {isRoomMenuOpen && <div className="room-context-menu fluxer-context-menu" role="menu" data-flx="ui.context-menu.room"><button type="button" onClick={() => { onCopyInvite(); setIsRoomMenuOpen(false); }}><Icon name="link" size={15} />Copiar convite</button><button type="button" onClick={copyRoomCode}><Icon name="code" size={15} />Copiar código</button><button type="button" onClick={onLeaveRoom} className="danger-menu-item"><Icon name="phoneDisconnect" size={15} />Sair da sala</button></div>}
       </section>}
 
       {!isServer ? <section className="sidebar-section channel-section">
@@ -172,9 +172,9 @@ export default function Sidebar({
             <div data-flx="channel.member-list.member-row" className={`fluxer-voice-member-row ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} onKeyDown={(event) => { if (participant.isLocal && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onProfileClick?.(); } }} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
               <span className="fluxer-voice-member-avatar" aria-hidden="true"><UserAvatar user={participant} size={25} /><UserStatusBadge status={participant.status} size="sm" /></span>
               <span className="fluxer-voice-member-content"><span className="fluxer-voice-member-name" title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</span>{participant.isGuest && <span className="visitor-badge">Visitante</span>}</span>
-              <span className="fluxer-member-media-icons" aria-label="Status de midia">
+              <span className="fluxer-member-media-icons" aria-label="Status de mídia">
                 <i className={`fluxer-member-media-icon ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}><Icon name={participant.micEnabled === false ? "micOff" : "mic"} size={14} /></i>
-                <i className={`fluxer-member-media-icon ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"} aria-label={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}><Icon name={participant.cameraEnabled === false ? "cameraOff" : "camera"} size={14} /></i>
+                <i className={`fluxer-member-media-icon ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Câmera desligada" : "Câmera ligada"} aria-label={participant.cameraEnabled === false ? "Câmera desligada" : "Câmera ligada"}><Icon name={participant.cameraEnabled === false ? "cameraOff" : "camera"} size={14} /></i>
                 {participant.isScreenSharing && <i className="fluxer-member-media-icon is-sharing" title="Compartilhando tela" aria-label="Compartilhando tela"><Icon name="screenShare" size={14} /></i>}
               </span>
             </div>
@@ -187,7 +187,7 @@ export default function Sidebar({
       <div className="sidebar-lower-region">
         {isInVoice && <section className={`fluxer-voice-connected-panel is-connected ${voicePreview ? "has-preview" : ""}`} aria-label="Status da voz" data-flx="voice.voice-connected-panel">
           {voicePreview && <div className="fluxer-voice-connected-preview">{voicePreview}</div>}
-          <div className="fluxer-voice-connected-heading"><span className="fluxer-voice-state-icon" aria-hidden="true"><Icon name={isInVoice ? "voice" : "headphones"} size={16} /></span><span className="fluxer-voice-connected-copy"><strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong><span className="fluxer-voice-connected-channel">{voiceChannelName}</span></span>{isInVoice && connectionQuality && <span className="fluxer-voice-quality" title={`Qualidade da conexao: ${connectionQuality}`}><Icon name="signal" size={14} />{connectionQuality}</span>}{isInVoice ? <button type="button" className="fluxer-voice-connected-action" onClick={onLeaveVoice} data-tooltip="Desconectar" aria-label="Desconectar"><Icon name="phoneDisconnect" size={16} /></button> : <button type="button" className="fluxer-voice-connected-action" onClick={onJoinVoice} data-tooltip="Entrar na voz" aria-label="Entrar na voz"><Icon name="voice" size={15} /></button>}</div>
+          <div className="fluxer-voice-connected-heading"><span className="fluxer-voice-state-icon" aria-hidden="true"><Icon name={isInVoice ? "voice" : "headphones"} size={16} /></span><span className="fluxer-voice-connected-copy"><strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong><span className="fluxer-voice-connected-channel">{voiceChannelName}</span></span>{isInVoice && connectionQuality && <span className="fluxer-voice-quality" title={`Qualidade da conexão: ${connectionQuality}`}><Icon name="signal" size={14} />{connectionQuality}</span>}{isInVoice ? <button type="button" className="fluxer-voice-connected-action" onClick={onLeaveVoice} data-tooltip="Desconectar" aria-label="Desconectar"><Icon name="phoneDisconnect" size={16} /></button> : <button type="button" className="fluxer-voice-connected-action" onClick={onJoinVoice} data-tooltip="Entrar na voz" aria-label="Entrar na voz"><Icon name="voice" size={15} /></button>}</div>
           <div className="fluxer-voice-toolbar" aria-label="Controles da chamada">
             <ControlsBar compact cameraEnabled={cameraEnabled} onToggleCamera={onToggleCamera} isScreenSharing={isScreenSharing} onToggleScreenShare={onToggleScreenShare} streamPreset={streamPreset} screenShareLabel={screenShareLabel} onStreamPresetChange={onStreamPresetChange} />
           </div>
@@ -215,9 +215,9 @@ function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voi
             <div className={`fluxer-voice-member-row ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local" : ""}`} key={participant.socketId}>
               <span className="fluxer-voice-member-avatar" aria-hidden="true"><UserAvatar user={participant} size={25} /><UserStatusBadge status={participant.status} size="sm" /></span>
               <span className="fluxer-voice-member-content"><span className="fluxer-voice-member-name" title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</span></span>
-              <span className="fluxer-member-media-icons" aria-label="Status de midia">
+              <span className="fluxer-member-media-icons" aria-label="Status de mídia">
                 <i className={`fluxer-member-media-icon ${participant.micEnabled === false ? "is-muted" : ""}`} title={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"} aria-label={participant.micEnabled === false ? "Microfone desligado" : "Microfone ligado"}><Icon name={participant.micEnabled === false ? "micOff" : "mic"} size={14} /></i>
-                <i className={`fluxer-member-media-icon ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"} aria-label={participant.cameraEnabled === false ? "Camera desligada" : "Camera ligada"}><Icon name={participant.cameraEnabled === false ? "cameraOff" : "camera"} size={14} /></i>
+                <i className={`fluxer-member-media-icon ${participant.cameraEnabled === false ? "is-muted" : ""}`} title={participant.cameraEnabled === false ? "Câmera desligada" : "Câmera ligada"} aria-label={participant.cameraEnabled === false ? "Câmera desligada" : "Câmera ligada"}><Icon name={participant.cameraEnabled === false ? "cameraOff" : "camera"} size={14} /></i>
                 {participant.isScreenSharing && <i className="fluxer-member-media-icon is-sharing" title="Compartilhando tela" aria-label="Compartilhando tela"><Icon name="screenShare" size={14} /></i>}
               </span>
             </div>
