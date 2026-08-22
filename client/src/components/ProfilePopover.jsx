@@ -45,9 +45,11 @@ export default function ProfilePopover({ accountUser, profile, nickname, avatarU
     </div>
     {aboutMe && <div className="profile-popover-about"><strong>Sobre mim</strong><p>{aboutMe}</p></div>}
     {isInVoice && <div className="profile-popover-voice"><span className="profile-popover-voice-icon"><Icon name="voice" size={15} /></span><span><strong>Em voz</strong><small>{voiceChannelName}{connectionQuality ? ` · ${connectionQuality}` : ""}</small></span><i className="online-dot" /></div>}
-    <PresenceMenu value={currentStatus} onChange={selectStatus} placement="side" className="profile-status-menu" label="Status do perfil" />
-    {statusError && <small className="profile-status-error" role="alert">{statusError}</small>}
-    <div className="profile-popover-actions profile-popover-action-group"><button type="button" onClick={onOpenSettings}><Icon name="settings" size={15} /><span>Configuracoes</span></button>{accountUser && <button type="button" className="profile-logout-button" onClick={onLogout}><Icon name="leave" size={15} /><span>Sair da conta</span></button>}</div>
+    <div className="profile-popover-action-group">
+      <PresenceMenu value={currentStatus} onChange={selectStatus} placement="side" className="profile-status-menu" label="Status do perfil" />
+      {statusError && <small className="profile-status-error" role="alert">{statusError}</small>}
+      <div className="profile-popover-actions"><button type="button" onClick={onOpenSettings}><Icon name="settings" size={15} /><span>Configuracoes</span></button>{accountUser && <button type="button" className="profile-logout-button" onClick={onLogout}><Icon name="leave" size={15} /><span>Sair da conta</span></button>}</div>
+    </div>
     <div className="profile-popover-actions profile-popover-edit-actions"><button type="button" className="profile-edit-primary" onClick={onEditProfile}><Icon name="edit" size={15} /><span>Editar perfil</span></button></div>
   </section>;
 }
