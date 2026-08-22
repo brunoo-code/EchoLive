@@ -8488,9 +8488,9 @@ video.screen-video {
 }
 .room-page .call-pip-preview.is-sidebar .call-pip-header { min-height: 28px; padding-inline: 8px 5px; font-size: .62rem; }
 .room-page .call-pip-preview.is-sidebar .call-pip-actions button { width: 22px; height: 22px; }
-.room-page .chat-composer { min-height: 54px; margin: 8px 10px; padding: 4px 8px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 8px; background: #2a2831; }
-.room-page .composer-row { min-height: 36px; gap: 5px; }
-.room-page .message-input { min-height: 34px; color: #e9e8ed; }
+.room-page .chat-composer { min-height: 52px; margin: 7px 10px 8px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.room-page .composer-row { min-height: 46px; gap: 6px; padding: 4px 6px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 8px; background: #2a2831; }
+.room-page .message-input { min-height: 32px; color: #e9e8ed; }
 .room-page .attach-button,
 .room-page .composer-icon-button,
 .room-page .send-button { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; padding: 0; border: 0; border-radius: 6px; color: #96939e; background: transparent; cursor: pointer; }
@@ -8697,8 +8697,8 @@ video.screen-video {
 .profile-popover-actions .profile-edit-primary { justify-content: center; margin-top: 4px; color: #071015; background: var(--profile-accent, #67d4e5); font-weight: 700; }
 .profile-popover-actions .profile-edit-primary:hover,
 .profile-popover-actions .profile-edit-primary:focus-visible { color: #071015; background: color-mix(in srgb, var(--profile-accent, #67d4e5) 86%, white); }
-.room-page .connected-voice { display: grid; gap: 3px; padding: 8px 9px; border-radius: 7px; }
-.room-page .sidebar-lower-region { padding-top: 9px; }
+.room-page .connected-voice { display: grid; gap: 3px; padding: 4px 4px 6px; border-radius: 0; background: transparent; }
+.room-page .sidebar-lower-region { padding-top: 5px; }
 .room-page .sidebar-call-toolbar { gap: 5px; margin: 5px 0 3px; }
 .room-page .sidebar-call-toolbar .control-icon-button,
 .room-page .sidebar-call-button { height: 32px; min-height: 32px; border-radius: 6px; }
@@ -8713,6 +8713,39 @@ video.screen-video {
 .room-page .sidebar-user-summary > div:last-child > span { font-size: .64rem; }
 .room-page .sidebar-user-controls { gap: 2px; }
 .room-page .sidebar-user-controls button { width: 30px; height: 30px; min-height: 30px; border-radius: 6px; }
+.room-page .profile-popover-action-group,
+.social-page .profile-popover-action-group {
+  gap: 0;
+  margin-top: 10px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 7px;
+  background: #222128;
+}
+.room-page .profile-popover-action-group button,
+.social-page .profile-popover-action-group button {
+  min-height: 34px;
+  border-radius: 5px;
+}
+.room-page .profile-popover-action-group button + button,
+.social-page .profile-popover-action-group button + button {
+  border-top: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 0 0 5px 5px;
+}
+.room-page .profile-popover-edit-actions,
+.social-page .profile-popover-edit-actions {
+  margin-top: 7px;
+  padding-top: 0;
+  border-top: 0;
+}
+.room-page .profile-popover-edit-actions .profile-edit-primary,
+.social-page .profile-popover-edit-actions .profile-edit-primary { margin-top: 0; min-height: 36px; border-radius: 6px; }
+.room-page > .profile-popover,
+.social-page > .profile-popover { background: #1b1b22; }
+.room-page > .profile-popover .profile-popover-banner,
+.social-page > .profile-popover .profile-popover-banner { background: linear-gradient(135deg, color-mix(in srgb, var(--profile-accent, #67d4e5) 14%, #252630), color-mix(in srgb, var(--profile-accent, #67d4e5) 4%, #17171d) 72%); }
+.room-page > .profile-popover .profile-popover-avatar,
+.social-page > .profile-popover .profile-popover-avatar { border-color: #1b1b22; }
 .room-page .call-view-controls button,
 .room-page .call-members-toggle { min-height: 28px; }
 .room-page .screen-share-state { border-color: rgba(255, 255, 255, .12); color: #a9e7ef; }
@@ -9408,7 +9441,7 @@ video.screen-video {
 }
 
 .room-page .sidebar-user-summary {
-  min-height: 58px;
+  min-height: 44px;
 }
 
 @media (max-width: 1180px) {
