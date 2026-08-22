@@ -1,5 +1,6 @@
 import Icon from "./Icon.jsx";
 import UserAvatar from "./UserAvatar.jsx";
+import LocalUserFooter from "./LocalUserFooter.jsx";
 import { useEffect, useMemo, useState } from "react";
 
 function Avatar({ user, size = 34 }) {
@@ -46,13 +47,7 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
         {!visibleConversations.length && <p className="social-sidebar-empty">{normalizedQuery ? "Nenhuma conversa encontrada." : socialStatus === "loading" ? "Carregando conversas..." : socialStatus === "error" ? "Nao foi possivel carregar as conversas." : "Suas conversas aparecerao aqui."}</p>}
       </div>
     </div>
-    <div className="social-sidebar-footer">
-      <button type="button" className="social-sidebar-user" onClick={(event) => onOpenProfile?.(user, event.currentTarget.getBoundingClientRect())} aria-label="Abrir perfil">
-        <Avatar user={user} size={36} />
-        <span><strong>{user?.displayName || user?.username}</strong><small><i className={user?.status === "dnd" ? "dnd-dot" : user?.status === "invisible" ? "invisible-dot" : "online-dot"} />{user?.customStatus || (user?.status === "dnd" ? "Não perturbe" : user?.status === "invisible" ? "Invisível" : "Online")}</small></span>
-      </button>
-      <button type="button" className="social-sidebar-settings" onClick={onOpenSettings} title="Configuracoes" aria-label="Abrir configuracoes"><Icon name="settings" size={17} /></button>
-    </div>
+    <LocalUserFooter className="social-sidebar-footer" nickname={user?.displayName || user?.username || "Conta"} avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} status={user?.status || "online"} customStatus={user?.customStatus || ""} onProfileClick={(event) => onOpenProfile?.(user, event.currentTarget.getBoundingClientRect())} onOpenUserSettings={onOpenSettings} />
   </aside>;
 }
 

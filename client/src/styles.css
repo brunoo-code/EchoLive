@@ -9569,6 +9569,95 @@ video.screen-video {
   align-items: center;
 }
 
+/* One stable identity footer is shared by room and social sidebars. */
+.local-user-footer {
+  display: flex;
+  min-width: 0;
+  min-height: 58px;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 8px;
+  border-top: 1px solid rgba(255, 255, 255, .07);
+}
+
+.local-user-footer .sidebar-user-summary {
+  display: flex;
+  min-width: 0;
+  min-height: 42px;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--shell-text, #f0eff3);
+  text-align: left;
+}
+
+.local-user-footer .sidebar-user-summary:hover,
+.local-user-footer .sidebar-user-summary:focus-visible {
+  background: rgba(255, 255, 255, .07);
+  outline: none;
+}
+
+.local-user-footer .sidebar-user-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.local-user-footer .sidebar-user-copy strong,
+.local-user-footer .sidebar-user-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.local-user-footer .sidebar-user-copy strong { font-size: 13px; line-height: 16px; }
+.local-user-footer .sidebar-user-copy span { color: var(--shell-muted, #9b98a6); font-size: 11px; line-height: 14px; }
+
+.local-user-footer .sidebar-user-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.local-user-footer .sidebar-user-controls .control-glyph {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--shell-muted, #aeb6c3);
+}
+
+.local-user-footer .sidebar-user-controls .control-glyph:hover:not(:disabled),
+.local-user-footer .sidebar-user-controls .control-glyph:focus-visible {
+  background: rgba(255, 255, 255, .08);
+  color: var(--shell-text, #f0eff3);
+  outline: none;
+}
+
+.local-user-footer .sidebar-user-controls .control-glyph.is-muted { color: var(--echo-danger, #f07d86); }
+.local-user-footer .sidebar-user-controls .control-glyph:disabled { opacity: .48; cursor: default; }
+
+.social-page .local-user-footer {
+  min-height: 58px;
+  margin: 0;
+  padding: 6px 10px;
+  background: #141319;
+}
+
+.social-page .local-user-footer .sidebar-user-summary { min-height: 46px; }
+.social-page .local-user-footer .sidebar-user-avatar .user-avatar { width: 36px; height: 36px; }
+
 @media (max-width: 900px) {
   .settings-modal .settings-layout {
     grid-template-columns: 178px minmax(0, 1fr);

@@ -1,10 +1,9 @@
-import UserStatusBadge from "./UserStatusBadge.jsx";
 import BrandMark from "./BrandMark.jsx";
 import Icon from "./Icon.jsx";
 import ControlsBar from "./ControlsBar.jsx";
 import UserAvatar from "./UserAvatar.jsx";
+import LocalUserFooter from "./LocalUserFooter.jsx";
 import { useEffect, useRef, useState } from "react";
-import { presenceLabel } from "../utils/presence.js";
 
 export default function Sidebar({
   roomCode,
@@ -194,23 +193,7 @@ export default function Sidebar({
           </div>
         </section>}
 
-        <footer className="sidebar-user-footer">
-        <button type="button" className={`sidebar-user-summary ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
-          <span className="sidebar-user-avatar">
-            <UserAvatar user={{ nickname, avatarUrl, avatarVariant, isGuest }} size={30} />
-            <UserStatusBadge status={status} size="md" />
-          </span>
-          <div>
-            <strong title={nickname}>{nickname}</strong>
-            <span title={isGuest ? "Visitante" : presenceLabel(status)}>{isGuest ? "Visitante" : presenceLabel(status)}</span>
-          </div>
-        </button>
-        <div className="sidebar-user-controls" aria-label="Controles do usuario">
-          {isInVoice && <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} data-tooltip={micEnabled ? "Silenciar microfone" : "Ativar microfone"} aria-label={micEnabled ? "Silenciar microfone" : "Ativar microfone"}><Icon name={micEnabled ? "mic" : "micOff"} size={16} /></button>}
-          {isInVoice && onToggleDeafen && <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"}`} onClick={onToggleDeafen} data-tooltip={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"}><Icon name="headphones" size={16} /></button>}
-          {onOpenUserSettings && <button type="button" className="control-glyph" onClick={onOpenUserSettings} data-tooltip="Configuracoes" aria-label="Abrir configuracoes"><Icon name="settings" size={16} /></button>}
-        </div>
-        </footer>
+        <LocalUserFooter nickname={nickname} avatarUrl={avatarUrl} avatarVariant={avatarVariant} isGuest={isGuest} status={status} isSpeaking={isSpeaking} isInVoice={isInVoice} micEnabled={micEnabled} isDeafened={isDeafened} onProfileClick={onProfileClick} onToggleMicrophone={onToggleMicrophone} onToggleDeafen={onToggleDeafen} onOpenUserSettings={onOpenUserSettings} />
       </div>
     </aside>
   );
