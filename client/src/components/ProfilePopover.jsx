@@ -42,7 +42,7 @@ export default function ProfilePopover({ accountUser, profile, nickname, avatarU
   const customStatus = accountUser?.customStatus || profile?.customStatus || "";
   const pronouns = accountUser?.pronouns || profile?.pronouns || "";
   const aboutMe = accountUser?.aboutMe || profile?.aboutMe || "";
-  return <section className="profile-popover" style={{ "--profile-accent": accountUser?.accentColor || profile?.accentColor || "#22D3EE" }} role="dialog" aria-label="Menu do perfil">
+  return <section className="profile-popover" data-flx="app.user-profile-popout" style={{ "--profile-accent": accountUser?.accentColor || profile?.accentColor || "#22D3EE" }} role="dialog" aria-label="Menu do perfil">
     <div className="profile-popover-banner" aria-hidden="true" />
     <div className="profile-popover-body profile-card-layout">
       <div className="profile-avatar-layer">
@@ -53,7 +53,7 @@ export default function ProfilePopover({ accountUser, profile, nickname, avatarU
       </div>
       {aboutMe && <div className="profile-public-info profile-popover-about"><strong>Sobre mim</strong><p>{aboutMe}</p></div>}
       {isInVoice && <div className="profile-popover-voice"><span className="profile-popover-voice-icon"><Icon name="voice" size={15} /></span><span><strong>Em voz</strong><small>{voiceChannelName}{connectionQuality ? ` · ${connectionQuality}` : ""}</small></span><i className="online-dot" /></div>}
-      <div className="profile-popover-action-group">
+        <div className="profile-popover-action-group" data-flx="app.user-profile-popout.action-group">
         <PresenceMenu value={currentStatus} onChange={selectStatus} placement="side" className="profile-status-menu" label="Status do perfil" />
         {statusError && <small className="profile-status-error" role="alert">{statusError}</small>}
         <div className="profile-popover-actions"><button type="button" onClick={onOpenSettings}><Icon name="settings" size={15} /><span>Configuracoes</span></button>{accountUser && <button type="button" className="profile-logout-button" onClick={onLogout}><Icon name="leave" size={15} /><span>Sair da conta</span></button>}</div>

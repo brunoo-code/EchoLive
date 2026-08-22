@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later. Presentation hierarchy directly derived from Fluxer chat surfaces. */
 import Icon from "./Icon.jsx";
+import { SearchInput } from "./FluxerPrimitives.jsx";
 
 export function ChatHeader({ title, subtitle = "", type = "text", meta = "", searchValue, onSearchChange, searchPlaceholder = "Buscar mensagens" }) {
   return <header className="chat-header">
@@ -9,7 +10,7 @@ export function ChatHeader({ title, subtitle = "", type = "text", meta = "", sea
     </div>
     <div className="chat-header-tools">
       {meta && <span className="chat-header-meta">{meta}</span>}
-      {typeof onSearchChange === "function" && <label className="chat-header-search"><Icon name="search" size={14} /><span className="sr-only">Buscar mensagens</span><input value={searchValue || ""} onChange={(event) => onSearchChange(event.target.value)} placeholder={searchPlaceholder} /></label>}
+      {typeof onSearchChange === "function" && <SearchInput className="chat-header-search" value={searchValue} onChange={onSearchChange} placeholder={searchPlaceholder} label={searchPlaceholder} />}
     </div>
   </header>;
 }
@@ -19,7 +20,7 @@ export function ChatViewport({ children, ariaLive = "polite" }) {
 }
 
 export function ChatComposerFrame({ children, onSubmit }) {
-  return <form className="chat-composer" onSubmit={onSubmit}><div className="composer-surface"><div className="composer-surface-inner">{children}</div></div></form>;
+  return <form className="chat-composer" onSubmit={onSubmit} data-flx="channel.composer.surface"><div className="composer-surface" data-composer-surface="canonical"><div className="composer-surface-inner">{children}</div></div></form>;
 }
 
 export function ChatComposerRow({ children }) {

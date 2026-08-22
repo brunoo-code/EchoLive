@@ -28,6 +28,9 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
   const mediaPromiseRef = useRef(null);
   const uiSoundsRef = useRef(uiSounds);
   uiSoundsRef.current = uiSounds;
+  const voiceSessionRef = useRef(false);
+  const voiceLeaveSoundRef = useRef(false);
+  const participantSoundKeysRef = useRef(new Set());
 
   function teardownAudioMix() {
     audioMixContextRef.current?.close?.().catch(() => {});
@@ -125,6 +128,11 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     };
     const handleJoined = ({ participant } = {}) => {
       if (!participant || participant.socketId === socket.id) return;
+      const joinKey = `${serverId}:${channelId}:join:${participant.socketId}`;
+      if (!participantSoundKeysRef.current.has(joinKey)) {
+        participantSoundKeysRef.current.add(joinKey);
+        playUiSound("participant-join", uiSoundsRef.current);
+      }
       setRemoteParticipants((current) => current.some((item) => item.socketId === participant.socketId)
         ? current
         : [...current, participant]);
@@ -132,6 +140,12 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     };
     const handleLeft = ({ participant } = {}) => {
       if (!participant) return;
+      participantSoundKeysRef.current.delete(`${serverId}:${channelId}:join:${participant.socketId}`);
+      const leaveKey = `${serverId}:${channelId}:leave:${participant.socketId}`;
+      if (!participantSoundKeysRef.current.has(leaveKey)) {
+        participantSoundKeysRef.current.add(leaveKey);
+        playUiSound("participant-leave", uiSoundsRef.current);
+      }
       engineRef.current?.removePeer(participant.socketId);
       setRemoteParticipants((current) => current.filter((item) => item.socketId !== participant.socketId));
       setRemoteStreams((current) => {
@@ -146,6 +160,11 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
         : participant));
     };
     const handleVoiceLeft = () => {
+      if (voiceSessionRef.current && !voiceLeaveSoundRef.current) {
+        playUiSound("voice-leave", uiSoundsRef.current);
+        voiceLeaveSoundRef.current = true;
+      }
+      voiceSessionRef.current = false;
       setConnected(false);
       engineRef.current?.closePeers();
       teardownAudioMix();
@@ -163,12 +182,23 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
       if (config) iceConfigRef.current = config;
       socket.emit("server:voice-join", { serverId, channelId }, (result) => {
         if (!result?.ok && active) notify(result?.error || "Nao foi possivel entrar no canal de voz.");
-        if (result?.ok && active) playUiSound("voice-join", uiSoundsRef.current);
+        if (result?.ok && active) {
+          voiceSessionRef.current = true;
+          voiceLeaveSoundRef.current = false;
+          playUiSound("voice-join", uiSoundsRef.current);
+        }
       });
     }).catch(() => {
       if (active) {
-        socket.emit("server:voice-join", { serverId, channelId });
-        playUiSound("voice-join", uiSoundsRef.current);
+        socket.emit("server:voice-join", { serverId, channelId }, (result) => {
+          if (!result?.ok) {
+            notify(result?.error || "Nao foi possivel entrar no canal de voz.");
+            return;
+          }
+          voiceSessionRef.current = true;
+          voiceLeaveSoundRef.current = false;
+          playUiSound("voice-join", uiSoundsRef.current);
+        });
       }
     });
 
@@ -186,8 +216,10 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
       teardownAudioMix();
       cleanupLocalMedia();
       setConnected(false);
+      voiceSessionRef.current = false;
       setRemoteParticipants([]);
       setRemoteStreams({});
+      participantSoundKeysRef.current.clear();
     };
   }, [channelId, enabled, notify, serverId, socket]);
 
@@ -208,6 +240,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     if (cameraTrackRef.current) {
       cameraTrackRef.current.enabled = !cameraTrackRef.current.enabled;
       setCameraEnabled(cameraTrackRef.current.enabled);
+      playUiSound(cameraTrackRef.current.enabled ? "camera-on" : "camera-off", uiSoundsRef.current);
       socket?.emit("server:voice-media-status", {
         micEnabled: Boolean(audioTrackRef.current?.enabled),
         cameraEnabled: cameraTrackRef.current.enabled,
@@ -225,6 +258,7 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
     engineRef.current?.replaceTrack("video", screenTrackRef.current || result.track);
     setLocalStream(localStreamRef.current);
     setCameraEnabled(true);
+    playUiSound("camera-on", uiSoundsRef.current);
     socket?.emit("server:voice-media-status", {
       micEnabled: Boolean(audioTrackRef.current?.enabled),
       cameraEnabled: true,
@@ -289,7 +323,6 @@ export default function useServerVoiceCall({ socket, serverId, channelId, identi
   function leave() {
     if (enabled) {
       socket?.emit("server:voice-leave", { serverId, channelId });
-      playUiSound("voice-leave", uiSoundsRef.current);
     }
   }
 

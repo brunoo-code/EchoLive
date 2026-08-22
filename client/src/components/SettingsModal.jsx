@@ -155,7 +155,7 @@ export default function SettingsModal({ initialSection = "profile", availableSec
   }
 
   return <div className="modal-backdrop settings-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) requestClose(); }}>
-    <section ref={modalRef} className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <section ref={modalRef} className="settings-modal" data-flx="app.settings.modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <header className="settings-header"><div><p className="section-label">EchoLive</p><h2 id="settings-title">Configuracoes</h2></div><button type="button" className="icon-button" onClick={requestClose} aria-label="Fechar configuracoes" title="Fechar"><Icon name="close" size={18} /></button></header>
       <div className="settings-layout">
         <nav className="settings-nav" aria-label="Secoes de configuracoes">{visibleSections.map((section) => <button type="button" key={section} className={active === section ? "settings-nav-active" : ""} onClick={() => setActive(section)}><span className="settings-nav-icon" aria-hidden="true"><Icon name={section === "profile" ? "user" : section === "account" ? "account" : section === "voice" ? "voice" : section === "appearance" ? "palette" : "sliders"} size={17} /></span><span className="settings-nav-copy"><strong>{labels[section]}</strong><small>{descriptions[section]}</small></span></button>)}</nav>

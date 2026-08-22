@@ -86,7 +86,7 @@ export default function ControlsBar({
 
   if (compact) {
     return (
-      <div className="voice-control-bar voice-control-bar-compact" aria-label="Controles de voz">
+      <div className="voice-control-bar voice-control-bar-compact" data-flx="voice.voice-control-bar" aria-label="Controles de voz">
         <IconControl label={cameraEnabled ? "Desligar camera" : "Ligar camera"} icon={cameraEnabled ? "camera" : "cameraOff"} active={cameraEnabled} pressed={cameraEnabled} onClick={onToggleCamera} />
         <IconControl label={isScreenSharing ? "Parar compartilhamento de tela" : "Compartilhar tela"} icon="screenShare" active={isScreenSharing} pressed={isScreenSharing} onClick={onToggleScreenShare} />
         <PresetMenu streamPreset={streamPreset} onStreamPresetChange={onStreamPresetChange} isOpen={isPresetMenuOpen} onToggle={togglePresetMenu} />
@@ -95,7 +95,7 @@ export default function ControlsBar({
   }
 
   return (
-    <footer className="call-controls voice-control-bar" aria-label="Controles da chamada">
+    <footer className="call-controls voice-control-bar" data-flx="voice.voice-control-bar" aria-label="Controles da chamada">
       <IconControl label={micEnabled ? "Silenciar microfone" : "Ativar microfone"} icon={micEnabled ? "mic" : "micOff"} active={micEnabled} pressed={micEnabled} onClick={onToggleMicrophone} />
       <IconControl label={isDeafened ? "Ativar áudio" : "Desativar áudio"} icon={isDeafened ? "speaker" : "headphones"} active={isDeafened} pressed={isDeafened} onClick={onToggleDeafen} />
       <IconControl label={cameraEnabled ? "Desligar câmera" : "Ligar câmera"} icon={cameraEnabled ? "camera" : "cameraOff"} active={cameraEnabled} pressed={cameraEnabled} onClick={onToggleCamera} />

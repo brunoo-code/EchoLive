@@ -150,7 +150,7 @@ export default function Sidebar({
         <p className="section-label">Canais de texto</p>
         <button
           type="button"
-          className={`channel-button channel-item-core ${selectedChannel === "text-general" ? "is-selected" : ""}`}
+          data-flx="channel.channel-item.text-general" className={`channel-button channel-item-core ${selectedChannel === "text-general" ? "is-selected" : ""}`}
           onClick={() => onSelectChannel("text-general")}
         >
           <span className="channel-icon channel-item-icon channel-hash" aria-hidden="true">#</span>
@@ -160,7 +160,7 @@ export default function Sidebar({
         <p className="section-label voice-label">Canais de voz</p>
         <button
           type="button"
-          className={`channel-button channel-item-core ${selectedChannel === "voice-general" ? "is-selected" : ""} ${isInVoice ? "is-connected" : ""}`}
+          data-flx="channel.channel-item.voice-general" className={`channel-button channel-item-core ${selectedChannel === "voice-general" ? "is-selected" : ""} ${isInVoice ? "is-connected" : ""}`}
           onClick={() => onSelectChannel("voice-general")}
         >
           <span className="channel-icon channel-item-icon" aria-hidden="true"><Icon name="voice" size={16} /></span>
@@ -169,7 +169,7 @@ export default function Sidebar({
         </button>
         <div className="call-member-list">
           {participants.map((participant) => (
-            <div className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} onKeyDown={(event) => { if (participant.isLocal && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onProfileClick?.(); } }} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
+            <div data-flx="channel.member-list.member-row" className={`call-member ${participant.isSpeaking ? "is-speaking" : ""} ${participant.isLocal ? "is-local-member" : ""}`} key={participant.socketId} onClick={participant.isLocal ? onProfileClick : undefined} onKeyDown={(event) => { if (participant.isLocal && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onProfileClick?.(); } }} role={participant.isLocal ? "button" : undefined} tabIndex={participant.isLocal ? 0 : undefined}>
               <span className="member-avatar" aria-hidden="true"><UserAvatar user={participant} size={25} /><UserStatusBadge status={participant.status} size="sm" /></span>
               <span className="member-name" title={participant.displayName || participant.nickname}>{participant.displayName || participant.nickname}</span>
               {participant.isGuest && <span className="visitor-badge">Visitante</span>}
@@ -227,7 +227,7 @@ function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voi
 }
 
 function ServerChannelRow({ channel, selected, connected, count = "", canManage, menuOpen, onSelect, onToggleMenu, onRename, onDelete }) {
-  return <div className="server-channel-row">
+  return <div className="server-channel-row" data-flx={`channel.channel-item.${channel.type}`}>
     <button type="button" className={`channel-button channel-item-core ${selected ? "is-selected" : ""} ${connected ? "is-connected" : ""}`} onClick={onSelect}>
       <span className={`channel-icon channel-item-icon ${channel.type === "text" ? "channel-hash" : ""}`} aria-hidden="true">{channel.type === "text" ? "#" : <Icon name="voice" size={16} />}</span>
       <strong className="channel-item-label">{channel.name}</strong>

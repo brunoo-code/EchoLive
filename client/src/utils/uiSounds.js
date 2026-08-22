@@ -4,12 +4,17 @@ const PROFILES = {
   "voice-join": [360, 560, 0.1], "voice-leave": [500, 280, 0.1],
   "deafen-on": [260, 180, 0.07], "deafen-off": [300, 460, 0.07],
   "screen-start": [300, 720, 0.09], "screen-stop": [620, 300, 0.09],
+  "camera-on": [520, 760, 0.08], "camera-off": [760, 440, 0.08],
   "message-send": [520, 680, 0.045], "message-received": [300, 390, 0.06],
   "dmReceived": [580, 760, 0.075],
   "dmSent": [520, 690, 0.045],
   "friendRequestReceived": [430, 650, 0.085],
   "friendAccepted": [520, 820, 0.09],
-  "friendRequestSent": [390, 520, 0.055]
+  "friendRequestSent": [390, 520, 0.055],
+  "participant-join": [420, 680, 0.075],
+  "participant-leave": [520, 300, 0.075],
+  "notification": [640, 880, 0.06],
+  "incoming-ring": [480, 720, 0.12]
 };
 let contextRef = null;
 let activeSource = null;

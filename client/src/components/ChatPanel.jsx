@@ -250,18 +250,18 @@ export default function ChatPanel({ socket, socketId, roomCode, messages, notify
           const isNewMessage = hasSeenMessageBatchRef.current && !knownMessageIdsRef.current.has(message.id);
 
           return (
-          <article className={`chat-message${isContinuation ? " is-grouped" : ""}${isNewMessage ? " is-new" : ""}`} key={message.id}>
+          <article className={`chat-message${isContinuation ? " is-grouped" : ""}${isNewMessage ? " is-new" : ""}`} key={message.id} data-flx="channel.message-group.message" data-message-id={message.id} data-is-group-start={!isContinuation}>
             {isContinuation ? <div className="message-avatar-placeholder" aria-hidden="true"><time>{formatTime(message.createdAt)}</time></div> : <div className="message-avatar" aria-hidden="true">
               {message.nickname?.slice(0, 1).toUpperCase() || "?"}
             </div>}
-            <div className="message-body">
+            <div className="message-body" data-flx="channel.message-group.message-body">
               {!isContinuation && <div className="message-meta">
                 <strong>{message.socketId === socketId ? (displayName || message.nickname) : message.nickname}</strong>
                 <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
               </div>}
               {message.content && <p>{linkifyMessage(message.content)}</p>}
               {message.attachment && (
-                <div className="message-attachment">
+                <div className="message-attachment" data-flx="channel.message-attachments">
                   {message.attachment.type === "image" ? (
                     <button type="button" className="chat-image-button" onClick={() => setLightboxImage({ source: `${SERVER_URL}${message.attachment.url}`, alt: message.attachment.name || "Imagem anexada" })}>
                       <img src={`${SERVER_URL}${message.attachment.url}`} alt={message.attachment.name || "Imagem anexada"} />
