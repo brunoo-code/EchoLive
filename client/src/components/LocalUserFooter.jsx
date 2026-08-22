@@ -32,35 +32,29 @@ export default function LocalUserFooter({
   const label = isGuest ? "Visitante" : customStatus || presenceLabel(status);
   const user = { nickname, avatarUrl, avatarVariant, isGuest };
 
-  return <footer className={`local-user-footer sidebar-user-footer user-area ${className}`.trim()}>
-    <div className="user-area-inner">
-      <button type="button" className={`sidebar-user-summary local-user-identity user-area-user-info ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
-        <span className="sidebar-user-avatar local-user-avatar user-area-avatar">
+  return <section className={`fluxer-user-area-inner ${className}`.trim()} data-flx="app.user-area">
+    <div className="fluxer-user-area-container">
+      <button type="button" className={`fluxer-user-info ${isSpeaking ? "is-speaking" : ""}`} onClick={onProfileClick} aria-label="Abrir menu do perfil">
+        <span className="fluxer-user-avatar">
           <UserAvatar user={user} size={30} />
           <UserStatusBadge status={status} size="md" />
         </span>
-        <span className="sidebar-user-copy local-user-copy user-area-copy">
-          <strong title={nickname}>{nickname}</strong>
-          <span title={label}>{label}</span>
+        <span className="fluxer-user-info-text">
+          <strong className="fluxer-user-name" title={nickname}>{nickname}</strong>
+          <span className="fluxer-user-status" title={label}>{label}</span>
         </span>
       </button>
-      <div className="sidebar-user-controls local-user-controls user-area-controls" aria-label="Controles do usuario">
-        <div className="user-area-control-slot">
-          <button type="button" className={`control-glyph ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} disabled={!micAvailable} data-tooltip={micEnabled ? "Silenciar microfone" : "Ativar microfone"} aria-label={micEnabled ? "Silenciar microfone" : "Ativar microfone"} aria-pressed={micEnabled}>
+      <div className="fluxer-user-controls" aria-label="Controles do usuario">
+        <button type="button" className={`fluxer-user-control ${micEnabled ? "is-active" : "is-muted"}`} onClick={onToggleMicrophone} disabled={!micAvailable} data-tooltip={micEnabled ? "Silenciar microfone" : "Ativar microfone"} aria-label={micEnabled ? "Silenciar microfone" : "Ativar microfone"} aria-pressed={micEnabled}>
             <Icon name={micEnabled ? "mic" : "micOff"} size={16} />
-          </button>
-        </div>
-        <div className="user-area-control-slot">
-          <button type="button" className={`control-glyph ${isDeafened ? "is-muted is-deafened" : "is-active"} ${!deafenAvailable ? "is-unavailable" : ""}`} onClick={onToggleDeafen} disabled={!deafenAvailable} data-tooltip={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-pressed={isDeafened}>
+        </button>
+        <button type="button" className={`fluxer-user-control ${isDeafened ? "is-muted is-deafened" : "is-active"} ${!deafenAvailable ? "is-unavailable" : ""}`} onClick={onToggleDeafen} disabled={!deafenAvailable} data-tooltip={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-label={isDeafened ? "Ativar audio" : "Silenciar audio"} aria-pressed={isDeafened}>
             <Icon name="headphones" size={16} />
-          </button>
-        </div>
-        <div className="user-area-control-slot">
-          <button type="button" className="control-glyph" onClick={onOpenUserSettings} disabled={typeof onOpenUserSettings !== "function"} data-tooltip="Configuracoes" aria-label="Abrir configuracoes">
+        </button>
+        <button type="button" className="fluxer-user-control" onClick={onOpenUserSettings} disabled={typeof onOpenUserSettings !== "function"} data-tooltip="Configuracoes" aria-label="Abrir configuracoes">
             <Icon name="settings" size={16} />
-          </button>
-        </div>
+        </button>
       </div>
     </div>
-  </footer>;
+  </section>;
 }

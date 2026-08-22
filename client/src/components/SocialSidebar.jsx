@@ -37,21 +37,21 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
     }
   }, [conversations]);
 
-  return <aside className="social-sidebar fluxer-sidebar-shell">
-    <div className="social-sidebar-content fluxer-sidebar-content">
-      <header className="social-sidebar-header"><SearchInput className="social-sidebar-search" value={conversationQuery} onChange={setConversationQuery} placeholder="Encontre ou comece uma conversa" label="Buscar conversas" /></header>
-      <nav className="social-nav fluxer-sidebar-nav" aria-label="Navegacao social">
+  return <aside className="fluxer-social-sidebar" data-flx="app.layout.social-sidebar">
+    <div className="fluxer-social-sidebar-layout">
+      <header className="fluxer-social-sidebar-header"><SearchInput value={conversationQuery} onChange={setConversationQuery} placeholder="Encontre ou comece uma conversa" label="Buscar conversas" /></header>
+      <nav className="fluxer-social-nav" aria-label="Navegacao social">
         <button type="button" className={activeTab !== "add" ? "is-active" : ""} onClick={() => onTabChange("all")}><Icon name="account" size={16} /><span>Amigos</span></button>
       </nav>
-      <div className="social-sidebar-section fluxer-sidebar-scroller">
-      <div className="social-sidebar-section-title"><span>Mensagens diretas</span><button type="button" title="Nova conversa" aria-label="Nova conversa" onClick={() => onTabChange("friends")}><Icon name="plus" size={14} /></button></div>
-      <div className="social-conversation-list">
-        {visibleConversations.map((conversation) => <div data-flx="channel.direct-message.dm-list-item" className={`social-conversation-row ${conversation.user?.isOfficial ? "is-official" : ""} ${conversation.unreadCount > 0 ? "has-unread" : ""} ${activeConversationId === conversation.id ? "is-active" : ""}`} key={conversation.id}><button type="button" className="social-conversation-main" onClick={() => onOpenConversation(conversation.id)}><span className="social-conversation-avatar" onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user, event.currentTarget.getBoundingClientRect()); }}><Avatar user={conversation.user} size={32} /><StatusDot status={conversation.user?.isOfficial || onlineUserIds.has(conversation.user.id) ? "online" : "offline"} /></span><span className="social-conversation-copy"><strong onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user, event.currentTarget.getBoundingClientRect()); }}>{conversation.user.displayName || conversation.user.username}{conversation.user?.isOfficial && <Badge tone="official">OFICIAL</Badge>}</strong><small>{conversationPreview(conversation)}</small></span>{conversation.unreadCount > 0 && <Badge tone="unread" className="social-unread-badge" aria-label={`${conversation.unreadCount} mensagens nao lidas`}>{conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}</Badge>}</button>{!conversation.user?.isOfficial && <IconButton className="social-conversation-close" label="Fechar conversa" onClick={() => onHideConversation?.(conversation.id)}><Icon name="close" size={14} /></IconButton>}</div>)}
-        {!visibleConversations.length && <p className="social-sidebar-empty">{normalizedQuery ? "Nenhuma conversa encontrada." : socialStatus === "loading" ? "Carregando conversas..." : socialStatus === "error" ? "Nao foi possivel carregar as conversas." : "Suas conversas aparecerao aqui."}</p>}
-      </div>
+      <div className="fluxer-social-sidebar-scroller">
+        <div className="fluxer-section-heading"><span>Mensagens diretas</span><button type="button" title="Nova conversa" aria-label="Nova conversa" onClick={() => onTabChange("friends")}><Icon name="plus" size={14} /></button></div>
+        <div className="fluxer-dm-list" data-flx="channel.direct-message.list">
+          {visibleConversations.map((conversation) => <article data-flx="channel.direct-message.dm-list-item" className={`fluxer-dm-item ${conversation.user?.isOfficial ? "is-official" : ""} ${conversation.unreadCount > 0 ? "has-unread" : ""} ${activeConversationId === conversation.id ? "is-active" : ""}`} key={conversation.id}><button type="button" className="fluxer-dm-item-content" onClick={() => onOpenConversation(conversation.id)}><span className="fluxer-dm-avatar" onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user, event.currentTarget.getBoundingClientRect()); }}><Avatar user={conversation.user} size={32} /><StatusDot status={conversation.user?.isOfficial || onlineUserIds.has(conversation.user.id) ? "online" : "offline"} /></span><span className="fluxer-dm-info"><span className="fluxer-dm-name-row"><strong onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user, event.currentTarget.getBoundingClientRect()); }}>{conversation.user.displayName || conversation.user.username}</strong>{conversation.user?.isOfficial && <Badge tone="official">OFICIAL</Badge>}</span><small>{conversationPreview(conversation)}</small></span>{conversation.unreadCount > 0 && <Badge tone="unread" aria-label={`${conversation.unreadCount} mensagens nao lidas`}>{conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}</Badge>}</button>{!conversation.user?.isOfficial && <IconButton className="fluxer-dm-close" label="Fechar conversa" onClick={() => onHideConversation?.(conversation.id)}><Icon name="close" size={14} /></IconButton>}</article>)}
+          {!visibleConversations.length && <p className="fluxer-social-empty">{normalizedQuery ? "Nenhuma conversa encontrada." : socialStatus === "loading" ? "Carregando conversas..." : socialStatus === "error" ? "Nao foi possivel carregar as conversas." : "Suas conversas aparecerao aqui."}</p>}
+        </div>
       </div>
     </div>
-    <LocalUserFooter className="social-sidebar-footer" nickname={user?.displayName || user?.username || "Conta"} avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} status={user?.status || "online"} customStatus={user?.customStatus || ""} onProfileClick={(event) => onOpenProfile?.(user, event.currentTarget.getBoundingClientRect())} onOpenUserSettings={onOpenSettings} />
+    <LocalUserFooter nickname={user?.displayName || user?.username || "Conta"} avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} status={user?.status || "online"} customStatus={user?.customStatus || ""} onProfileClick={(event) => onOpenProfile?.(user, event.currentTarget.getBoundingClientRect())} onOpenUserSettings={onOpenSettings} />
   </aside>;
 }
 

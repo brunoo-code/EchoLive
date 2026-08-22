@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later. DM presentation directly derived from Fluxer direct-message list surfaces. */
 import { useEffect, useRef, useState } from "react";
 import Icon from "../components/Icon.jsx";
 import SocialRail from "../components/SocialRail.jsx";
@@ -343,22 +344,22 @@ export default function DirectMessagePage({ conversationId, initialConversation,
     anchorRect
   }));
   const sidebarProps = { activeTab: "friends", onTabChange: onNavigateFriends, conversations, onlineUserIds, user, onHome: onNavigateHome, onOpenConversation: onNavigateDm, onOpenSettings: onOpenAccountSettings, onHideConversation: async (id) => { await hideConversation(id); onNavigateFriends(); }, activeConversationId: conversationId, socialStatus };
-  if (conversationStatus === "loading") return <main className="page social-page"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
-  if (conversationStatus === "error") return <main className="page social-page"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="dm-content"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
+  if (conversationStatus === "loading") return <main className="page fluxer-social-shell"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="fluxer-dm-main"><SocialEmptyState title="Abrindo conversa..." copy="Estamos recuperando suas mensagens." /></section></main>;
+  if (conversationStatus === "error") return <main className="page fluxer-social-shell"><SocialRail onHome={onNavigateHome} notificationCount={notificationCount} /><SocialSidebar {...sidebarProps} /><section className="fluxer-dm-main"><SocialEmptyState title="Conversa indisponivel" copy="Escolha uma conversa existente para continuar." action="Voltar para Amigos" onAction={onNavigateFriends} /></section></main>;
 
   const historyLoading = historyStatus === "loading";
   const historyError = historyStatus === "error";
-  return <main className="page social-page">
+  return <main className="page fluxer-social-shell">
     <SocialRail onHome={onNavigateHome} notificationCount={notificationCount} />
     <SocialSidebar {...sidebarProps} onOpenProfile={openSidebarProfile} />
-    <section className="dm-content">
-      <header className={`dm-header ${isOfficial ? "is-official" : ""}`}>
+    <section className="fluxer-dm-main">
+      <header className={`dm-header fluxer-dm-header ${isOfficial ? "is-official" : ""}`}>
         <button type="button" className="dm-header-profile" onClick={(event) => openSidebarProfile({ ...otherUser, status: isOnline ? publicPresence(otherUser.status) : "offline" }, event.currentTarget.getBoundingClientRect())}>
           <Avatar user={otherUser} size={38} />
           <span><strong>{otherUser.displayName || otherUser.username}{isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{isOfficial ? "Mensagem oficial do EchoLive" : `@${otherUser.username} · ${isOnline && publicPresence(otherUser.status) === "dnd" ? "Não perturbe" : isOnline && publicPresence(otherUser.status) === "online" ? "Online" : "Offline"}`}</small></span>
         </button>
       </header>
-      <div ref={messagesRef} className="dm-messages" onScroll={handleMessagesScroll}>
+      <div ref={messagesRef} className="dm-messages fluxer-message-scroller" onScroll={handleMessagesScroll}>
         {showNewMessages && <button type="button" className="dm-new-messages" onClick={() => { shouldAutoScrollRef.current = true; setShowNewMessages(false); bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }}>↓ Novas mensagens</button>}
         {hasMore && <button type="button" className="text-button dm-load-more" onClick={loadOlder}>Carregar mensagens anteriores</button>}
         {historyLoading && !messages.length ? <DmSkeleton /> : historyError ? <div className="dm-load-error"><strong>Nao foi possivel carregar esta conversa.</strong><span>{error || "Tente novamente."}</span><button type="button" className="secondary-button" onClick={() => { setError(""); setRetryVersion((value) => value + 1); }}>Tentar novamente</button></div> : messages.length ? messages.map((message, index) => <Message key={message.id} message={message} mine={message.senderUserId === normalizeIdentity(user?.id)} compact={index > 0 && messages[index - 1].senderUserId === message.senderUserId && timestampValue(message.createdAt) - timestampValue(messages[index - 1].createdAt) < 5 * 60 * 1000} showDate={index === 0 || !sameDate(message.createdAt, messages[index - 1].createdAt)} onOpenImage={(source, alt) => setLightboxImage({ source, alt })} />) : <div className="dm-intro"><Avatar user={otherUser} size={64} /><h2>{otherUser.displayName || otherUser.username}</h2><p>{isOfficial ? "A mensagem oficial do EchoLive" : `@${otherUser.username}`}</p><span>Este e o inicio da conversa.</span></div>}

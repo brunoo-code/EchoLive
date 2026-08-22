@@ -1,0 +1,139 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * Directly derived presentation slice from Fluxer layout/UserArea,
+ * FriendsListItem and DirectMessageListItem surfaces. EchoLive supplies
+ * identity, data and event handlers; Fluxer stores and network actions are
+ * intentionally absent.
+ */
+
+.fluxer-social-shell {
+  --fluxer-rail-width: 64px;
+  --fluxer-sidebar-width: 284px;
+  --fluxer-panel-width: 300px;
+  --fluxer-row-height: 52px;
+  display: grid;
+  grid-template-columns: var(--fluxer-rail-width) var(--fluxer-sidebar-width) minmax(0, 1fr) var(--fluxer-panel-width);
+  min-width: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--app-bg, #19171f);
+}
+
+.fluxer-rail {
+  display: flex;
+  justify-content: center;
+  width: var(--fluxer-rail-width);
+  min-width: var(--fluxer-rail-width);
+  padding: 12px 0;
+  background: #111016;
+  border-right: 1px solid rgba(255,255,255,.04);
+}
+.fluxer-rail-scroll { display:flex; flex:1; flex-direction:column; align-items:center; width:100%; }
+.fluxer-rail-top { display:flex; flex-direction:column; align-items:center; gap:10px; width:100%; }
+.fluxer-rail-button { position:relative; display:flex; align-items:center; justify-content:center; width:42px; height:42px; border:0; border-radius:13px; color:#b3afc0; background:#24212b; cursor:pointer; transition:background .16s ease, color .16s ease, border-radius .16s ease; }
+.fluxer-rail-button:hover, .fluxer-rail-button:focus-visible { color:#fff; background:#34303d; border-radius:11px; outline:none; }
+.fluxer-rail-brand { color:#62d9e8; background:#22212a; }
+.fluxer-rail-item.is-active { color:#fff; background:#4b46e7; }
+.fluxer-rail-divider { width:28px; height:1px; background:#34303c; margin:2px 0; }
+.fluxer-rail-badge { position:absolute; right:-3px; top:-4px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:#ed4c62; color:#fff; font-size:10px; line-height:16px; }
+
+.fluxer-social-sidebar { display:flex; min-width:0; min-height:0; flex-direction:column; background:#1c1a21; border-right:1px solid rgba(255,255,255,.05); }
+.fluxer-social-sidebar-layout { display:grid; grid-template-rows:auto auto minmax(0,1fr); min-height:0; flex:1; }
+.fluxer-social-sidebar-header { padding:10px 12px 8px; border-bottom:1px solid rgba(255,255,255,.05); }
+.fluxer-social-sidebar-header .fluxer-search-input { height:34px; }
+.fluxer-social-nav { padding:8px 10px; }
+.fluxer-social-nav button { display:flex; align-items:center; gap:10px; width:100%; min-height:38px; padding:0 12px; border:0; border-radius:7px; background:transparent; color:#aaa5b8; font-weight:600; cursor:pointer; }
+.fluxer-social-nav button:hover, .fluxer-social-nav button.is-active { color:#fff; background:#302d37; }
+.fluxer-social-sidebar-scroller { min-height:0; overflow:auto; padding:10px 8px 14px; }
+.fluxer-section-heading { display:flex; align-items:center; justify-content:space-between; padding:7px 10px 8px; color:#aaa5b8; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.fluxer-section-heading button { display:grid; place-items:center; width:24px; height:24px; border:0; border-radius:5px; color:#aaa5b8; background:transparent; cursor:pointer; }
+.fluxer-section-heading button:hover { color:#fff; background:#302d37; }
+.fluxer-dm-list { display:flex; flex-direction:column; gap:2px; }
+.fluxer-dm-item { position:relative; display:flex; align-items:center; min-height:48px; border-radius:7px; }
+.fluxer-dm-item:hover, .fluxer-dm-item.is-active { background:#302d37; }
+.fluxer-dm-item-content { display:flex; align-items:center; gap:10px; flex:1; min-width:0; height:48px; padding:0 8px; border:0; color:#aaa5b8; background:transparent; text-align:left; cursor:pointer; }
+.fluxer-dm-item-content:hover, .fluxer-dm-item.is-active .fluxer-dm-item-content { color:#fff; }
+.fluxer-dm-avatar { position:relative; display:inline-flex; flex:0 0 auto; }
+.fluxer-dm-avatar .fluxer-status-dot { position:absolute; right:-1px; bottom:-1px; border:2px solid #302d37; }
+.fluxer-dm-info { display:flex; flex-direction:column; min-width:0; flex:1; gap:2px; overflow:hidden; }
+.fluxer-dm-name-row { display:flex; align-items:center; gap:6px; min-width:0; }
+.fluxer-dm-name-row strong, .fluxer-dm-info small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fluxer-dm-name-row strong { font-size:13px; color:#ddd9e4; }
+.fluxer-dm-info small { font-size:11px; color:#878292; }
+.fluxer-dm-close { opacity:0; flex:0 0 auto; margin-right:5px; }
+.fluxer-dm-item:hover .fluxer-dm-close, .fluxer-dm-item.is-active .fluxer-dm-close { opacity:1; }
+.fluxer-user-area-inner { flex:0 0 auto; margin:0 8px 8px; border-radius:8px; background:#211f27; box-shadow:inset 0 1px 0 rgba(255,255,255,.025); overflow:hidden; }
+.fluxer-user-area-container { display:flex; align-items:center; gap:8px; min-height:56px; padding:8px 10px; }
+.fluxer-user-info { display:flex; align-items:center; gap:9px; flex:1; min-width:0; padding:0; border:0; color:inherit; background:transparent; text-align:left; cursor:pointer; }
+.fluxer-user-avatar { position:relative; display:inline-flex; flex:0 0 auto; }
+.fluxer-user-avatar .status-badge { position:absolute; right:-2px; bottom:-2px; }
+.fluxer-user-info-text { display:flex; flex-direction:column; gap:1px; min-width:0; overflow:hidden; }
+.fluxer-user-name, .fluxer-user-status { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fluxer-user-name { color:#eeeaf2; font-size:13px; line-height:18px; }
+.fluxer-user-status { color:#8d8799; font-size:11px; line-height:14px; }
+.fluxer-user-controls { display:flex; align-items:center; gap:2px; flex:0 0 auto; }
+.fluxer-user-control { display:grid; place-items:center; width:32px; height:32px; padding:0; border:0; border-radius:6px; color:#aaa5b8; background:transparent; cursor:pointer; }
+.fluxer-user-control:hover, .fluxer-user-control:focus-visible { color:#fff; background:#35313d; outline:none; }
+.fluxer-user-control.is-muted { color:#ed6475; }
+.fluxer-user-control:disabled { opacity:.45; cursor:default; }
+
+.fluxer-main-column { min-width:0; background:#201e25; }
+.fluxer-social-shell > .social-content { min-width:0; background:#201e25; }
+.fluxer-friends-header { display:flex; align-items:center; gap:22px; min-height:58px; padding:0 20px; border-bottom:1px solid rgba(255,255,255,.05); }
+.fluxer-friends-title { display:flex; align-items:center; gap:10px; min-width:max-content; }
+.fluxer-friends-tabs { display:flex; align-items:center; gap:4px; height:100%; }
+.fluxer-friends-tabs button { display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 12px; border:0; border-radius:7px; background:transparent; color:#aaa5b8; font-weight:600; cursor:pointer; }
+.fluxer-friends-tabs button:hover, .fluxer-friends-tabs button.is-active { color:#fff; background:#35313d; }
+.fluxer-friends-tabs .social-tab-add { margin-left:6px; color:#fff; background:#5148ed; }
+.fluxer-friends-tabs .social-tab-add:hover { background:#625af5; }
+.fluxer-friends-view { max-width:100%; padding:14px 18px 24px; overflow:auto; }
+.fluxer-friends-search { width:100%; margin-bottom:16px; }
+.fluxer-friend-section h2 { margin:0; padding:8px 2px; font-size:12px; color:#b7b2c3; font-weight:700; }
+.fluxer-friend-list { border-top:1px solid rgba(255,255,255,.06); }
+.fluxer-friend-list-item { display:flex; align-items:center; justify-content:space-between; min-height:52px; padding:0 8px; position:relative; border-bottom:1px solid rgba(255,255,255,.06); }
+.fluxer-friend-list-item:hover { background:#2a2731; }
+.fluxer-friend-info { display:flex; align-items:center; gap:12px; flex:1; min-width:0; padding:0; border:0; color:inherit; background:transparent; text-align:left; cursor:pointer; }
+.fluxer-friend-avatar { position:relative; flex:0 0 auto; display:inline-flex; }
+.fluxer-friend-avatar .fluxer-status-dot { position:absolute; right:-2px; bottom:-2px; border:2px solid #201e25; }
+.fluxer-friend-details { display:flex; flex-direction:column; gap:2px; min-width:0; overflow:hidden; }
+.fluxer-friend-name-row { display:flex; align-items:center; gap:6px; min-width:0; }
+.fluxer-friend-name-row strong { color:#eeeaf2; font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fluxer-friend-tag { color:#807a8d; font-size:11px; opacity:0; }
+.fluxer-friend-list-item:hover .fluxer-friend-tag { opacity:1; }
+.fluxer-friend-subtext { color:#8d8799; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fluxer-friend-actions { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+.fluxer-friend-actions .fluxer-icon-button { opacity:.65; }
+.fluxer-friend-actions .fluxer-icon-button:hover { opacity:1; }
+
+.fluxer-active-now-panel { min-width:0; background:#1c1a21; border-left:1px solid rgba(255,255,255,.05); padding:18px 14px; }
+.fluxer-active-now-panel h2 { margin:0 0 14px; color:#e5e1eb; font-size:14px; }
+.fluxer-active-now-row { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:48px; padding:5px 8px; border-radius:7px; }
+.fluxer-active-now-row:hover { background:#302d37; }
+.fluxer-active-now-identity { display:flex; align-items:center; gap:10px; min-width:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.fluxer-active-now-identity > span:last-child { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.fluxer-active-now-identity strong { color:#e8e4ed; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fluxer-active-now-identity small { display:flex; align-items:center; gap:5px; color:#8d8799; font-size:11px; }
+.fluxer-active-now-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:50vh; gap:8px; text-align:center; color:#918b9e; font-size:12px; }
+.fluxer-active-now-empty strong { color:#e4dfeb; font-size:13px; }
+.fluxer-social-shell > .social-online-panel { min-width:0; background:#1c1a21; border-left:1px solid rgba(255,255,255,.05); padding:18px 14px; }
+.fluxer-social-shell > .social-online-panel h2 { margin:0 0 14px; color:#e5e1eb; font-size:14px; }
+.fluxer-social-shell > .social-online-panel .social-online-row { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:48px; padding:5px 8px; border-radius:7px; }
+.fluxer-social-shell > .social-online-panel .social-online-row:hover { background:#302d37; }
+
+.fluxer-dm-main { display:grid; grid-template-rows:auto minmax(0,1fr) auto; min-width:0; background:#201e25; }
+.fluxer-dm-header { display:flex; align-items:center; min-height:58px; padding:0 18px; border-bottom:1px solid rgba(255,255,255,.05); }
+.fluxer-dm-header .dm-header-profile { display:flex; align-items:center; gap:10px; min-width:0; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.fluxer-dm-header .dm-header-profile > span { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.fluxer-dm-header .dm-header-profile strong { display:flex; align-items:center; gap:8px; color:#eeeaf2; font-size:14px; }
+.fluxer-dm-header .dm-header-profile small { color:#8d8799; font-size:11px; }
+.fluxer-message-scroller { min-height:0; overflow:auto; }
+
+@media (max-width: 1100px) {
+  .fluxer-social-shell { --fluxer-panel-width: 250px; --fluxer-sidebar-width: 250px; }
+}
+@media (max-width: 820px) {
+  .fluxer-social-shell { grid-template-columns: 56px minmax(0,1fr); }
+  .fluxer-social-sidebar { display:none; }
+  .fluxer-active-now-panel { display:none; }
+  .fluxer-social-shell > .social-online-panel { display:none; }
+}
