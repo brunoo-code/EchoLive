@@ -8592,9 +8592,17 @@ video.screen-video {
 /* Shared interaction details for the canonical desktop contract. */
 .room-page > .profile-popover,
 .social-page > .profile-popover {
-  width: min(306px, calc(100vw - 92px));
+  width: min(304px, calc(100vw - 92px));
+  min-width: min(304px, calc(100vw - 92px));
+  max-width: 304px;
   padding: 12px;
   border-radius: 9px;
+}
+.room-page > .profile-popover .profile-popover-body,
+.social-page > .profile-popover .profile-popover-body {
+  display: grid;
+  min-width: 0;
+  gap: 0;
 }
 .social-page > .profile-popover {
   left: calc(var(--social-rail-size) + 10px);
@@ -8602,7 +8610,7 @@ video.screen-video {
 }
 .room-page > .profile-popover .profile-popover-banner,
 .social-page > .profile-popover .profile-popover-banner {
-  height: 84px;
+  height: 94px;
   margin: -12px -12px 10px;
   border-radius: 9px 9px 0 0;
   border-bottom-color: rgba(255,255,255,.06);
@@ -8754,7 +8762,7 @@ video.screen-video {
 .room-page > .profile-popover,
 .social-page > .profile-popover { background: #1b1b22; }
 .room-page > .profile-popover .profile-popover-banner,
-.social-page > .profile-popover .profile-popover-banner { background: linear-gradient(135deg, color-mix(in srgb, var(--profile-accent, #67d4e5) 14%, #252630), color-mix(in srgb, var(--profile-accent, #67d4e5) 4%, #17171d) 72%); }
+.social-page > .profile-popover .profile-popover-banner { background: linear-gradient(135deg, color-mix(in srgb, var(--profile-accent, #67d4e5) 42%, #263750), color-mix(in srgb, var(--profile-accent, #67d4e5) 16%, #171b26) 72%); }
 .room-page > .profile-popover .profile-popover-avatar,
 .social-page > .profile-popover .profile-popover-avatar { border-color: #1b1b22; }
 .room-page .call-view-controls button,
