@@ -7684,20 +7684,33 @@ video.screen-video {
   padding: 7px 16px 10px;
 }
 
-.room-page .composer-row,
-.server-page .composer-row {
-  min-height: 40px;
-  padding: 4px 6px;
+.room-page .composer-surface,
+.server-page .composer-surface {
+  display: flex;
+  min-height: 42px;
+  align-items: stretch;
   border: 1px solid var(--shell-line);
   border-radius: 8px;
   background: var(--shell-raised);
 }
 
+.room-page .composer-row,
+.server-page .composer-row {
+  flex: 1;
+  min-height: 40px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+}
+
 .room-page .composer-row:focus-within,
 .server-page .composer-row:focus-within {
-  border-color: rgba(103, 212, 229, .36);
+  border-color: transparent;
   box-shadow: 0 0 0 2px rgba(103, 212, 229, .07);
 }
+.room-page .composer-surface:focus-within,
+.server-page .composer-surface:focus-within { border-color: rgba(103, 212, 229, .36); }
 
 .room-page .message-input,
 .server-page .message-input {
@@ -8527,6 +8540,7 @@ video.screen-video {
   font-size: 14px;
 }
 .social-page .social-sidebar { min-width: 0; border-right: 1px solid rgba(255, 255, 255, .07); background: #19181e; }
+.social-page .social-sidebar-content { min-height: 0; flex: 1; display: flex; flex-direction: column; }
 .social-page .social-sidebar-search { height: 34px; margin: 8px 10px 7px; border: 1px solid rgba(255, 255, 255, .09); border-radius: 6px; background: #111014; }
 .social-page .social-nav button,
 .social-page .social-conversation-main { border-radius: 5px; }
@@ -8534,6 +8548,7 @@ video.screen-video {
 .social-page .social-conversation-row.is-active,
 .social-page .social-conversation-row:hover { background: #29282e; }
 .social-page .social-sidebar-footer { min-height: 58px; padding: 6px 10px; border-top: 1px solid rgba(255, 255, 255, .07); background: #141319; }
+.social-page .social-sidebar-content .social-sidebar-section { flex: 1; min-height: 0; overflow: auto; }
 .social-page .social-content { min-width: 0; min-height: 0; background: #211f27; }
 .social-page .social-topbar { min-height: 48px; padding: 0 18px; border-bottom: 1px solid rgba(255, 255, 255, .07); background: #1c1b21; }
 .social-page .social-topbar-title strong { font-size: 15px; }
@@ -8618,6 +8633,8 @@ video.screen-video {
 }
 .room-page > .profile-popover .profile-popover-header,
 .social-page > .profile-popover .profile-popover-header { align-items: flex-end; }
+.room-page > .profile-popover .profile-avatar-layer,
+.social-page > .profile-popover .profile-avatar-layer { display: flex; min-height: 42px; align-items: flex-end; }
 .room-page > .profile-popover .profile-popover-avatar,
 .social-page > .profile-popover .profile-popover-avatar {
   width: 70px;
@@ -8625,6 +8642,10 @@ video.screen-video {
   margin-top: -36px;
   border: 4px solid #1b1b20;
 }
+.room-page > .profile-popover .profile-popover-header,
+.social-page > .profile-popover .profile-popover-header { align-items: flex-start; padding: 8px 0 10px; }
+.room-page > .profile-popover .profile-popover-header .profile-popover-identity,
+.social-page > .profile-popover .profile-popover-header .profile-popover-identity { width: 100%; }
 .room-page > .profile-popover .profile-popover-identity > strong,
 .social-page > .profile-popover .profile-popover-identity > strong { font-size: 1.1875rem; font-weight: 700; }
 .room-page > .profile-popover .profile-popover-identity > .profile-popover-username > span,
@@ -9699,4 +9720,213 @@ video.screen-video {
   .settings-profile-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Fluxer presentation patterns adapted to EchoLive components. */
+.room-page .channel-item-core {
+  min-width: 0;
+  margin: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.room-page .channel-item-icon {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  color: #7e8795;
+}
+
+.room-page .channel-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .78rem;
+  line-height: 1.2rem;
+  font-weight: 550;
+}
+
+.room-page .channel-item-core.is-selected .channel-item-icon,
+.room-page .channel-item-core:hover .channel-item-icon {
+  color: var(--echo-cyan);
+}
+
+.room-page .sidebar-call-toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+  align-items: center;
+}
+
+.room-page .sidebar-call-toolbar > .sidebar-call-button,
+.room-page .sidebar-call-toolbar > .call-toolbar-button,
+.room-page .sidebar-call-toolbar > .screen-options-control,
+.room-page .sidebar-call-toolbar .screen-options-control .call-toolbar-button {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 7px;
+}
+
+.room-page .sidebar-call-toolbar .call-toolbar-button {
+  display: grid;
+  place-items: center;
+  padding: 0 6px;
+}
+
+.room-page .sidebar-call-toolbar .call-toolbar-button > .ui-icon,
+.room-page .sidebar-call-toolbar .sidebar-call-button .camera-control-icon {
+  flex: 0 0 auto;
+}
+
+.room-page .sidebar-call-toolbar .screen-options-control {
+  min-width: 0;
+}
+
+.room-page .sidebar-call-toolbar .screen-options-control .call-toolbar-button {
+  display: grid;
+}
+
+.room-page .sidebar-call-toolbar .screen-share-state {
+  display: none;
+}
+
+.status-menu-row,
+.profile-status-options button {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-menu-icon {
+  position: static;
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin: 0;
+}
+
+.status-menu-text {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+  text-align: left;
+}
+
+.status-menu-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-menu-chevron {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.room-page .member-list-item {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.room-page .member-avatar-stack,
+.room-page .member-main,
+.room-page .member-action-cluster {
+  min-width: 0;
+}
+
+.room-page .member-main {
+  overflow: hidden;
+}
+
+.room-page .member-action-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.room-page .chat-composer .composer-surface {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .035);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .025);
+}
+
+.room-page .local-user-identity {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.room-page .local-user-avatar,
+.room-page .local-user-copy,
+.room-page .local-user-controls {
+  flex: 0 0 auto;
+}
+
+.room-page .local-user-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* SPDX-License-Identifier: AGPL-3.0-or-later. Directly derived presentation geometry from Fluxer layout, adapted to EchoLive state. */
+.user-area { box-sizing: border-box; }
+.user-area-inner { display: flex; align-items: center; min-width: 0; gap: .5rem; padding: .5rem; }
+.user-area-user-info { display: flex; align-items: center; min-width: 0; flex: 1 1 auto; gap: .5rem; }
+.user-area-copy { min-width: 0; flex: 1 1 auto; }
+.user-area-controls { display: flex; align-items: center; gap: .125rem; flex: 0 0 auto; }
+.user-area-control-slot { position: relative; display: flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; flex: 0 0 auto; }
+
+.voice-control-bar { display: grid; grid-auto-flow: column; grid-auto-columns: max-content; align-items: center; justify-content: center; gap: .25rem; padding: .375rem; border: .0625rem solid rgba(255,255,255,.1); border-radius: 1.125rem; background: #000; box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.45); }
+.voice-control-button-container { position: relative; display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; flex: 0 0 auto; }
+.voice-control-bar .call-toolbar-button { width: 2.75rem; height: 2.75rem; border: 0; border-radius: 1rem; background: rgba(255,255,255,.05); }
+.voice-control-bar .call-toolbar-button:hover,
+.voice-control-bar .call-toolbar-button:focus-visible { background: rgba(255,255,255,.12); }
+.voice-control-bar .call-toolbar-button.is-on { color: #30d158; background: rgba(48,209,88,.16); }
+.voice-control-bar .call-toolbar-button.is-danger { color: #ff6b6b; background: rgba(255,72,72,.14); }
+.voice-control-bar-compact { width: 100%; padding: .25rem 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: initial; grid-auto-columns: initial; }
+.voice-control-bar-compact .voice-control-button-container { width: auto; height: 2.25rem; }
+.voice-control-bar-compact .call-toolbar-button { width: 100%; height: 2.25rem; border-radius: .5rem; }
+
+.member-list-item { box-sizing: border-box; width: 100%; border: 0; text-align: left; font: inherit; }
+.member-list-grid { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; align-items: center; min-width: 0; width: 100%; gap: .5rem; }
+.member-list-grid > * { min-width: 0; }
+.member-list-item .member-avatar-stack { grid-column: 1; }
+.member-list-item .member-main { grid-column: 2; }
+.member-list-item .member-action-cluster { grid-column: 3; }
+
+.chat-header-main { min-width: 0; }
+.chat-header-tools { display: flex; align-items: center; min-width: 0; gap: .5rem; margin-left: auto; }
+.composer-surface-inner { display: flex; align-items: center; min-width: 0; width: 100%; gap: .5rem; }
+.fluxer-sidebar-content { display: flex; flex-direction: column; min-height: 0; }
+.fluxer-sidebar-header { flex: 0 0 auto; }
+.fluxer-sidebar-nav { flex: 0 0 auto; }
+.fluxer-sidebar-scroller { min-height: 0; overflow: auto; flex: 1 1 auto; }
+.profile-card-layout { display: flex; flex-direction: column; min-width: 0; }
+
+@media (max-width: 720px) {
+  .chat-header-tools { gap: .25rem; }
+  .chat-header-meta { display: none; }
+  .voice-control-bar .call-toolbar-button { width: 2.5rem; height: 2.5rem; }
+  .voice-control-button-container { width: 2.5rem; height: 2.5rem; }
 }

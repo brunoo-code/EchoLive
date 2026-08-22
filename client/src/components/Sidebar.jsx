@@ -1,4 +1,9 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ * Channel and voice presentation is directly derived from Fluxer
+ * ChannelItem.tsx/GuildSidebar.tsx. EchoLive routing and callbacks are kept.
+ */
 import BrandMark from "./BrandMark.jsx";
+/* SPDX-License-Identifier: AGPL-3.0-or-later. Channel sidebar presentation directly derived from Fluxer layout surfaces. */
 import Icon from "./Icon.jsx";
 import ControlsBar from "./ControlsBar.jsx";
 import UserAvatar from "./UserAvatar.jsx";
@@ -103,7 +108,7 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="app-sidebar" aria-label={isServer ? "Navegacao do servidor" : "Informacoes da sala"}>
+    <aside className="app-sidebar fluxer-guild-sidebar" aria-label={isServer ? "Navegacao do servidor" : "Informacoes da sala"}>
       <div className={`brand-block ${isServer ? "server-brand-block" : ""}`} ref={isServer ? serverMenuRef : null}>
         <div className={`brand-mark ${isServer && serverIconUrl ? "has-server-icon" : ""}`} aria-hidden="true">{isServer && serverIconUrl ? <img src={serverIconUrl} alt="" /> : <BrandMark size={30} />}</div>
         <div>
@@ -145,21 +150,21 @@ export default function Sidebar({
         <p className="section-label">Canais de texto</p>
         <button
           type="button"
-          className={`channel-button ${selectedChannel === "text-general" ? "is-selected" : ""}`}
+          className={`channel-button channel-item-core ${selectedChannel === "text-general" ? "is-selected" : ""}`}
           onClick={() => onSelectChannel("text-general")}
         >
-          <span className="channel-icon channel-hash" aria-hidden="true">#</span>
-          <strong>geral</strong>
+          <span className="channel-icon channel-item-icon channel-hash" aria-hidden="true">#</span>
+          <strong className="channel-item-label">geral</strong>
         </button>
 
         <p className="section-label voice-label">Canais de voz</p>
         <button
           type="button"
-          className={`channel-button ${selectedChannel === "voice-general" ? "is-selected" : ""} ${isInVoice ? "is-connected" : ""}`}
+          className={`channel-button channel-item-core ${selectedChannel === "voice-general" ? "is-selected" : ""} ${isInVoice ? "is-connected" : ""}`}
           onClick={() => onSelectChannel("voice-general")}
         >
-          <span className="channel-icon" aria-hidden="true"><Icon name="voice" size={16} /></span>
-          <strong>Geral</strong>
+          <span className="channel-icon channel-item-icon" aria-hidden="true"><Icon name="voice" size={16} /></span>
+          <strong className="channel-item-label">Geral</strong>
           <span className="channel-count">{participants.length}</span>
         </button>
         <div className="call-member-list">
@@ -185,11 +190,7 @@ export default function Sidebar({
           {voicePreview && <div className="connected-voice-preview">{voicePreview}</div>}
           <div className="connected-voice-heading"><span className="voice-state-icon" aria-hidden="true"><Icon name={isInVoice ? "voice" : "headphones"} size={16} /></span><span className="connected-voice-copy"><strong>{isInVoice ? "Voz conectada" : "Fora da voz"}</strong><span className="connected-voice-channel">{voiceChannelName}</span></span>{isInVoice && connectionQuality && <span className="connection-quality" title={`Qualidade da conexao: ${connectionQuality}`}><Icon name="signal" size={14} />{connectionQuality}</span>}{isInVoice ? <button type="button" className="connected-voice-action" onClick={onLeaveVoice} data-tooltip="Desconectar" aria-label="Desconectar"><Icon name="phoneDisconnect" size={16} /></button> : <button type="button" className="connected-voice-action" onClick={onJoinVoice} data-tooltip="Entrar na voz" aria-label="Entrar na voz"><Icon name="voice" size={15} /></button>}</div>
           <div className="sidebar-call-toolbar" aria-label="Controles da chamada">
-            <button type="button" className={`sidebar-call-button ${cameraEnabled ? "is-active" : "is-muted"}`} onClick={onToggleCamera} data-tooltip={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-label={cameraEnabled ? "Desligar camera" : "Ligar camera"} aria-pressed={cameraEnabled}>
-              <span className="camera-control-icon" aria-hidden="true"><Icon name={cameraEnabled ? "camera" : "cameraOff"} size={15} /></span>
-              <span>Camera</span>
-            </button>
-            <ControlsBar compact isScreenSharing={isScreenSharing} onToggleScreenShare={onToggleScreenShare} streamPreset={streamPreset} screenShareLabel={screenShareLabel} onStreamPresetChange={onStreamPresetChange} />
+            <ControlsBar compact cameraEnabled={cameraEnabled} onToggleCamera={onToggleCamera} isScreenSharing={isScreenSharing} onToggleScreenShare={onToggleScreenShare} streamPreset={streamPreset} screenShareLabel={screenShareLabel} onStreamPresetChange={onStreamPresetChange} />
           </div>
         </section>}
 
@@ -227,9 +228,9 @@ function ServerChannelNavigation({ channels, voiceChannels, activeChannelId, voi
 
 function ServerChannelRow({ channel, selected, connected, count = "", canManage, menuOpen, onSelect, onToggleMenu, onRename, onDelete }) {
   return <div className="server-channel-row">
-    <button type="button" className={`channel-button ${selected ? "is-selected" : ""} ${connected ? "is-connected" : ""}`} onClick={onSelect}>
-      <span className={`channel-icon ${channel.type === "text" ? "channel-hash" : ""}`} aria-hidden="true">{channel.type === "text" ? "#" : <Icon name="voice" size={16} />}</span>
-      <strong>{channel.name}</strong>
+    <button type="button" className={`channel-button channel-item-core ${selected ? "is-selected" : ""} ${connected ? "is-connected" : ""}`} onClick={onSelect}>
+      <span className={`channel-icon channel-item-icon ${channel.type === "text" ? "channel-hash" : ""}`} aria-hidden="true">{channel.type === "text" ? "#" : <Icon name="voice" size={16} />}</span>
+      <strong className="channel-item-label">{channel.name}</strong>
       {count !== "" && <span className="channel-count">{count}</span>}
     </button>
     {canManage && <button type="button" className="server-channel-actions" onClick={onToggleMenu} title={`Ações de ${channel.name}`} aria-label={`Ações de ${channel.name}`} aria-haspopup="menu" aria-expanded={menuOpen}><Icon name="more" size={15} /></button>}

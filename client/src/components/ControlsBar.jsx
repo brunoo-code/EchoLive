@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ * Presentational structure directly derived from Fluxer VoiceControlBar.tsx
+ * and VoiceControlBar.module.css; EchoLive owns every action and media state.
+ */
 import Icon from "./Icon.jsx";
 import { useState } from "react";
 
@@ -10,17 +14,19 @@ const presetOptions = [
 
 function IconControl({ label, icon, active = false, danger = false, onClick, pressed, disabled = false }) {
   return (
-    <button
-      className={`control-button control-icon-button ${active ? "is-on" : ""} ${danger ? "is-danger" : ""}`}
-      type="button"
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      aria-pressed={pressed}
-      disabled={disabled}
-    >
-      <Icon name={icon} size={18} />
-    </button>
+    <div className="voice-control-button-container">
+      <button
+        className={`control-button control-icon-button call-toolbar-button ${active ? "is-on" : ""} ${danger ? "is-danger" : ""}`}
+        type="button"
+        onClick={onClick}
+        title={label}
+        aria-label={label}
+        aria-pressed={pressed}
+        disabled={disabled}
+      >
+        <Icon name={icon} size={18} />
+      </button>
+    </div>
   );
 }
 
@@ -29,7 +35,7 @@ function PresetMenu({ streamPreset, onStreamPresetChange, isOpen, onToggle }) {
     <div className="screen-options-control">
       <button
         type="button"
-        className="screen-preset-trigger control-button control-icon-button"
+        className="screen-preset-trigger control-button control-icon-button call-toolbar-button"
         onClick={onToggle}
         title="Opções da transmissão"
         aria-label="Opções da transmissão"
@@ -80,15 +86,16 @@ export default function ControlsBar({
 
   if (compact) {
     return (
-      <>
+      <div className="voice-control-bar voice-control-bar-compact" aria-label="Controles de voz">
+        <IconControl label={cameraEnabled ? "Desligar camera" : "Ligar camera"} icon={cameraEnabled ? "camera" : "cameraOff"} active={cameraEnabled} pressed={cameraEnabled} onClick={onToggleCamera} />
         <IconControl label={isScreenSharing ? "Parar compartilhamento de tela" : "Compartilhar tela"} icon="screenShare" active={isScreenSharing} pressed={isScreenSharing} onClick={onToggleScreenShare} />
         <PresetMenu streamPreset={streamPreset} onStreamPresetChange={onStreamPresetChange} isOpen={isPresetMenuOpen} onToggle={togglePresetMenu} />
-      </>
+      </div>
     );
   }
 
   return (
-    <footer className="call-controls" aria-label="Controles da chamada">
+    <footer className="call-controls voice-control-bar" aria-label="Controles da chamada">
       <IconControl label={micEnabled ? "Silenciar microfone" : "Ativar microfone"} icon={micEnabled ? "mic" : "micOff"} active={micEnabled} pressed={micEnabled} onClick={onToggleMicrophone} />
       <IconControl label={isDeafened ? "Ativar áudio" : "Desativar áudio"} icon={isDeafened ? "speaker" : "headphones"} active={isDeafened} pressed={isDeafened} onClick={onToggleDeafen} />
       <IconControl label={cameraEnabled ? "Desligar câmera" : "Ligar câmera"} icon={cameraEnabled ? "camera" : "cameraOff"} active={cameraEnabled} pressed={cameraEnabled} onClick={onToggleCamera} />

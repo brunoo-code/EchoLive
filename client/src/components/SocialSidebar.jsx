@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later. Sidebar presentation hierarchy directly derived from Fluxer layout surfaces. */
 import Icon from "./Icon.jsx";
 import UserAvatar from "./UserAvatar.jsx";
 import LocalUserFooter from "./LocalUserFooter.jsx";
@@ -35,16 +36,18 @@ export default function SocialSidebar({ activeTab, onTabChange, conversations, o
     }
   }, [conversations]);
 
-  return <aside className="social-sidebar">
-    <label className="social-sidebar-search"><Icon name="search" size={15} /><span className="sr-only">Buscar conversas</span><input value={conversationQuery} onChange={(event) => setConversationQuery(event.target.value)} placeholder="Encontre ou comece uma conversa" /></label>
-    <nav className="social-nav" aria-label="Navegacao social">
-      <button type="button" className={activeTab !== "add" ? "is-active" : ""} onClick={() => onTabChange("all")}><Icon name="account" size={16} /><span>Amigos</span></button>
-    </nav>
-    <div className="social-sidebar-section">
+  return <aside className="social-sidebar fluxer-sidebar-shell">
+    <div className="social-sidebar-content fluxer-sidebar-content">
+      <header className="social-sidebar-header"><label className="social-sidebar-search"><Icon name="search" size={15} /><span className="sr-only">Buscar conversas</span><input value={conversationQuery} onChange={(event) => setConversationQuery(event.target.value)} placeholder="Encontre ou comece uma conversa" /></label></header>
+      <nav className="social-nav fluxer-sidebar-nav" aria-label="Navegacao social">
+        <button type="button" className={activeTab !== "add" ? "is-active" : ""} onClick={() => onTabChange("all")}><Icon name="account" size={16} /><span>Amigos</span></button>
+      </nav>
+      <div className="social-sidebar-section fluxer-sidebar-scroller">
       <div className="social-sidebar-section-title"><span>Mensagens diretas</span><button type="button" title="Nova conversa" aria-label="Nova conversa" onClick={() => onTabChange("friends")}><Icon name="plus" size={14} /></button></div>
       <div className="social-conversation-list">
         {visibleConversations.map((conversation) => <div className={`social-conversation-row ${conversation.user?.isOfficial ? "is-official" : ""} ${conversation.unreadCount > 0 ? "has-unread" : ""} ${activeConversationId === conversation.id ? "is-active" : ""}`} key={conversation.id}><button type="button" className="social-conversation-main" onClick={() => onOpenConversation(conversation.id)}><span className="social-conversation-avatar" onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user, event.currentTarget.getBoundingClientRect()); }}><Avatar user={conversation.user} size={32} /><i className={conversation.user?.isOfficial || onlineUserIds.has(conversation.user.id) ? "is-online" : ""} /></span><span className="social-conversation-copy"><strong onClick={(event) => { event.stopPropagation(); onOpenProfile?.(conversation.user, event.currentTarget.getBoundingClientRect()); }}>{conversation.user.displayName || conversation.user.username}{conversation.user?.isOfficial && <em className="official-badge">OFICIAL</em>}</strong><small>{conversationPreview(conversation)}</small></span>{conversation.unreadCount > 0 && <b className="social-unread-badge" aria-label={`${conversation.unreadCount} mensagens nao lidas`}>{conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}</b>}</button>{!conversation.user?.isOfficial && <button type="button" className="social-conversation-close icon-button" title="Fechar conversa" aria-label="Fechar conversa" onClick={() => onHideConversation?.(conversation.id)}><Icon name="close" size={14} /></button>}</div>)}
         {!visibleConversations.length && <p className="social-sidebar-empty">{normalizedQuery ? "Nenhuma conversa encontrada." : socialStatus === "loading" ? "Carregando conversas..." : socialStatus === "error" ? "Nao foi possivel carregar as conversas." : "Suas conversas aparecerao aqui."}</p>}
+      </div>
       </div>
     </div>
     <LocalUserFooter className="social-sidebar-footer" nickname={user?.displayName || user?.username || "Conta"} avatarUrl={user?.avatarUrl || ""} avatarVariant={user?.avatarVariant || 0} status={user?.status || "online"} customStatus={user?.customStatus || ""} onProfileClick={(event) => onOpenProfile?.(user, event.currentTarget.getBoundingClientRect())} onOpenUserSettings={onOpenSettings} />
