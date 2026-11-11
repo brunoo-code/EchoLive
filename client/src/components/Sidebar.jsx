@@ -7,6 +7,7 @@ import BrandMark from "./BrandMark.jsx";
 import Icon from "./Icon.jsx";
 import ControlsBar from "./ControlsBar.jsx";
 import UserAvatar from "./UserAvatar.jsx";
+import UserStatusBadge from "./UserStatusBadge.jsx";
 import LocalUserFooter from "./LocalUserFooter.jsx";
 import { useEffect, useRef, useState } from "react";
 

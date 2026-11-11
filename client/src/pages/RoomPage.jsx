@@ -491,7 +491,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       if (isInVoiceRef.current) {
         upsertRemoteParticipants((voiceParticipants || [participant]).filter((item) => item.socketId !== socket.id));
         const peer = createPeer(participant.socketId, false, true);
-        await sendOffer(participant.socketId, peer.pc);
+        if (peer) await sendOffer(participant.socketId, peer.pc);
         emitMediaStatus();
       }
     });
@@ -514,7 +514,7 @@ export default function RoomPage({ roomCode, onBack, onNavigateRoom, onNavigateS
       emitMediaStatus();
       participants.forEach((participant) => {
         const peer = createPeer(participant.socketId, false, true);
-        sendOffer(participant.socketId, peer.pc);
+        if (peer) sendOffer(participant.socketId, peer.pc);
       });
     });
 

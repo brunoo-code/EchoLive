@@ -2,6 +2,20 @@
 
 EchoLive é um aplicativo web para salas privadas de voz, vídeo, compartilhamento de tela e conversa temporária em `# geral`.
 
+[![CI](https://github.com/brunoo-code/EchoLive/actions/workflows/ci.yml/badge.svg)](https://github.com/brunoo-code/EchoLive/actions/workflows/ci.yml)
+
+## Demo
+
+[![Sala do EchoLive com mensagens trocadas entre duas sessões](docs/demo.png)](docs/demo.webm)
+
+[Assistir à gravação](docs/demo.webm) · [Ver o diagrama da arquitetura](docs/arquitetura.md)
+
+A gravação usa duas sessões locais de navegador e dispositivos de mídia simulados. Para reproduzir a sala como visitante, execute `npm ci` e `npm run dev`, abra a página inicial e use o link da sala em outra sessão.
+
+## Testes automatizados
+
+`npm test` inicia um servidor de teste e verifica entrada em sala, rejeição de código inexistente, limite de participantes e entrega de mensagens entre clientes Socket.IO. O GitHub Actions também verifica a compilação do frontend.
+
 ## Requisitos
 
 - Node.js LTS
